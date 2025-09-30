@@ -1,0 +1,256 @@
+// import React from 'react';
+// import { Provider } from 'react-redux';
+// import { NavigationContainer } from '@react-navigation/native';
+// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+// import { createNativeStackNavigator } from '@react-navigation/native-stack';
+// import { PersistGate } from 'redux-persist/integration/react';
+// import { store, persistor } from './src/store';
+// import LoginScreen from './src/screens/LoginScreen';
+// import ClientsScreen from './src/screens/ClientsScreen';
+// import CatalogScreen from './src/screens/CatalogScreen';
+// import OrdersScreen from './src/screens/OrdersScreen';
+// import SettingsScreen from './src/screens/SettingsScreen';
+// import { View, Text } from 'react-native';
+
+// const Tab = createBottomTabNavigator();
+// const Stack = createNativeStackNavigator();
+
+// // put your tabs here
+// function MainTabs() {
+//   return (
+//     <Tab.Navigator initialRouteName="Clients">
+//       <Tab.Screen name="Clients" component={ClientsScreen} />
+//       <Tab.Screen name="Catalog" component={CatalogScreen} />
+//       <Tab.Screen name="Orders" component={OrdersScreen} />
+//       <Tab.Screen name="Settings" component={SettingsScreen} />
+//     </Tab.Navigator>
+//   );
+// }
+
+// export default function App() {
+//   const isLoggedIn = false; // 👉 replace with your redux/auth state
+
+//   return (
+//     <Provider store={store}>
+//       <PersistGate loading={<View><Text>Loading...</Text></View>} persistor={persistor}>
+//         <NavigationContainer>
+//           <Stack.Navigator screenOptions={{ headerShown: false }}>
+//             {isLoggedIn ? (
+//               <Stack.Screen name="Main" component={MainTabs} />
+//             ) : (
+//               <Stack.Screen name="Login" component={LoginScreen} />
+//             )}
+//           </Stack.Navigator>
+//         </NavigationContainer>
+//       </PersistGate>
+//     </Provider>
+//   );
+// }
+
+import React, { useState } from 'react';
+import { Provider, useSelector } from 'react-redux';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './src/store';
+import LoginScreen from './src/screens/LoginScreen';
+import ClientsScreen from './src/screens/ClientsScreen';
+import CatalogScreen from './src/screens/CatalogScreen';
+import OrdersScreen from './src/screens/OrdersScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import { View, Text, TouchableOpacity } from 'react-native';
+import Modal from 'react-native-modal';
+import ClientOrderScreen from './src/screens/ClientOrderScreen';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import IndirizziScreen from './src/screens/IndirizziScreen';
+import ClientsMenuModal from './src/components/modals/ClientsMenuModal';
+import CatalogueMenuModal from './src/components/modals/CatalogueMenuModal';
+import { dark } from './colors';
+import OrderMenuModal from './src/components/modals/OrderMenuModal';
+
+const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+const ClientsStack = createNativeStackNavigator();
+const CatalogueStack = createNativeStackNavigator();
+const OrderStack = createNativeStackNavigator();
+
+function ClientsStackNavigator() {
+  return (
+    <ClientsStack.Navigator screenOptions={{ headerShown: false }}>
+      <ClientsStack.Screen name="Clients" component={ClientsScreen} />
+      <ClientsStack.Screen
+        name="ClientsAddresses"
+        component={IndirizziScreen}
+      />
+    </ClientsStack.Navigator>
+  );
+}
+
+function CatalogueStackNavigator() {
+  return (
+    <CatalogueStack.Navigator screenOptions={{ headerShown: false }}>
+      <CatalogueStack.Screen name="Catalog" component={CatalogScreen} />
+    </CatalogueStack.Navigator>
+  );
+}
+
+function OrderStackNavigator() {
+  return (
+    <OrderStack.Navigator screenOptions={{ headerShown: false }}>
+      <OrderStack.Screen name="Orders" component={OrdersScreen} />
+    </OrderStack.Navigator>
+  );
+}
+
+// Tabs
+function MainTabs({ navigation }) {
+  const [isClientsMenuVisible, setClientsMenuVisible] = useState(false);
+  const [isCatalogueMenuVisible, setCatalogueMenuVisible] = useState(false);
+  const [isOrderMenuVisible, setOrderMenuVisible] = useState(false);
+
+  return (
+    <>
+      <Tab.Navigator
+        initialRouteName="ClientsTab"
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: '#007AFF',
+          tabBarInactiveTintColor: 'gray',
+        }}
+      >
+        {/* Clients Tab now points to the stack */}
+        <Tab.Screen
+          name="ClientsTab"
+          component={ClientsStackNavigator}
+          options={{
+            tabBarLabel: 'Clienti',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="people-outline" color={color} size={size} />
+            ),
+            tabBarButton: (props) => (
+              <TouchableOpacity
+                {...props}
+                onPress={() => setClientsMenuVisible(true)}
+              />
+            ),
+          }}
+        />
+
+        <Tab.Screen
+          name="CatalogTab"
+          component={CatalogueStackNavigator}
+          options={{
+            tabBarLabel: 'Catalogo',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="albums-outline" color={color} size={size} />
+            ),
+            tabBarButton: (props) => (
+              <TouchableOpacity
+                {...props}
+                onPress={() => setCatalogueMenuVisible(true)}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="OrdersTab"
+          component={OrdersScreen}
+          options={{
+            tabBarLabel: 'Ordini',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cart-outline" color={color} size={size} />
+            ),
+            tabBarButton: (props) => (
+              <TouchableOpacity
+                {...props}
+                onPress={() => setOrderMenuVisible(true)}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Settings"
+          component={SettingsScreen}
+          options={{
+            tabBarLabel: 'Statistiche',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="settings-outline" color={color} size={size} />
+            ),
+          }}
+        />
+      </Tab.Navigator>
+
+      {/* Clients submenu modal */}
+      <ClientsMenuModal
+        visible={isClientsMenuVisible}
+        onClose={() => setClientsMenuVisible(false)}
+        navigation={navigation}
+      />
+
+      {/* Catalogue submenu modal */}
+      <CatalogueMenuModal
+        visible={isCatalogueMenuVisible}
+        onClose={() => setCatalogueMenuVisible(false)}
+        navigation={navigation}
+      />
+
+      {/* Order submenu modal */}
+      <OrderMenuModal
+        visible={isOrderMenuVisible}
+        onClose={() => setOrderMenuVisible(false)}
+        navigation={navigation}
+      />
+    </>
+  );
+}
+
+// Root navigation that actually uses Redux state
+function RootNavigator() {
+  const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
+
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {isLoggedIn ? (
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="ClientOrder" component={ClientOrderScreen} />
+
+        </>
+      ) : (
+        <Stack.Screen name="Login" component={LoginScreen} />
+      )}
+    </Stack.Navigator>
+  );
+}
+
+// App wrapper
+export default function App() {
+  const navTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: dark,
+      card: dark,
+      text: '#fff',
+      border: '#333',
+    },
+  };
+  return (
+    <Provider store={store}>
+      <PersistGate
+        loading={
+          <View style={{ justifyContent: 'center' }}>
+            <Text>Loading...</Text>
+          </View>
+        }
+        persistor={persistor}
+      >
+        <NavigationContainer theme={navTheme}>
+          <RootNavigator />
+        </NavigationContainer>
+      </PersistGate>
+    </Provider>
+  );
+}
+

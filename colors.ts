@@ -1,0 +1,1 @@
+export const dark = '#131313ff';

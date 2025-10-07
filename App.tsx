@@ -88,7 +88,7 @@ function ClientsStackNavigator() {
 function CatalogueStackNavigator() {
   return (
     <CatalogueStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_bottom' }}>
-      <CatalogueStack.Screen name="Catalog" component={CatalogScreen}  />
+      <CatalogueStack.Screen name="Catalog" component={CatalogScreen} />
       <ClientsStack.Screen name="ProductList" component={ProductListScreen} />
     </CatalogueStack.Navigator>
   );
@@ -209,11 +209,11 @@ function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false , animation: 'slide_from_bottom' }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_bottom' }}>
       {isLoggedIn ? (
         <>
           <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="ClientOrder" component={ClientOrderScreen} />
+          {/* <Stack.Screen name="ClientOrder" component={ClientOrderScreen} /> */}
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

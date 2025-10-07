@@ -41,24 +41,36 @@ const ProductListScreen = () => {
         );
     }
 
-    const ProductsList = (item: any) => {
-        if (item)
-            item = item.item;
+  const ProductsList = (item: any) => {
+    if (item)
+        item = item.item;
 
-        return (
-            <View style={styles.productsBox}>
-                <View>
-                    <Image style={styles.productImage} source={{ uri: fetchProductImage(item.id, item.id_default_image) }} />
-                </View>
-                <View style={{ marginLeft: 16 }}>
-                    <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>{item.name || 'No name'}</Text>
-                    <ProductInformation label="Price" value={item.price} prefix="€" />
-                    <ProductInformation label="Category IDs" value={item.associations?.categories?.map((c: any) => c.id).join(', ')} prefix="" />
-                </View>
-
+    return (
+        <View style={styles.productsBox}>
+            <View>
+                <Image style={styles.productImage} source={{ uri: fetchProductImage(item.id, item.id_default_image) }} />
             </View>
-        );
-    }
+            <View style={{ marginLeft: 16, flex: 1 }}>
+                <Text 
+                    style={{ 
+                        color: '#fff', 
+                        fontSize: 17, 
+                        fontWeight: 'bold', 
+                        marginBottom: 10,
+                        flexWrap: 'wrap',
+                        flexShrink: 1
+                    }}
+                    numberOfLines={3} // Optional: limit to 3 lines
+                    ellipsizeMode="tail" // Optional: show ... if truncated
+                >
+                    {item.name || 'No name'}
+                </Text>
+                <ProductInformation label="Price" value={item.price} prefix="€" />
+                <ProductInformation label="Category IDs" value={item.associations?.categories?.map((c: any) => c.id).join(', ')} prefix="" />
+            </View>
+        </View>
+    );
+}
 
     return (
         <View style={styles.container}>
@@ -102,11 +114,11 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        backgroundColor: '#1d1d1dff',
+        backgroundColor: '#292929ff',
     },
     productImage: {
-        width: 130,
-        height: 130,
+        width: 100,
+        height: 100,
         borderRadius: 8,
     }
 });

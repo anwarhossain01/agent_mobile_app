@@ -50,10 +50,13 @@ export default function OrderMenuModal({
                     }}
                     onPress={() => {
                         onClose();
-                        navigation.navigate('Main', {
+                        navigation.replace('Main', {
                             screen: 'OrdersTab',
                             params: {
-                                screen: 'Orders'
+                                screen: 'Orders',
+                                params: {
+                                    employee_id: null,
+                                }
                             }
                         });
                     }}

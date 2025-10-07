@@ -4,14 +4,18 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { addOrder } from '../store/slices/ordersSlice';
 import { getOrdersFromServer, getSafeOrders } from '../api/prestashop';
+import { useNavigation } from '@react-navigation/native';
 
-export default function OrdersScreen() {
+export default function OrdersScreen({ route }) {
   const localOrders = useSelector((s: RootState) => s.orders.items || []);
   const auth = useSelector((s: RootState) => s.auth);
   const [serverOrders, setServerOrders] = useState<any[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const employeeId = route.params?.employee_id || auth.employeeId;
   const dispatch = useDispatch();
+  const navigation = useNavigation();
+
 
   useEffect(() => {
     let mounted = true;
@@ -19,8 +23,8 @@ export default function OrdersScreen() {
       setLoadingServer(true);
       setServerError(null);
       try {
-        const orders = await getOrdersFromServer(auth.employeeId);//await getSafeOrders(50);
-        console.log("orders: ", orders);
+        console.log("Emloyeeeeee", employeeId);
+        const orders = await getOrdersFromServer(employeeId);//await getSafeOrders(50);
 
         if (!mounted) return;
         setServerOrders(orders);
@@ -104,7 +108,7 @@ export default function OrdersScreen() {
         </View>
       </View>
     );
-};
+  };
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
@@ -130,8 +134,8 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
- card: {
-    backgroundColor: '#1d1d1dff',
+  card: {
+    backgroundColor: '#292929ff',
     padding: 16,
     marginHorizontal: 12,
     marginVertical: 6,

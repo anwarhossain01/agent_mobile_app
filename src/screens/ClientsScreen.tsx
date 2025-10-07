@@ -21,6 +21,7 @@ export default function ClientsScreen() {
         if (data.length === 0) {
           setNoData(true);
         }
+
         dispatch(setClients(data));
       } catch (e) {
         console.log('clients load err', e);
@@ -29,17 +30,30 @@ export default function ClientsScreen() {
     load();
   }, [dispatch, employeeId]);
 
+  const ClientOrderNavigate = (client_id: string) => {
+
+    (navigation as any).replace('Main', {
+      screen: 'OrdersTab',
+      params: {
+        screen: 'Orders',
+        params: {
+          employee_id: client_id,
+        }
+      }
+    });
+  }
+
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Assigned Clients</Text>
       {noData ? (
-        <View style={{display: 'flex', flex: 1, padding: 2 , alignItems: 'center' }}>
+        <View style={{ display: 'flex', flex: 1, padding: 2, alignItems: 'center' }}>
           <Text style={{ fontSize: 21, marginBottom: 8, color: '#ffffff27', fontWeight: 'bold' }}>Empty</Text>
         </View>
       ) : null}
       <FlatList
         data={clients}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(item) => String(item.id || item.id_customer)}
         renderItem={({ item }) => (
           <View
             style={{
@@ -59,7 +73,7 @@ export default function ClientsScreen() {
             <View style={{ display: 'flex', flexDirection: 'row' }}>
               <TouchableOpacity
                 style={styles.buttonStyle}
-                onPress={() => navigation.navigate('ClientOrder')}
+                onPress={() => {ClientOrderNavigate(item.id_customer)}}
               >
                 <Text style={{ color: 'white', fontWeight: '600', fontSize: 11 }}>ORDINE</Text>
               </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -9,13 +9,18 @@ import { useNavigation } from '@react-navigation/native';
 export default function ClientsScreen() {
   const dispatch = useDispatch();
   const clients = useSelector((s: RootState) => s.clients.items);
-  const employeeId = 24;
+  const auth = useSelector((s: RootState) => s.auth);
+  const [noData, setNoData] = useState(false);
+  const employeeId = auth.employeeId;
   const navigation = useNavigation();
 
   useEffect(() => {
     const load = async () => {
       try {
         const data = await getClientsForAgent(employeeId || 0);
+        if (data.length === 0) {
+          setNoData(true);
+        }
         dispatch(setClients(data));
       } catch (e) {
         console.log('clients load err', e);
@@ -27,6 +32,11 @@ export default function ClientsScreen() {
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Assigned Clients</Text>
+      {noData ? (
+        <View style={{display: 'flex', flex: 1, padding: 2 , alignItems: 'center' }}>
+          <Text style={{ fontSize: 21, marginBottom: 8, color: '#ffffff27', fontWeight: 'bold' }}>Empty</Text>
+        </View>
+      ) : null}
       <FlatList
         data={clients}
         keyExtractor={(item) => String(item.id)}

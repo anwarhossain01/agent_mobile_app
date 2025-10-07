@@ -1,27 +1,30 @@
 
-      // navigation.reset({
-      //   index: 0,
-      //   routes: [{ name: 'Main' }],
- 
-    // const res = await loginEmployee(email, password);
-    //  if (res.success) {
-    //   dispatch(setAuth({ token: res.token, employeeId: res.employee_id }));
-    //   // In a real app navigate to protected area
-    //   Alert.alert('Login successful');
-    // } else {
-    //   Alert.alert('Login failed');
-    // }
+// navigation.reset({
+//   index: 0,
+//   routes: [{ name: 'Main' }],
+
+// const res = await loginEmployee(email, password);
+//  if (res.success) {
+//   dispatch(setAuth({ token: res.token, employeeId: res.employee_id }));
+//   // In a real app navigate to protected area
+//   Alert.alert('Login successful');
+// } else {
+//   Alert.alert('Login failed');
+// }
 
 import React, { useState } from 'react';
-import { View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
-import { dark } from '../../colors';
+import { dark, theme } from '../../colors';
+import { loginEmployee } from '../api/prestashop';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
@@ -30,12 +33,16 @@ export default function LoginScreen() {
       Alert.alert('Please enter email and password');
       return;
     }
-
-    if (email == 'mailbox@mondoweb.it' && password == 'Mondoweb_2025') {
-      dispatch(setAuth({ token: 'token', employeeId: 24, isLoggedIn: true }));
-    }
-    else{
-      Alert.alert("Wrong Password or Email !")
+    setError(false);
+    setLoading(true);
+    const res = await loginEmployee(email, password);
+    console.log(res);
+    
+    if (res.success) {
+      dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
+    } else {
+      setError(true);
+      setLoading(false);
     }
   };
 
@@ -61,9 +68,13 @@ export default function LoginScreen() {
           secureTextEntry
           style={styles.input}
         />
-        <TouchableOpacity style={styles.button} onPress={onLogin}>
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
+        {error ? <Text style={styles.errorTxt}>Wrong Password or Email !</Text> : null}
+        {loading ? <ActivityIndicator color={theme} /> : (
+          <TouchableOpacity style={styles.button} onPress={onLogin}>
+            <Text style={styles.buttonText}>Login</Text>
+          </TouchableOpacity>
+        )}
+
       </View>
     </KeyboardAvoidingView>
   );
@@ -114,4 +125,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 16,
   },
+  errorTxt: {
+    color: 'red',
+    fontSize: 14,
+  }
 });

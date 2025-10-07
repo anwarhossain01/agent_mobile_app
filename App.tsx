@@ -68,6 +68,7 @@ import ClientsMenuModal from './src/components/modals/ClientsMenuModal';
 import CatalogueMenuModal from './src/components/modals/CatalogueMenuModal';
 import { dark } from './colors';
 import OrderMenuModal from './src/components/modals/OrderMenuModal';
+import ProductListScreen from './src/screens/ProductListScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -79,18 +80,16 @@ function ClientsStackNavigator() {
   return (
     <ClientsStack.Navigator screenOptions={{ headerShown: false }}>
       <ClientsStack.Screen name="Clients" component={ClientsScreen} />
-      <ClientsStack.Screen
-        name="ClientsAddresses"
-        component={IndirizziScreen}
-      />
+      <ClientsStack.Screen name="ClientsAddresses" component={IndirizziScreen} />
     </ClientsStack.Navigator>
   );
 }
 
 function CatalogueStackNavigator() {
   return (
-    <CatalogueStack.Navigator screenOptions={{ headerShown: false }}>
-      <CatalogueStack.Screen name="Catalog" component={CatalogScreen} />
+    <CatalogueStack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_bottom' }}>
+      <CatalogueStack.Screen name="Catalog" component={CatalogScreen}  />
+      <ClientsStack.Screen name="ProductList" component={ProductListScreen} />
     </CatalogueStack.Navigator>
   );
 }
@@ -155,7 +154,7 @@ function MainTabs({ navigation }) {
         />
         <Tab.Screen
           name="OrdersTab"
-          component={OrdersScreen}
+          component={OrderStackNavigator}
           options={{
             tabBarLabel: 'Ordini',
             tabBarIcon: ({ color, size }) => (
@@ -210,12 +209,11 @@ function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false , animation: 'slide_from_bottom' }}>
       {isLoggedIn ? (
         <>
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="ClientOrder" component={ClientOrderScreen} />
-
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

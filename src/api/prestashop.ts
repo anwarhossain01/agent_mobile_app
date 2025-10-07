@@ -1,7 +1,19 @@
 import axios from 'axios';
- // PrestaShop Webservice Key
+// PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
-const API_KEY = 'ZK2XHVFPTQCP7ZUTS86K44W95HBVIEKU'; 
+const API_LOGIN_URL = 'https://b2b.fumostore.com/module';
+export const API_KEY = 'ZK2XHVFPTQCP7ZUTS86K44W95HBVIEKU';
+
+function generateRandomNumber(length: number): number {
+  if (length < 1) {
+    throw new Error("Length must be at least 1");
+  }
+
+  const min = Math.pow(10, length - 1);
+  const max = Math.pow(10, length) - 1;
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   auth: {
@@ -13,30 +25,56 @@ const api = axios.create({
   },
 });
 
+
+
 export const loginEmployee = async (email: string, password: string) => {
-  // PrestaShop does not provide a default employee login endpoint via webservice.
-  // Usually you'd authenticate via a custom endpoint on your PrestaShop store that returns a token for employees.
-  // This is a placeholder to demonstrate the flow.
-  return { success: true, employee_id: 1, token: 'demo-token' };
+
+  try {
+    let int_random = generateRandomNumber(10);
+    const res = await api.post(`/employeeapi/auth?t=${int_random}`, { email, password }, {
+      baseURL: API_LOGIN_URL, // Override baseURL to empty string to use the full loginUrl
+    });
+    return { success: true, token: res.data?.token, employee: res.data?.employee, expire: res.data?.expires_in };
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.error };
+  }
+
 };
 
 export const getClientsForAgent = async (agentId: number) => {
   // Example: fetch customers and filter by an 'id_assigned_agent' custom field in your PrestaShop DB.
-  const res = await api.get('/customers?display=full');
+  //  const res = await api.get('/customers?display=full');
+  const res = await api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
+    { employee_id: agentId },
+    { baseURL: API_LOGIN_URL }
+  );
+  
   return res.data.customers || [];
 };
+
 export const getProducts = async () => {
   const res = await api.get('/products?output_format=JSON&display=full&limit=50');
   console.log('API products sample:', JSON.stringify(res.data.products[0], null, 2));
   return res.data.products || [];
 };
 
+export const getActiveCategories = async () => {
+  try {
+    const res = await api.get(`/categories?display=[id,name]&filter[active]=1&output_format=JSON&ws_key=${API_KEY}`);
+    return res.data;
+  } catch (error: any) {
+    console.log("Categories api error", error);
+    return { success: false, error: error.response?.data?.error };
+  }
+
+}
+
 export const getallCustomerss = async () => {
   try {
     const res = await api.get('/customers', {
       params: {
         output_format: 'JSON',
-        display:'full', // safe fields
+        display: 'full', // safe fields
         limit: 50,
       },
     });
@@ -52,9 +90,13 @@ export const createOrder = async (orderPayload: any) => {
   const res = await api.post('/orders', orderPayload);
   return res.data;
 };
-export const getOrdersFromServer = async () => {
+export const getOrdersFromServer = async (employeeId: any) => {
   try {
-    const res = await api.get('/orders?output_format=JSON&display=full&limit=50');
+    const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}`,
+      { employee_id: employeeId },
+      {
+        baseURL: API_LOGIN_URL
+      });
     console.log('Server orders:', res.data.orders);
     return res.data.orders || [];
   } catch (err) {

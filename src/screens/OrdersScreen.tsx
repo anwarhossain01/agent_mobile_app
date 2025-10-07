@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { addOrder } from '../store/slices/ordersSlice';
-import { getSafeOrders } from '../api/prestashop';
+import { getOrdersFromServer, getSafeOrders } from '../api/prestashop';
 
 export default function OrdersScreen() {
   const localOrders = useSelector((s: RootState) => s.orders.items || []);
+  const auth = useSelector((s: RootState) => s.auth);
   const [serverOrders, setServerOrders] = useState<any[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -18,7 +19,9 @@ export default function OrdersScreen() {
       setLoadingServer(true);
       setServerError(null);
       try {
-        const orders = await getSafeOrders(50);
+        const orders = await getOrdersFromServer(auth.employeeId);//await getSafeOrders(50);
+        console.log("orders: ", orders);
+
         if (!mounted) return;
         setServerOrders(orders);
         if (!orders.length) {
@@ -43,11 +46,14 @@ export default function OrdersScreen() {
   };
 
   const normalizedServerOrders = serverOrders.map(o => ({
-    id: o.id,
+    id: o.id_order,
     id_customer: o.id_customer,
+    customer_name: o.firstname + ' ' + o.lastname,
+    company: o.company,
     total_paid: o.total_paid,
     date_add: o.date_add,
     synced: true,
+    reference: o.reference
   }));
 
   const parseDate = (d?: string) => (d ? new Date(String(d)) : new Date(0));
@@ -60,27 +66,125 @@ export default function OrdersScreen() {
     parseDate(b.date_add).getTime() - parseDate(a.date_add).getTime()
   );
 
+  const OrderCard = (item: any) => {
+    item = item.item;
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.header}>
+          <Text style={styles.orderId}>Order #{item.localId || item.id}</Text>
+          <View style={[styles.status, { backgroundColor: item.synced ? '#22C55E' : '#6B7280' }]}>
+            <Text style={styles.statusText}>{item.synced ? 'Synced' : 'Pending'}</Text>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.label}>Customer:</Text>
+          <Text style={styles.value}>{item.customer_name}</Text>
+        </View>
+
+        {item.company && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Company:</Text>
+            <Text style={styles.value}>{item.company}</Text>
+          </View>
+        )}
+
+        <View style={styles.details}>
+          <View style={styles.detailItem}>
+            <Text style={styles.label}>Total:</Text>
+            <Text style={styles.amount}>{item.total_paid ? `€${item.total_paid}` : '—'}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.label}>Date:</Text>
+            <Text style={styles.value}>
+              {item.date_add ? new Date(item.date_add).toLocaleDateString() : '—'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+};
+
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>My Orders</Text>
 
       {loadingServer ? <ActivityIndicator color="#fff" /> : null}
-      {serverError ? <Text style={{ color: 'red', marginBottom: 8 }}>{serverError}</Text> : null}
+      {serverError ? (
+        <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
+          <Text style={{ color: 'red', marginBottom: 8, fontSize: 15 }}>{serverError}</Text>
+        </View>
+      ) : null}
 
       <FlatList
         data={allOrders}
         keyExtractor={(item) => String(item.localId || item.id)}
         renderItem={({ item }) => (
-          <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#333' }}>
-            <Text style={{ color: '#fff' }}>Order: {item.localId || item.id}</Text>
-            <Text style={{ color: '#fff' }}>Customer ID: {item.clientId || item.id_customer}</Text>
-            <Text style={{ color: '#fff' }}>Total: {item.total_paid ?? '—'}</Text>
-            <Text style={{ color: '#fff' }}>Synced: {String(!!item.synced)}</Text>
-            <Text style={{ color: '#fff' }}>Date: {item.date_add ? new Date(item.date_add).toLocaleString() : '—'}</Text>
-          </View>
+          <OrderCard item={item} />
         )}
       />
       <Button title="Create Demo Order" color="#007AFF" onPress={createDemoOrder} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+ card: {
+    backgroundColor: '#1d1d1dff',
+    padding: 16,
+    marginHorizontal: 12,
+    marginVertical: 6,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3a3a3aff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orderId: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  status: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  details: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  label: {
+    color: '#A0AEC0',
+    fontSize: 15,
+    marginRight: 6,
+  },
+  value: {
+    color: '#fff',
+    fontSize: 15,
+  },
+  amount: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+});

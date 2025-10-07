@@ -50,7 +50,7 @@ export default function CatalogueMenuModal({
                     }}
                     onPress={() => {
                         onClose();
-                        navigation.navigate('Main', {
+                        navigation.replace('Main', {
                             screen: 'CatalogTab',
                             params: {
                                 screen: 'Catalog'
@@ -79,7 +79,13 @@ export default function CatalogueMenuModal({
                     }}
                     onPress={() => {
                         onClose();
-                        Alert.alert('in development');
+                        //Alert.alert('in development');
+                        navigation.replace('Main', {
+                            screen: 'CatalogTab',
+                            params: {
+                                screen: 'ProductList'
+                            }
+                        });
                     }}
                 >
                     <Ionicons

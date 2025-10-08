@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { addOrder } from '../store/slices/ordersSlice';
 import { getOrdersFromServer, getSafeOrders } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
+import { darkBg } from '../../colors';
 
 export default function OrdersScreen({ route }) {
   const localOrders = useSelector((s: RootState) => s.orders.items || []);
@@ -15,7 +16,7 @@ export default function OrdersScreen({ route }) {
   const employeeId = route.params?.employee_id || auth.employeeId;
   const dispatch = useDispatch();
   const navigation = useNavigation();
-
+  const [showbtn , setShowBtn] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -23,7 +24,10 @@ export default function OrdersScreen({ route }) {
       setLoadingServer(true);
       setServerError(null);
       try {
-        console.log("Emloyeeeeee", employeeId);
+      //  console.log("Emloyeeeeee", employeeId);
+      if(route.params?.employee_id){
+        setShowBtn(true);
+      }
         const orders = await getOrdersFromServer(employeeId);//await getSafeOrders(50);
 
         if (!mounted) return;
@@ -46,7 +50,7 @@ export default function OrdersScreen({ route }) {
   const createDemoOrder = () => {
     const localId = 'local-' + Date.now();
     dispatch(addOrder({ localId, clientId: 1, items: [], synced: false }));
-    alert('Demo order created (offline). Background sync will attempt to push when online.');
+    Alert.alert('Demo order created (offline). Background sync will attempt to push when online.');
   };
 
   const normalizedServerOrders = serverOrders.map(o => ({
@@ -70,6 +74,18 @@ export default function OrdersScreen({ route }) {
     parseDate(b.date_add).getTime() - parseDate(a.date_add).getTime()
   );
 
+  const newOrderRouteHandler = () => {
+    (navigation as any).navigate('Main', {
+      screen: 'OrdersTab',
+      params: {
+        screen: 'NewOrders',
+        params: {
+          client_id: employeeId,
+        }
+      }
+    });
+  }
+
   const OrderCard = (item: any) => {
     item = item.item;
 
@@ -90,7 +106,7 @@ export default function OrdersScreen({ route }) {
         {item.company && (
           <View style={styles.row}>
             <Text style={styles.label}>Company:</Text>
-            <Text style={styles.value}>{item.company}</Text>
+            <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.company || '—'}</Text>
           </View>
         )}
 
@@ -111,8 +127,11 @@ export default function OrdersScreen({ route }) {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>My Orders</Text>
+    <View style={{ flex: 1, padding: 13 }}>
+      <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+        <Text style={{ fontSize: 18, marginBottom: 12, color: '#fff' }}>My Orders</Text>
+        {showbtn ? <Button title="New Order +" color="#008a1eff" onPress={newOrderRouteHandler} /> : null}
+      </View>
 
       {loadingServer ? <ActivityIndicator color="#fff" /> : null}
       {serverError ? (
@@ -135,8 +154,8 @@ export default function OrdersScreen({ route }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#292929ff',
-    padding: 16,
+    backgroundColor: darkBg,
+    padding: 14,
     marginHorizontal: 12,
     marginVertical: 6,
     borderRadius: 8,
@@ -151,7 +170,7 @@ const styles = StyleSheet.create({
   },
   orderId: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
   },
   status: {
@@ -161,12 +180,13 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '500',
   },
   row: {
     flexDirection: 'row',
     marginBottom: 8,
+    flexWrap: 'wrap'
   },
   details: {
     flexDirection: 'row',
@@ -179,16 +199,21 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#A0AEC0',
-    fontSize: 15,
+    fontSize: 13,
     marginRight: 6,
   },
   value: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 13,
+  },
+  companyvalue: {
+    color: '#fff',
+    fontSize: 13,
+    width: 150
   },
   amount: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

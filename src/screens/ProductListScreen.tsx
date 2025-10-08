@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, FlatList, Image } from 'react-native';
-import { dark } from '../../colors';
+import { dark, darkBg } from '../../colors';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { API_KEY, getProducts } from '../api/prestashop';
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
-        backgroundColor: '#292929ff',
+        backgroundColor: darkBg,
     },
     productImage: {
         width: 100,

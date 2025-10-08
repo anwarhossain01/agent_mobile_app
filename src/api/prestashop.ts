@@ -48,13 +48,13 @@ export const getClientsForAgent = async (agentId: number) => {
     { employee_id: agentId },
     { baseURL: API_LOGIN_URL }
   );
-  
+
   return res.data.customers || [];
 };
 
 export const getProducts = async () => {
   const res = await api.get('/products?output_format=JSON&display=full&limit=50');
-  console.log('API products sample:', JSON.stringify(res.data.products[0], null, 2));
+  //console.log('API products sample:', JSON.stringify(res.data.products[0], null, 2));
   return res.data.products || [];
 };
 
@@ -119,5 +119,50 @@ export const getSafeOrders = async (limit = 50) => {
     console.error('getSafeOrders error:', err.response?.status, err.response?.data || err.message);
     if (err.response?.data?.errors) console.error('server errors:', err.response.data.errors);
     return [];
+  }
+};
+
+export const getCustomer = async (search: string | number) => {
+  try {
+    let url = `/customers/?display=full&output_format=JSON&ws_key=${API_KEY}`;
+
+    // if search is numeric -> search by ID
+    if (!isNaN(Number(search))) {
+      url += `&filter[id]=[${search}]`;
+    } else if (typeof search === 'string' && search.trim() !== '') {
+      const nameParts = search.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts[1] || '';
+
+      // Wildcard match both firstname and lastname
+      if (lastName) {
+        url += `&filter[firstname]=%[${encodeURIComponent(firstName)}]%&filter[lastname]=%[${encodeURIComponent(lastName)}]%`;
+      } else {
+        url += `&filter[firstname]=%[${encodeURIComponent(firstName)}]%`;
+      }
+    }
+
+    const res = await api.get(url);
+    // console.log('Customer res', res, url);
+
+    return { success: true, data: res.data };
+
+  } catch (error: any) {
+    console.log('Customer error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
+export const getProductSearchResult = async (search: string) => {
+  try {
+    const res = await api.get(
+      `/products?filter[name]=%[${encodeURIComponent(search)}]%&display=[id,name,id_default_image,price]&output_format=JSON&ws_key=${API_KEY}`
+    );
+    console.log('Product search result', res);
+    
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    console.log('Product search error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
   }
 };

@@ -5,6 +5,7 @@ import { RootState } from '../store';
 import { setClients } from '../store/slices/clientsSlice';
 import { getClientsForAgent } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
+import { darkBg } from '../../colors';
 
 export default function ClientsScreen() {
   const dispatch = useDispatch();
@@ -55,35 +56,49 @@ export default function ClientsScreen() {
         data={clients}
         keyExtractor={(item) => String(item.id || item.id_customer)}
         renderItem={({ item }) => (
-          <View
-            style={{
-              padding: 12,
-              borderBottomWidth: 1,
-              borderBottomColor: '#333',
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-            }}
-          >
-            <View>
-              <Text style={{ color: '#fff' }}>{item.firstname} {item.lastname}</Text>
-              <Text style={{ color: '#fff' }}>{item.email}</Text>
-            </View>
-
-            <View style={{ display: 'flex', flexDirection: 'row' }}>
+          <View style={styles.card}>
+            {/* Buttons on top */}
+            <View style={styles.buttonContainer}>
               <TouchableOpacity
-                style={styles.buttonStyle}
-                onPress={() => {ClientOrderNavigate(item.id_customer)}}
+                style={[styles.button, styles.orderButton]}
+                onPress={() => ClientOrderNavigate(item.id_customer)}
               >
-                <Text style={{ color: 'white', fontWeight: '600', fontSize: 11 }}>ORDINE</Text>
+                <Text style={styles.buttonText}>ORDINE</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={styles.buttonStyle}
+                style={[styles.button, styles.detailsButton]}
                 onPress={() => alert('in development')}
               >
-                <Text style={{ color: 'white', fontWeight: '600', fontSize: 11 }}>DETTAGLI</Text>
+                <Text style={styles.buttonText}>DETTAGLI</Text>
               </TouchableOpacity>
+            </View>
+
+            {/* Client Information stacked */}
+            <View style={styles.infoSection}>
+              <Text style={styles.infoText}>
+                <Text style={styles.label}>Codice CMNR: </Text>
+                {item.codice_cmnr}
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.label}>Numero Ordinale: </Text>
+                {item.numero_ordinale}
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.label}>Azienda: </Text>
+                {item.company}
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.label}>Città: </Text>
+                {item.city}
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.label}>Cliente: </Text>
+                {item.firstname} {item.lastname}
+              </Text>
+              <Text style={styles.infoText}>
+                <Text style={styles.label}>Email: </Text>
+                {item.email}
+              </Text>
             </View>
           </View>
         )}
@@ -98,18 +113,78 @@ export default function ClientsScreen() {
 }
 
 const styles = StyleSheet.create({
-  buttonStyle: {
-    margin: 3,
-    backgroundColor: '#0077ffff',
-    paddingHorizontal: 6,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  card: {
+    backgroundColor: darkBg,
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    borderRadius: 8,
+    marginBottom: 8,
   },
+
+  // infoSection: {
+  //   flex: 1,
+  //   marginRight: 12,
+  // },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 6,
+    alignItems: 'flex-start',
+    flexWrap: 'wrap', // allow wrapping if needed
+  },
+  label: {
+    color: '#0af',
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 8,
+  
+  },
+  value: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    flex: 2,          // more space than label
+    flexWrap: 'wrap', // wrap long text
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginBottom: 8,
+    flexWrap: 'wrap', // buttons wrap if small screen
+  },
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 5,
+    alignItems: 'center',
+    minWidth: 70,
+  },
+
+  orderButton: {
+    backgroundColor: '#059669', // Green
+  },
+
+  detailsButton: {
+    backgroundColor: '#2563EB', // Blue
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 11,
+  },
+
+  infoSection: {
+    flexDirection: 'column',
+  },
+
+  infoText: {
+    color: '#fff',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+
+  // label: {
+  //   fontWeight: '600',
+  //   color: '#0af',
+  // },
 });

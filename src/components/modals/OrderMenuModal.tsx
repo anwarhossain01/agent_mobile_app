@@ -41,7 +41,7 @@ export default function OrderMenuModal({
                     }}
                 />
 
-                {/* Clients option */}
+                {/* Order option */}
                 <TouchableOpacity
                     style={{
                         flexDirection: 'row',
@@ -68,6 +68,37 @@ export default function OrderMenuModal({
                         style={{ marginRight: 12 }}
                     />
                     <Text style={{ fontSize: 18, color: '#fff' }}>Ordini</Text>
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+
+                <TouchableOpacity
+                    style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 14,
+                    }}
+                    onPress={() => {
+                        onClose();
+                        navigation.replace('Main', {
+                            screen: 'OrdersTab',
+                            params: {
+                                screen: 'NewOrders',
+                                params: {
+                                    client_id: null,
+                                }
+                            }
+                        });
+                    }}
+                >
+                    <Ionicons
+                        name="add-circle-outline"
+                        size={22}
+                        color="#007AFF"
+                        style={{ marginRight: 12 }}
+                    />
+                    <Text style={{ fontSize: 18, color: '#fff' }}>Nuovo Ordine</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}

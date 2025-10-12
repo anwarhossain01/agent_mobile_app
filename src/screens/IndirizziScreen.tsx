@@ -1,12 +1,13 @@
 
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { dark } from '../../colors';
 
 const IndirizziScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.heading}>Indirizzi Cliente</Text>
-      <ActivityIndicator size="large" color="#007AFF" />
+    
     </View>
   );
 };
@@ -14,14 +15,12 @@ const IndirizziScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    padding: 16,
+    backgroundColor: dark,
   },
   heading: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
+    fontSize: 18,
+    marginBottom: 8,
     color: '#fff'
   },
 });

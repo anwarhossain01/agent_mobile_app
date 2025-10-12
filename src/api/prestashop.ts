@@ -156,13 +156,32 @@ export const getCustomer = async (search: string | number) => {
 export const getProductSearchResult = async (search: string) => {
   try {
     const res = await api.get(
-      `/products?filter[name]=%[${encodeURIComponent(search)}]%&display=[id,name,id_default_image,price]&output_format=JSON&ws_key=${API_KEY}`
+      `/products?filter[name]=%[${encodeURIComponent(search)}]%&display=[id,name,id_default_image,price,minimal_quantity]&output_format=JSON&ws_key=${API_KEY}`
     );
-    console.log('Product search result', res);
-    
+    // console.log('Product search result', res);
     return { success: true, data: res.data };
   } catch (error: any) {
     console.log('Product search error', error);
     return { success: false, error: error.response?.data?.error || error.message };
   }
 };
+
+export const checkProductStock = async (product_id: string | number) => {
+  try {
+    const res = await api.get(`/stock_availables/?filter[id_product]=[${product_id}]&display=[id,id_product,id_product_attribute,quantity,depends_on_stock,out_of_stock]&output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    console.log('Product stock error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+
+  }
+}
+
+export const clientAddressGet = async (client_id: string | number | null) => {
+  try {
+    const res = await api.get(`/addresses/?filter[id_customer]=[${client_id}]&display=full&output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}

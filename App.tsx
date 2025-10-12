@@ -70,6 +70,7 @@ import { dark } from './colors';
 import OrderMenuModal from './src/components/modals/OrderMenuModal';
 import ProductListScreen from './src/screens/ProductListScreen';
 import NewOrderScreen from './src/screens/NewOrderScreen';
+import CartScreen from './src/screens/CartScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -100,6 +101,7 @@ function OrderStackNavigator() {
     <OrderStack.Navigator screenOptions={{ headerShown: false }}>
       <OrderStack.Screen name="Orders" component={OrdersScreen} />
       <OrderStack.Screen name="NewOrders" component={NewOrderScreen} />
+      <OrderStack.Screen name="CartScreen" component={CartScreen} />
     </OrderStack.Navigator>
   );
 }

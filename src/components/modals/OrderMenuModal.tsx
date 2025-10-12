@@ -113,7 +113,12 @@ export default function OrderMenuModal({
                     }}
                     onPress={() => {
                         onClose();
-                        Alert.alert('in development');
+                        (navigation as any).replace('Main', {
+                            screen: 'OrdersTab',
+                            params: {
+                                screen: 'CartScreen',
+                            }
+                        });
                     }}
                 >
                     <Ionicons

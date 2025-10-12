@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { getCustomer, getProductSearchResult } from '../api/prestashop';
+import { checkProductStock, getCustomer, getProductSearchResult } from '../api/prestashop';
+import { useDispatch, useSelector } from 'react-redux';
+import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, selectTotalPrice, selectClientId } from '../store/slices/cartSlice';
+import { useNavigation } from '@react-navigation/native';
 
 const NewOrderScreen = ({ route }) => {
     const [query, setQuery] = useState('');
@@ -12,25 +15,58 @@ const NewOrderScreen = ({ route }) => {
     const [productQuery, setProductQuery] = useState('');
     const [productResults, setProductResults] = useState<any[]>([]);
     const [productLoading, setProductLoading] = useState(false);
-    const [cart, setCart] = useState<any[]>([]);
+    const [quantityInputs, setQuantityInputs] = useState<{ [key: string]: string }>({});
+    const [isNextBtnEnabled, setNextBtnEnabled] = useState(false);
+
+    // Redux state
+    const dispatch = useDispatch();
+    const cart = useSelector(selectCartItems);
+    const grandTotal = useSelector(selectTotalPrice);
+    const reduxClientId = useSelector(selectClientId);
+
     const client_id = route.params?.client_id || null;
+    const navigation = useNavigation();
+
+    useEffect(() => {
+        function enableBtnNextCheck() {
+            if (reduxClientId && cart.length > 0) {
+                // Check if all quantity inputs are valid numbers > 0
+                const allQuantitiesValid = cart.every(item => {
+                    const inputValue = quantityInputs[item.product_id];
+                    // Must have a local input and it must be valid
+                    if (inputValue !== undefined) {
+                        const parsed = parseInt(inputValue);
+                        return !isNaN(parsed) && parsed > 0;
+                    }
+                    return false;
+                });
+
+                setNextBtnEnabled(allQuantitiesValid);
+            } else {
+                setNextBtnEnabled(false);
+            }
+        }
+
+        enableBtnNextCheck();
+    }, [cart, reduxClientId, quantityInputs]);
 
     useEffect(() => {
         const fetchClientById = async () => {
             if (!client_id) return;
             setLoading(true);
-            const res = await getCustomer(client_id); 
+            const res = await getCustomer(client_id);
             setLoading(false);
 
             if (res.success && res.data?.customers?.length > 0) {
                 const client = res.data.customers[0];
                 setSelectedCustomer(client);
                 setQuery(`${client.firstname} ${client.lastname}`);
+                dispatch(setClientId(client.id.toString()));
             }
         };
 
         fetchClientById();
-    }, [client_id]);
+    }, [client_id, dispatch]);
 
     // ===== Debounce =====
     const debounce = (func: (...args: any[]) => void, delay = 600) => {
@@ -64,6 +100,7 @@ const NewOrderScreen = ({ route }) => {
 
     const handleSelectCustomer = (item: any) => {
         setSelectedCustomer(item);
+        dispatch(setClientId(item.id.toString()));
         setQuery(`${item.firstname} ${item.lastname}`);
         setFilteredData([]);
     };
@@ -77,7 +114,11 @@ const NewOrderScreen = ({ route }) => {
 
         setProductLoading(true);
         const res = await getProductSearchResult(searchText);
+
         setProductLoading(false);
+
+        //   const prod_stock =  await checkProductStock(res.data.products[0].id);
+        //   console.log('Product stock result', prod_stock.data);
 
         if (res.success && res.data?.products) setProductResults(res.data.products);
         else setProductResults([]);
@@ -90,38 +131,111 @@ const NewOrderScreen = ({ route }) => {
         debouncedFetchProduct(text);
     };
 
-    const handleSelectProduct = (item: any) => {
+    const handleSelectProduct = async (item: any) => {
         setProductQuery('');
         setProductResults([]);
-        setCart((prev) => {
-            const exists = prev.find((p) => p.id === item.id);
-            if (exists) {
-                return prev.map((p) =>
-                    p.id === item.id
-                        ? { ...p, quantity: p.quantity + 1, total: (p.quantity + 1) * p.price }
-                        : p
-                );
-            } else {
-                const price = parseFloat(item.price || 0);
-                return [...prev, { ...item, quantity: 1, price, total: price }];
+        // Check product stock
+        const stockRes = await checkProductStock(item.id);
+        const stockData = stockRes.data?.stock_availables?.[0];
+        console.log('Stock data', stockData);
+
+        if (stockData?.out_of_stock == 1) {
+            Alert.alert('Prodotto non disponibile in magazzino');
+            return;
+        }
+
+        if (stockData?.depends_on_stock === "1") {
+            const availableStock = parseInt(stockData.quantity) || 0;
+
+            if (availableStock <= 0) {
+                Alert.alert('Prodotto non disponibile in magazzino');
+                return;
             }
+
+            const price = parseFloat(item.price || 0);
+            const quantity = parseInt(item.minimal_quantity) || 0;
+
+            dispatch(addItem({
+                product_id: item.id,
+                name: item.name,
+                quantity: quantity,
+                max_quantity: availableStock,
+                price: price,
+            }));
+            setQuantityInputs(prev => {
+                const newInputs = { ...prev };
+                newInputs[item.id] = String(quantity);
+                return newInputs;
+            });
+        }
+        else {
+            // console.log("Went into else block");
+            // console.log("Stock data", stockData.quantity);
+            // console.log(stockData.quantity != 0);
+
+            // Product doesn't depend on stock, add with minimal quantity
+            let quantity = parseInt(item.minimal_quantity) || 1;
+            dispatch(addItem({
+                product_id: item.id,
+                name: item.name,
+                quantity: quantity,
+                max_quantity: stockData.quantity != 0 ? stockData.quantity : null,
+                price: parseFloat(item.price || 0),
+            }));
+            setQuantityInputs(prev => {
+                const newInputs = { ...prev };
+                newInputs[item.id] = String(quantity);
+                return newInputs;
+            });
+        }
+    };
+
+    const handleQuantityChange = (product_id: string | number, newQty: string, max_quantity: number | null) => {
+        // Update local state immediately for responsive input
+        setQuantityInputs(prev => ({
+            ...prev,
+            [product_id]: newQty,
+        }));
+
+        // Only dispatch to Redux when we have a valid final quantity
+        if (newQty === '') return;
+
+        const parsedQty = parseInt(newQty);
+        if (isNaN(parsedQty)) return;
+
+        let quantity = parsedQty;
+        if (quantity < 1) quantity = 1;
+
+        if (max_quantity !== null && quantity > max_quantity) {
+            quantity = max_quantity;
+        }
+        setQuantityInputs(prev => {
+            const newInputs = { ...prev };
+            newInputs[product_id] = String(quantity);
+            return newInputs;
+        });
+        dispatch(updateQuantity({ product_id, quantity }));
+    };
+
+    const handleRemoveProduct = (product_id: string | number) => {
+        dispatch(removeItem(product_id));
+        setQuantityInputs(prev => {
+            const newInputs = { ...prev };
+            delete newInputs[product_id];
+            return newInputs;
         });
     };
 
-    const handleQuantityChange = (id: any, newQty: string) => {
-        const qty = parseInt(newQty) || 1;
-        setCart((prev) =>
-            prev.map((p) =>
-                p.id === id ? { ...p, quantity: qty, total: qty * p.price } : p
-            )
-        );
+    const handleNextBtn = () => {
+        // TODO: Validate inputs
+        console.log('Next btn pressed');
+        (navigation as any).navigate('Main', {
+            screen: 'OrdersTab',
+            params: {
+                screen: 'CartScreen',
+            }
+        });
     };
-
-    const handleRemoveProduct = (id: any) => {
-        setCart((prev) => prev.filter((p) => p.id !== id));
-    };
-
-    const grandTotal = cart.reduce((sum, p) => sum + p.total, 0);
 
     return (
         <KeyboardAvoidingView style={styles.container}>
@@ -215,18 +329,19 @@ const NewOrderScreen = ({ route }) => {
                     </View>
 
                     {/* Cart Items */}
-                    {cart.map((p) => (
-                        <View key={p.id} style={styles.cartItem}>
-                            <Text style={styles.cartName}>{p.name}</Text>
+                    {cart.map((item) => (
+                        <View key={item.product_id} style={styles.cartItem}>
+                            <Text style={styles.cartName}>{item.name}</Text>
                             <TextInput
                                 style={styles.qtyInput}
                                 keyboardType="numeric"
-                                value={String(p.quantity)}
-                                onChangeText={(val) => handleQuantityChange(p.id, val)}
+                                value={quantityInputs[item.product_id] !== undefined ? quantityInputs[item.product_id] : String(item.quantity)}
+                                onChangeText={(val) => handleQuantityChange(item.product_id, val, item.max_quantity)}
+
                             />
-                            <Text style={styles.cartText}>€{p.price.toFixed(2)}</Text>
-                            <Text style={styles.cartText}>€{p.total.toFixed(2)}</Text>
-                            <TouchableOpacity onPress={() => handleRemoveProduct(p.id)}>
+                            <Text style={styles.cartText}>€{item.price.toFixed(2)}</Text>
+                            <Text style={styles.cartText}>€{item.total.toFixed(2)}</Text>
+                            <TouchableOpacity onPress={() => handleRemoveProduct(item.product_id)}>
                                 <Ionicons name="close-circle" size={22} color="#f44" />
                             </TouchableOpacity>
                         </View>
@@ -240,10 +355,12 @@ const NewOrderScreen = ({ route }) => {
                 </View>
             )}
 
+            <View style={{ marginTop: 50 }}>
+                <Button title="Next ▶" color="#007AFF" onPress={handleNextBtn} disabled={!isNextBtnEnabled} />
+            </View>
         </KeyboardAvoidingView>
     );
 };
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#111', padding: 16 },
     title: { fontSize: 18, marginBottom: 8, color: '#fff' },

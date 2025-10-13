@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button, Platform, TouchableNativeFeedback } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { checkProductStock, getCustomer, getProductSearchResult } from '../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
@@ -28,6 +28,16 @@ const NewOrderScreen = ({ route }) => {
     const navigation = useNavigation();
 
     useEffect(() => {
+        function setLocalQuantityState() {
+            cart.forEach(element => {
+                quantityInputs[element.product_id] = String(element.quantity);
+            });
+        }
+
+        setLocalQuantityState();
+    }, []);
+
+    useEffect(() => {
         function enableBtnNextCheck() {
             if (reduxClientId && cart.length > 0) {
                 // Check if all quantity inputs are valid numbers > 0
@@ -52,9 +62,9 @@ const NewOrderScreen = ({ route }) => {
 
     useEffect(() => {
         const fetchClientById = async () => {
-            if (!client_id) return;
+            if (!client_id && !reduxClientId) return;
             setLoading(true);
-            const res = await getCustomer(client_id);
+            const res = await getCustomer(client_id || reduxClientId);
             setLoading(false);
 
             if (res.success && res.data?.customers?.length > 0) {
@@ -66,7 +76,7 @@ const NewOrderScreen = ({ route }) => {
         };
 
         fetchClientById();
-    }, [client_id, dispatch]);
+    }, [client_id, dispatch, reduxClientId]);
 
     // ===== Debounce =====
     const debounce = (func: (...args: any[]) => void, delay = 600) => {
@@ -137,7 +147,7 @@ const NewOrderScreen = ({ route }) => {
         // Check product stock
         const stockRes = await checkProductStock(item.id);
         const stockData = stockRes.data?.stock_availables?.[0];
-        console.log('Stock data', stockData);
+        //  console.log('Stock data', stockData);
 
         if (stockData?.out_of_stock == 1) {
             Alert.alert('Prodotto non disponibile in magazzino');
@@ -355,9 +365,43 @@ const NewOrderScreen = ({ route }) => {
                 </View>
             )}
 
-            <View style={{ marginTop: 50 }}>
-                <Button title="Next ▶" color="#007AFF" onPress={handleNextBtn} disabled={!isNextBtnEnabled} />
-            </View>
+            {Platform.OS === 'android' ? (
+                <TouchableNativeFeedback
+                    onPress={handleNextBtn}
+                    disabled={!isNextBtnEnabled}
+                    background={TouchableNativeFeedback.Ripple('#0056b3', false)}
+                >
+                    <View style={{
+                        backgroundColor: isNextBtnEnabled ? '#007AFF' : '#ccc',
+                        paddingVertical: 12,
+                        paddingHorizontal: 24,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        marginTop: 55
+                    }}>
+                        <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                            Next ▶
+                        </Text>
+                    </View>
+                </TouchableNativeFeedback>
+            ) : (
+                <TouchableOpacity
+                    onPress={handleNextBtn}
+                    disabled={!isNextBtnEnabled}
+                    style={{
+                        backgroundColor: '#007AFF',
+                        paddingVertical: 12,
+                        paddingHorizontal: 24,
+                        borderRadius: 8,
+                        alignItems: 'center',
+                        marginTop: 55
+                    }}
+                >
+                    <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                        Next ▶
+                    </Text>
+                </TouchableOpacity>
+            )}
         </KeyboardAvoidingView>
     );
 };

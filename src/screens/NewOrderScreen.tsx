@@ -369,7 +369,7 @@ const NewOrderScreen = ({ route }) => {
                 <TouchableNativeFeedback
                     onPress={handleNextBtn}
                     disabled={!isNextBtnEnabled}
-                    background={TouchableNativeFeedback.Ripple('#0056b3', false)}
+                    background={TouchableNativeFeedback.Ripple('#003c7cff', false)}
                 >
                     <View style={{
                         backgroundColor: isNextBtnEnabled ? '#007AFF' : '#ccc',

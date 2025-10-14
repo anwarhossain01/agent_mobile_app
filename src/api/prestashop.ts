@@ -1,4 +1,6 @@
 import axios from 'axios';
+import base64 from 'react-native-base64'
+
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
 const API_LOGIN_URL = 'https://b2b.fumostore.com/module';
@@ -24,8 +26,6 @@ const api = axios.create({
     'Output-Format': 'JSON',
   },
 });
-
-
 
 export const loginEmployee = async (email: string, password: string) => {
 
@@ -182,6 +182,68 @@ export const clientAddressGet = async (client_id: string | number | null) => {
     const res = await api.get(`/addresses/?filter[id_customer]=[${client_id}]&display=full&output_format=JSON&ws_key=${API_KEY}`);
     return { success: true, data: res.data };
   } catch (error) {
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const createNewAddress = async (
+  customer_id: string | number | null,
+  alias: string,
+  firstname: string,
+  lastname: string,
+  company: string,
+  address1: string,
+  postcode: string,
+  city: string,
+  id_country: number,
+  phone_mobile: string | null,
+  dni: number | null
+) => {
+  try {
+    const xmlData = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop>
+  <address>
+    <id_customer>${customer_id}</id_customer>
+    <alias><![CDATA[${alias}]]></alias>
+    <firstname><![CDATA[${firstname}]]></firstname>
+    <lastname><![CDATA[${lastname}]]></lastname>
+    <company><![CDATA[${company}]]></company>
+    <address1><![CDATA[${address1}]]></address1>
+    <postcode><![CDATA[${postcode}]]></postcode>
+    <city><![CDATA[${city}]]></city>
+    <id_country>${id_country}</id_country>
+    <phone_mobile><![CDATA[${phone_mobile || ''}]]></phone_mobile>
+    <dni><![CDATA[${dni || ''}]]></dni>
+  </address>
+</prestashop>`;
+
+    const headers = {
+      'Authorization': `Basic ${API_KEY}`,
+      'Content-Type': 'application/xml',
+      'Accept': 'application/json'
+    };
+
+    console.log('createNewAddress xmlData', xmlData);
+
+    const res = await api.post("/addresses", xmlData, {
+      headers: headers
+    });
+
+    console.log('createNewAddress res', res);
+    return { success: true, data: res.data };
+
+  } catch (error: any) {
+    console.log('createNewAddress error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const getCountryList = async (country_name: string | null) => {
+  try {
+    const res = await api.get(`/countries?filter[name]=%[${country_name}]%&display=[id,name]&output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    console.log('Country list error', error);
     return { success: false, error: error.response?.data?.error || error.message };
   }
 }

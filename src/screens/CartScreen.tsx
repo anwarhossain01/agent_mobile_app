@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View, Text, FlatList, ActivityIndicator, StyleSheet, ScrollView,
+  TouchableOpacity, Modal, TextInput, Alert
+} from 'react-native';
 import { dark } from '../../colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { selectCartItems, selectClientId, selectTotalPrice, selectDeliveryAddressId, selectInvoiceAddressId, setDeliveryAddressId, setInvoiceAddressId, } from '../store/slices/cartSlice';
-import { clientAddressGet, getCustomer } from '../api/prestashop';
+import {
+  selectCartItems, selectClientId, selectTotalPrice,
+  selectDeliveryAddressId, selectInvoiceAddressId,
+  setDeliveryAddressId, setInvoiceAddressId
+} from '../store/slices/cartSlice';
+import { clientAddressGet, getCustomer, createNewAddress, getCountryList } from '../api/prestashop';
 
 const CartScreen = () => {
   const cart = useSelector(selectCartItems);
@@ -12,21 +19,58 @@ const CartScreen = () => {
   const client_id = useSelector(selectClientId);
   const delivery_address_id = useSelector(selectDeliveryAddressId);
   const invoice_address_id = useSelector(selectInvoiceAddressId);
-  
+
   const [loading, setLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [showDeliveryDropdown, setShowDeliveryDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
-  
+  const [showNewAddressModal, setShowNewAddressModal] = useState(false);
+  const [countries, setCountries] = useState<any[]>([]);
+  const [countrySearch, setCountrySearch] = useState('');
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [creatingAddress, setCreatingAddress] = useState(false);
+
+  const [selectedAlias, setSelectedAlias] = useState('');
+  const aliasOptions = ['Delivery', 'Invoice'];
+
+  const [newAddress, setNewAddress] = useState({
+    alias: '',
+    company: '',
+    address1: '',
+    postcode: '',
+    city: '',
+    id_country: '',
+    phone_mobile: ''
+  });
+
   const dispatch = useDispatch();
 
   useEffect(() => {
+    if (countrySearch.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        searchCountries(countrySearch);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setCountries([]);
+    }
+  }, [countrySearch]);
+
+  const searchCountries = async (searchText: string) => {
+    const res = await getCountryList(searchText);
+    if (res.success && res.data?.countries) {
+      setCountries(res.data.countries);
+    }
+  };
+
+  useEffect(() => {
     async function getClientAddresses() {
-      if(!client_id) return;
+      if (!client_id) return;
       const res = await clientAddressGet(client_id);
-      console.log('clientAddressGet', res.data);
       if (res.success && res.data?.addresses) {
+        console.log(res.data.addresses);
+        
         setAddresses(res.data.addresses);
       }
     }
@@ -43,11 +87,16 @@ const CartScreen = () => {
       if (res.success && res.data?.customers?.length > 0) {
         const client = res.data.customers[0];
         setSelectedCustomer(client);
+        setNewAddress(prev => ({
+          ...prev,
+          company: client.company || '',
+          alias: ``
+        }));
       }
     };
 
     fetchClientById();
-  }, [client_id]);
+  }, [client_id, addresses.length]);
 
   const handleSelectDeliveryAddress = (address: any) => {
     dispatch(setDeliveryAddressId(address.id.toString()));
@@ -59,11 +108,74 @@ const CartScreen = () => {
     setShowInvoiceDropdown(false);
   };
 
+  const handleNewAddress = () => {
+    setShowNewAddressModal(true);
+  };
+
+  const handleCreateAddress = async () => {
+    if (!client_id) {
+      Alert.alert('Errore', 'Nessun cliente selezionato');
+      return;
+    }
+
+    if (!newAddress.alias || !newAddress.address1 || !newAddress.city || !newAddress.postcode || !newAddress.id_country) {
+      Alert.alert('Errore', 'Compila tutti i campi obbligatori');
+      return;
+    }
+
+    setCreatingAddress(true);
+    const res = await createNewAddress(
+      client_id,
+      newAddress.alias,
+      selectedCustomer?.firstname || '',
+      selectedCustomer?.lastname || '',
+      newAddress.company,
+      newAddress.address1,
+      newAddress.postcode,
+      newAddress.city,
+      parseInt(newAddress.id_country),
+      newAddress.phone_mobile,
+      Date.now()
+    );
+
+    setCreatingAddress(false);
+    // console.log('createNewAddress res', res.data);
+
+
+    if (res.success) {
+      //Alert.alert('Successo', 'Indirizzo creato con successo');
+      setShowNewAddressModal(false);
+      const addressesRes = await clientAddressGet(client_id);
+      if (addressesRes.success && addressesRes.data?.addresses) {
+        setAddresses(addressesRes.data.addresses);
+      }
+
+      Alert.alert('Successo !', 'Indirizzo creato con successo');
+      // setNewAddress({
+      //   alias: `Indirizzo ${addresses.length + 2}`,
+      //   company: selectedCustomer?.company || '',
+      //   address1: '',
+      //   postcode: '',
+      //   city: '',
+      //   id_country: '',
+      //   phone_mobile: ''
+      // });
+      setCountrySearch('');
+    } else {
+      Alert.alert('Errore', res.error || 'Errore nella creazione dell\'indirizzo');
+    }
+  };
+
   const getSelectedAddressText = (addressId: string | null) => {
     if (!addressId) return 'Seleziona indirizzo';
     const address = addresses.find(addr => addr.id.toString() === addressId);
     if (!address) return 'Seleziona indirizzo';
     return `${address.company || ''} ${address.address1}, ${address.city}`.trim();
+  };
+
+  const getCountryName = (countryId: string) => {
+    const country = countries.find(c => c.id.toString() === countryId);
+    return country ? country.name : 'Seleziona paese';
   };
 
   const renderCartItem = ({ item }: { item: any }) => (
@@ -80,7 +192,7 @@ const CartScreen = () => {
   );
 
   const renderAddressItem = (address: any) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.addressItem}
       onPress={() => {
         if (showDeliveryDropdown) handleSelectDeliveryAddress(address);
@@ -98,7 +210,6 @@ const CartScreen = () => {
     <SafeAreaView style={styles.container}>
       <Text style={styles.heading}>Carrello della spesa</Text>
 
-      {/* Client Information */}
       {loading ? (
         <ActivityIndicator color="#0af" style={{ marginVertical: 16 }} />
       ) : selectedCustomer ? (
@@ -119,62 +230,217 @@ const CartScreen = () => {
         <Text style={styles.noCustomer}>Nessun cliente selezionato</Text>
       )}
 
-      {/* Address Selection */}
-      {addresses.length > 0 && (
-        <View style={styles.addressSection}>
-          {/* Delivery Address */}
-          <View style={styles.addressDropdown}>
-            <Text style={styles.addressLabel}>Indirizzo di Consegna:</Text>
-            <TouchableOpacity 
-              style={styles.addressSelector}
-              onPress={() => setShowDeliveryDropdown(!showDeliveryDropdown)}
-            >
-              <Text style={styles.addressSelectorText}>
-                {getSelectedAddressText(delivery_address_id)}
-              </Text>
-              <Text style={styles.dropdownArrow}>▼</Text>
-            </TouchableOpacity>
-            
-            {showDeliveryDropdown && (
-              <View style={styles.dropdown}>
-                <FlatList
-                  data={addresses}
-                  renderItem={({ item }) => renderAddressItem(item)}
-                  keyExtractor={(item) => item.id.toString()}
-                  style={styles.dropdownList}
-                />
-              </View>
-            )}
-          </View>
+      <View style={styles.addressSection}>
+        <View style={styles.addressHeader}>
+          <Text style={styles.addressSectionTitle}>Indirizzi</Text>
+          <TouchableOpacity style={styles.newAddressButton} onPress={handleNewAddress}>
+            <Text style={styles.newAddressButtonText}>+ Nuovo Indirizzo</Text>
+          </TouchableOpacity>
+        </View>
 
-          {/* Invoice Address */}
-          <View style={styles.addressDropdown}>
-            <Text style={styles.addressLabel}>Indirizzo di Fatturazione:</Text>
-            <TouchableOpacity 
-              style={styles.addressSelector}
-              onPress={() => setShowInvoiceDropdown(!showInvoiceDropdown)}
-            >
-              <Text style={styles.addressSelectorText}>
-                {getSelectedAddressText(invoice_address_id)}
-              </Text>
-              <Text style={styles.dropdownArrow}>▼</Text>
-            </TouchableOpacity>
-            
-            {showInvoiceDropdown && (
-              <View style={styles.dropdown}>
-                <FlatList
-                  data={addresses}
-                  renderItem={({ item }) => renderAddressItem(item)}
-                  keyExtractor={(item) => item.id.toString()}
-                  style={styles.dropdownList}
+        <View style={styles.addressDropdown}>
+          <Text style={styles.addressLabel}>Indirizzo di Consegna:</Text>
+          <TouchableOpacity
+            style={styles.addressSelector}
+            onPress={() => setShowDeliveryDropdown(!showDeliveryDropdown)}
+          >
+            <Text style={styles.addressSelectorText}>
+              {getSelectedAddressText(delivery_address_id)}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+
+          {showDeliveryDropdown && (
+            <View style={styles.dropdown}>
+              <FlatList
+                data={addresses}
+                renderItem={({ item }) => renderAddressItem(item)}
+                keyExtractor={(item) => item.id.toString()}
+                style={styles.dropdownList}
+              />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.addressDropdown}>
+          <Text style={styles.addressLabel}>Indirizzo di Fatturazione:</Text>
+          <TouchableOpacity
+            style={styles.addressSelector}
+            onPress={() => setShowInvoiceDropdown(!showInvoiceDropdown)}
+          >
+            <Text style={styles.addressSelectorText}>
+              {getSelectedAddressText(invoice_address_id)}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+
+          {showInvoiceDropdown && (
+            <View style={styles.dropdown}>
+              <FlatList
+                data={addresses}
+                renderItem={({ item }) => renderAddressItem(item)}
+                keyExtractor={(item) => item.id.toString()}
+                style={styles.dropdownList}
+              />
+            </View>
+          )}
+        </View>
+      </View>
+
+      <Modal
+        visible={showNewAddressModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowNewAddressModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Nuovo Indirizzo</Text>
+
+            <ScrollView style={styles.modalForm} nestedScrollEnabled={true}>
+              <View style={styles.readonlyField}>
+                <Text style={styles.readonlyLabel}>Cliente</Text>
+                <Text style={styles.readonlyValue}>
+                  {selectedCustomer?.firstname} {selectedCustomer?.lastname}
+                </Text>
+              </View>
+
+              <View style={styles.aliasContainer}>
+                <Text style={styles.aliasLabel}>Tipo Indirizzo:</Text>
+                <View style={styles.aliasOptions}>
+                  {aliasOptions.map((alias) => (
+                    <TouchableOpacity
+                      key={alias}
+                      style={[
+                        styles.aliasOption,
+                        selectedAlias === alias && styles.aliasOptionSelected
+                      ]}
+                      onPress={() => {
+                        setSelectedAlias(alias);
+                        setNewAddress(prev => ({ ...prev, alias }));
+                      }}
+                    >
+                      <View style={[
+                        styles.checkbox,
+                        selectedAlias === alias && styles.checkboxSelected
+                      ]}>
+                        {selectedAlias === alias && <Text style={styles.checkmark}>✓</Text>}
+                      </View>
+                      <Text style={[
+                        styles.aliasText,
+                        selectedAlias === alias && styles.aliasTextSelected
+                      ]}>
+                        {alias}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Azienda"
+                placeholderTextColor="#888"
+                value={newAddress.company}
+                onChangeText={(text) => setNewAddress(prev => ({ ...prev, company: text }))}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Indirizzo *"
+                placeholderTextColor="#888"
+                value={newAddress.address1}
+                onChangeText={(text) => setNewAddress(prev => ({ ...prev, address1: text }))}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Postcode *"
+                placeholderTextColor="#888"
+                value={newAddress.postcode}
+                onChangeText={(text) => setNewAddress(prev => ({ ...prev, postcode: text }))}
+                keyboardType="numeric"
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholder="Città *"
+                placeholderTextColor="#888"
+                value={newAddress.city}
+                onChangeText={(text) => setNewAddress(prev => ({ ...prev, city: text }))}
+              />
+
+              <View style={styles.countryInputContainer}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Cerca paese *"
+                  placeholderTextColor="#888"
+                  value={countrySearch}
+                  onChangeText={(text) => {
+                    setCountrySearch(text);
+                    setShowCountryDropdown(true);
+                  }}
+                  onFocus={() => setShowCountryDropdown(true)}
                 />
               </View>
-            )}
+
+              {showCountryDropdown && countries.length > 0 && (
+                <View style={styles.countryDropdown}>
+                  <FlatList
+                    data={countries}
+                    keyExtractor={(item) => item.id.toString()}
+                    style={styles.countryDropdownList}
+                    horizontal={true}
+                    showsHorizontalScrollIndicator={true}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={styles.dropdownItem}
+                        onPress={() => {
+                          setNewAddress(prev => ({ ...prev, id_country: item.id.toString() }));
+                          setCountrySearch(item.name);
+                          setShowCountryDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownItemText}>{item.name}</Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                </View>
+              )}
+
+              <TextInput
+                style={styles.input}
+                placeholder="Telefono"
+                placeholderTextColor="#888"
+                value={newAddress.phone_mobile}
+                onChangeText={(text) => setNewAddress(prev => ({ ...prev, phone_mobile: text }))}
+                keyboardType="phone-pad"
+              />
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setShowNewAddressModal(false)}
+              >
+                <Text style={styles.cancelButtonText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.createButton]}
+                onPress={handleCreateAddress}
+                disabled={creatingAddress}
+              >
+                {creatingAddress ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.createButtonText}>Crea Indirizzo</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      )}
+      </Modal>
 
-      {/* Cart Items */}
       <ScrollView style={styles.cartList}>
         {cart.length === 0 ? (
           <Text style={styles.emptyCart}>Il carrello è vuoto</Text>
@@ -189,8 +455,7 @@ const CartScreen = () => {
               keyExtractor={(item) => item.product_id.toString()}
               scrollEnabled={false}
             />
-            
-            {/* Grand Total */}
+
             <View style={styles.grandTotal}>
               <Text style={styles.grandTotalText}>Totale Ordine:</Text>
               <Text style={styles.grandTotalAmount}>€{grandTotal.toFixed(2)}</Text>
@@ -241,6 +506,28 @@ const styles = StyleSheet.create({
   addressSection: {
     marginBottom: 20,
   },
+  addressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addressSectionTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  newAddressButton: {
+    backgroundColor: '#0af',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  newAddressButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
   addressDropdown: {
     marginBottom: 16,
   },
@@ -290,6 +577,106 @@ const styles = StyleSheet.create({
   addressText: {
     color: '#ccc',
     fontSize: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: dark,
+    borderRadius: 12,
+    padding: 20,
+    width: '90%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalForm: {
+    maxHeight: 400,
+  },
+  readonlyField: {
+    marginBottom: 16,
+  },
+  readonlyLabel: {
+    color: '#888',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  readonlyValue: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  input: {
+    backgroundColor: '#222',
+    color: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  countryInputContainer: {
+    marginBottom: 12,
+  },
+  inputText: {
+    color: '#fff',
+  },
+  placeholderText: {
+    color: '#888',
+  },
+  countryDropdown: {
+    backgroundColor: '#333',
+    borderRadius: 8,
+    marginTop: -12,
+    marginBottom: 12,
+    maxHeight: 60,
+  },
+  countryDropdownList: {
+    padding: 8,
+  },
+  dropdownItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    backgroundColor: '#444',
+    borderRadius: 6,
+  },
+  dropdownItemText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  cancelButton: {
+    backgroundColor: '#666',
+  },
+  cancelButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  createButton: {
+    backgroundColor: '#0af',
+  },
+  createButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   cartList: {
     flex: 1,
@@ -360,6 +747,61 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 16,
     marginTop: 50,
+  },
+  aliasContainer: {
+    marginBottom: 16,
+  },
+  aliasLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  aliasOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  aliasOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#222',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  aliasOptionSelected: {
+    backgroundColor: '#0af',
+    borderColor: '#0af',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#888',
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxSelected: {
+    borderColor: '#fff',
+    backgroundColor: '#fff',
+  },
+  checkmark: {
+    color: '#0af',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  aliasText: {
+    color: '#ccc',
+    fontSize: 14,
+  },
+  aliasTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

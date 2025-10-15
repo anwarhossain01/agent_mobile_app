@@ -64,7 +64,7 @@ export default function ClientsMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Clients</Text>
+                    <Text style={{ fontSize: 18, color: '#fff' }}>Clienti</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}

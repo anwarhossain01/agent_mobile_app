@@ -6,6 +6,7 @@ import { setClients } from '../store/slices/clientsSlice';
 import { getClientsForAgent } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
 import { darkBg } from '../../colors';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ClientsScreen() {
   const dispatch = useDispatch();
@@ -45,8 +46,8 @@ export default function ClientsScreen() {
   }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Assigned Clients</Text>
+    <SafeAreaView style={{ flex: 1, padding: 14 }}>
+      <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Clienti</Text>
       {noData ? (
         <View style={{ display: 'flex', flex: 1, padding: 2, alignItems: 'center' }}>
           <Text style={{ fontSize: 21, marginBottom: 8, color: '#ffffff27', fontWeight: 'bold' }}>Empty</Text>
@@ -108,18 +109,19 @@ export default function ClientsScreen() {
         color="#007AFF"
         onPress={() => alert('Trigger sync from background service in a real app')}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: darkBg,
-    padding: 14,
+    paddingTop: 14,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#333',
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
   // infoSection: {
@@ -137,7 +139,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginRight: 8,
-  
+
   },
   value: {
     color: '#FFFFFF',

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button, Platform, TouchableNativeFeedback } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button, Platform, TouchableNativeFeedback, ScrollView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { checkProductStock, getCustomer, getProductSearchResult } from '../api/prestashop';
+import { checkProductStock, getCartDetails, getCartListForClient, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
-import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, selectTotalPrice, selectClientId } from '../store/slices/cartSlice';
+import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, selectTotalPrice, selectClientId, setCartId } from '../store/slices/cartSlice';
 import { useNavigation } from '@react-navigation/native';
 
 const NewOrderScreen = ({ route }) => {
@@ -17,6 +17,12 @@ const NewOrderScreen = ({ route }) => {
     const [productLoading, setProductLoading] = useState(false);
     const [quantityInputs, setQuantityInputs] = useState<{ [key: string]: string }>({});
     const [isNextBtnEnabled, setNextBtnEnabled] = useState(false);
+
+    // for carts
+    const [carts, setCarts] = useState<any[]>([]);
+    const [showCartDropdown, setShowCartDropdown] = useState(false);
+    const [selectedCart, setSelectedCart] = useState<any | null>(null);
+    const [loadingCarts, setLoadingCarts] = useState(false);
 
     // Redux state
     const dispatch = useDispatch();
@@ -77,6 +83,57 @@ const NewOrderScreen = ({ route }) => {
 
         fetchClientById();
     }, [client_id, dispatch, reduxClientId]);
+
+    useEffect(() => {
+        if (!client_id && !reduxClientId) return;
+        fetchClientCarts();
+    }, [client_id, reduxClientId]);
+
+    const fetchClientCarts = async () => {
+        if (!client_id && !reduxClientId) return;
+
+        setLoadingCarts(true);
+        try {
+            // Get all carts for client
+            const cartsRes = await getCartListForClient(client_id || reduxClientId);
+            if (!cartsRes.success || !cartsRes.data?.carts) {
+                setCarts([]);
+                return;
+            }
+
+            // Filter out carts that have orders AND are empty
+            const availableCarts = [];
+            for (const cart of cartsRes.data.carts) {
+                const ordersRes = await getOrdersFiltered(null, cart.id);
+
+                // Check if cart has no order AND is empty (no cart_rows)
+                if (ordersRes.success && (!ordersRes.data.orders || ordersRes.data.orders.length === 0)) {
+                    const cartDetailsRes = await getCartDetails(cart.id);
+                    if (cartDetailsRes.success) {
+                        const cartData = cartDetailsRes.data.cart;
+                        // Check if cart is empty (no associations or no cart_rows)
+                        if (!cartData.associations || !cartData.associations.cart_rows || cartData.associations.cart_rows.length === 0) {
+                            availableCarts.push(cartData);
+                        }
+                    }
+                }
+            }
+
+            setCarts(availableCarts);
+        } catch (error) {
+            console.log('Error fetching carts:', error);
+            setCarts([]);
+        } finally {
+            setLoadingCarts(false);
+        }
+    };
+
+    const handleSelectCart = (cart: any) => {
+        setSelectedCart(cart);
+        setShowCartDropdown(false);
+
+        dispatch(setCartId({ id_cart: cart.id }));
+    };
 
     // ===== Debounce =====
     const debounce = (func: (...args: any[]) => void, delay = 600) => {
@@ -278,7 +335,65 @@ const NewOrderScreen = ({ route }) => {
                 </View>
             )}
 
-            {selectedCustomer && (
+            {/* Cart Selection Section */}
+            <View style={styles.cartSection}>
+                <View style={styles.cartHeaderSelection}>
+                    <Text style={styles.cartSectionTitle}>Seleziona Carrello</Text>
+                    <TouchableOpacity
+                        style={styles.refreshButton}
+                        onPress={fetchClientCarts}
+                        disabled={loadingCarts}
+                    >
+                        {loadingCarts ? (
+                            <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                            <Text style={styles.refreshButtonText}>🔄</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.cartDropdown}>
+                    <TouchableOpacity
+                        style={styles.cartSelector}
+                        onPress={() => setShowCartDropdown(!showCartDropdown)}
+                        disabled={loadingCarts}
+                    >
+                        <Text style={styles.cartSelectorText}>
+                            {selectedCart
+                                ? `Carrello #${selectedCart.id} (${selectedCart.associations?.cart_rows?.length || 0} prodotti)`
+                                : loadingCarts
+                                    ? 'Caricamento carrelli...'
+                                    : carts.length === 0
+                                        ? 'Nessun carrello disponibile'
+                                        : 'Seleziona un carrello'
+                            }
+                        </Text>
+                        <Text style={styles.dropdownArrow}>▼</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.cartHintText}>
+                        (Opzionale) - Se non selezioni un carrello, ne verrà creato uno automaticamente per te
+                    </Text>
+
+                    {showCartDropdown && carts.length > 0 && (
+                        <View style={styles.dropdown}>
+                            {carts.map((item) => (
+                                <TouchableOpacity
+                                    key={item.id.toString()}
+                                    style={styles.cartItemSelection}
+                                    onPress={() => handleSelectCart(item)}
+                                >
+                                    <Text style={styles.cartId}>Carrello #{item.id}</Text>
+                                    <Text style={styles.cartDetails}>
+                                        {item.associations?.cart_rows?.length || 0} prodotti •
+                                        Aggiornato: {new Date(item.date_upd).toLocaleDateString()}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </View>
+            {/* {selectedCustomer && (
                 <View style={styles.customerBox}>
                     <Text style={styles.customerName}>
                         {selectedCustomer.firstname} {selectedCustomer.lastname}
@@ -295,7 +410,7 @@ const NewOrderScreen = ({ route }) => {
                         Created: {selectedCustomer.date_add}
                     </Text>
                 </View>
-            )}
+            )} */}
 
             {/* PRODUCT SEARCH */}
             <Text style={[styles.title, { marginTop: 16 }]}>Aggiungi Prodotto</Text>
@@ -318,96 +433,97 @@ const NewOrderScreen = ({ route }) => {
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => handleSelectProduct(item)} style={styles.dropdownItem}>
                                 <Text style={styles.dropdownText}>
-                                    {item.name} — €{item.price}
+                                    {item.name} — €{parseFloat(item.price).toFixed(2)}
                                 </Text>
                             </TouchableOpacity>
                         )}
                     />
                 </View>
             )}
-
-            {/* CART LIST */}
-            {cart.length > 0 && (
-                <View style={styles.cartBox}>
-                    {/* Header Row */}
-                    <View style={[styles.cartItem, { borderBottomColor: '#555', borderBottomWidth: 2 }]}>
-                        <Text style={[styles.cartHeader, { flex: 2 }]}>Prodotto</Text>
-                        <Text style={[styles.cartHeader, { width: 50, textAlign: 'center' }]}>Qty</Text>
-                        <Text style={[styles.cartHeader, { flex: 1, textAlign: 'center' }]}>Prezzo</Text>
-                        <Text style={[styles.cartHeader, { flex: 1, textAlign: 'center' }]}>Totale</Text>
-                        <Text style={[styles.cartHeader, { width: 24 }]}></Text>
-                    </View>
-
-                    {/* Cart Items */}
-                    {cart.map((item) => (
-                        <View key={item.product_id} style={styles.cartItem}>
-                            <Text style={styles.cartName}>{item.name}</Text>
-                            <TextInput
-                                style={styles.qtyInput}
-                                keyboardType="numeric"
-                                value={quantityInputs[item.product_id] !== undefined ? quantityInputs[item.product_id] : String(item.quantity)}
-                                onChangeText={(val) => handleQuantityChange(item.product_id, val, item.max_quantity)}
-
-                            />
-                            <Text style={styles.cartText}>€{item.price.toFixed(2)}</Text>
-                            <Text style={styles.cartText}>€{item.total.toFixed(2)}</Text>
-                            <TouchableOpacity onPress={() => handleRemoveProduct(item.product_id)}>
-                                <Ionicons name="close-circle" size={22} color="#f44" />
-                            </TouchableOpacity>
+            <ScrollView style={{ flex: 1 }}>
+                {/* CART LIST */}
+                {cart.length > 0 && (
+                    <View style={styles.cartBox}>
+                        {/* Header Row */}
+                        <View style={[styles.cartItem, { borderBottomColor: '#555', borderBottomWidth: 2 }]}>
+                            <Text style={[styles.cartHeader, { flex: 2 }]}>Prodotto</Text>
+                            <Text style={[styles.cartHeader, { width: 50, textAlign: 'center' }]}>Qty</Text>
+                            <Text style={[styles.cartHeader, { flex: 1, textAlign: 'center' }]}>Prezzo</Text>
+                            <Text style={[styles.cartHeader, { flex: 1, textAlign: 'center' }]}>Totale</Text>
+                            <Text style={[styles.cartHeader, { width: 24 }]}></Text>
                         </View>
-                    ))}
 
-                    {/* Total Row */}
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalText}>Totale:</Text>
-                        <Text style={styles.totalValue}>€{grandTotal.toFixed(2)}</Text>
+                        {/* Cart Items */}
+                        {cart.map((item) => (
+                            <View key={item.product_id} style={styles.cartItem}>
+                                <Text style={styles.cartName}>{item.name}</Text>
+                                <TextInput
+                                    style={styles.qtyInput}
+                                    keyboardType="numeric"
+                                    value={quantityInputs[item.product_id] !== undefined ? quantityInputs[item.product_id] : String(item.quantity)}
+                                    onChangeText={(val) => handleQuantityChange(item.product_id, val, item.max_quantity)}
+
+                                />
+                                <Text style={styles.cartText}>€{item.price.toFixed(2)}</Text>
+                                <Text style={styles.cartText}>€{item.total.toFixed(2)}</Text>
+                                <TouchableOpacity onPress={() => handleRemoveProduct(item.product_id)}>
+                                    <Ionicons name="close-circle" size={22} color="#f44" />
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+
+                        {/* Total Row */}
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalText}>Totale:</Text>
+                            <Text style={styles.totalValue}>€{grandTotal.toFixed(2)}</Text>
+                        </View>
                     </View>
-                </View>
-            )}
+                )}
 
-            {Platform.OS === 'android' ? (
-                <TouchableNativeFeedback
-                    onPress={handleNextBtn}
-                    disabled={!isNextBtnEnabled}
-                    background={TouchableNativeFeedback.Ripple('#003c7cff', false)}
-                >
-                    <View style={{
-                        backgroundColor: isNextBtnEnabled ? '#007AFF' : '#ccc',
-                        paddingVertical: 12,
-                        paddingHorizontal: 24,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                        marginTop: 55
-                    }}>
+                {Platform.OS === 'android' ? (
+                    <TouchableNativeFeedback
+                        onPress={handleNextBtn}
+                        disabled={!isNextBtnEnabled}
+                        background={TouchableNativeFeedback.Ripple('#003c7cff', false)}
+                    >
+                        <View style={{
+                            backgroundColor: isNextBtnEnabled ? '#007AFF' : '#ccc',
+                            paddingVertical: 12,
+                            paddingHorizontal: 24,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            marginTop: 55
+                        }}>
+                            <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                                Next ▶
+                            </Text>
+                        </View>
+                    </TouchableNativeFeedback>
+                ) : (
+                    <TouchableOpacity
+                        onPress={handleNextBtn}
+                        disabled={!isNextBtnEnabled}
+                        style={{
+                            backgroundColor: '#007AFF',
+                            paddingVertical: 12,
+                            paddingHorizontal: 24,
+                            borderRadius: 8,
+                            alignItems: 'center',
+                            marginTop: 55
+                        }}
+                    >
                         <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
                             Next ▶
                         </Text>
-                    </View>
-                </TouchableNativeFeedback>
-            ) : (
-                <TouchableOpacity
-                    onPress={handleNextBtn}
-                    disabled={!isNextBtnEnabled}
-                    style={{
-                        backgroundColor: '#007AFF',
-                        paddingVertical: 12,
-                        paddingHorizontal: 24,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                        marginTop: 55
-                    }}
-                >
-                    <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-                        Next ▶
-                    </Text>
-                </TouchableOpacity>
-            )}
+                    </TouchableOpacity>
+                )}
+            </ScrollView>
         </KeyboardAvoidingView>
     );
 };
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#111', padding: 16 },
-    title: { fontSize: 18, marginBottom: 8, color: '#fff' },
+    title: { fontSize: 16, marginBottom: 8, color: '#fff' },
     input: { backgroundColor: '#222', color: '#fff', padding: 10, borderRadius: 8, marginBottom: 8 },
     dropdown: { backgroundColor: '#333', borderRadius: 8, maxHeight: 200, marginBottom: 8 },
     dropdownItem: { padding: 10, borderBottomColor: '#444', borderBottomWidth: 1 },
@@ -424,7 +540,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         paddingVertical: 8,
     },
-    cartName: { flex: 2, color: '#fff', fontSize: 14 },
+    cartName: { flex: 2, color: '#fff', fontSize: 13 },
     qtyInput: {
         backgroundColor: '#333',
         color: '#fff',
@@ -434,15 +550,85 @@ const styles = StyleSheet.create({
         marginHorizontal: 8,
         padding: 4,
     },
-    cartText: { flex: 1, color: '#ccc', textAlign: 'center' },
+    cartText: { flex: 1, color: '#ccc', textAlign: 'center', fontSize: 13 },
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
     totalText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     totalValue: { color: '#0af', fontSize: 16, fontWeight: 'bold' },
     cartHeader: {
         color: '#0af',
         fontWeight: 'bold',
-        fontSize: 13,
+        fontSize: 12,
         textTransform: 'uppercase',
+    },
+    cartSection: {
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    cartHeaderSelection: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    cartSectionTitle: {
+        color: '#fff',
+        fontSize: 15,
+        fontWeight: 'bold',
+    },
+    refreshButton: {
+        backgroundColor: '#333',
+        padding: 8,
+        borderRadius: 6,
+        width: 36,
+        height: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    refreshButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
+    cartDropdown: {
+        marginBottom: 16,
+    },
+    cartSelector: {
+        backgroundColor: '#222',
+        padding: 12,
+        borderRadius: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    cartSelectorText: {
+        color: '#fff',
+        fontSize: 14,
+        flex: 1,
+    },
+    cartItemSelection: {
+        padding: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#444',
+    },
+    cartId: {
+        color: '#0af',
+        fontSize: 14,
+        fontWeight: 'bold',
+        marginBottom: 4,
+    },
+    cartDetails: {
+        color: '#ccc',
+        fontSize: 12,
+    },
+    cartHintText: {
+        color: '#888',
+        fontSize: 12,
+        marginTop: 4,
+        fontStyle: 'italic',
+    },
+    dropdownArrow: {
+        color: '#0af',
+        fontSize: 12,
+
     },
 });
 

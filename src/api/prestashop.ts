@@ -201,21 +201,21 @@ export const createNewAddress = async (
 ) => {
   try {
     const xmlData = `<?xml version="1.0" encoding="UTF-8"?>
-<prestashop>
-  <address>
-    <id_customer>${customer_id}</id_customer>
-    <alias><![CDATA[${alias}]]></alias>
-    <firstname><![CDATA[${firstname}]]></firstname>
-    <lastname><![CDATA[${lastname}]]></lastname>
-    <company><![CDATA[${company}]]></company>
-    <address1><![CDATA[${address1}]]></address1>
-    <postcode><![CDATA[${postcode}]]></postcode>
-    <city><![CDATA[${city}]]></city>
-    <id_country>${id_country}</id_country>
-    <phone_mobile><![CDATA[${phone_mobile || ''}]]></phone_mobile>
-    <dni><![CDATA[${dni || ''}]]></dni>
-  </address>
-</prestashop>`;
+    <prestashop>
+      <address>
+        <id_customer>${customer_id}</id_customer>
+        <alias><![CDATA[${alias}]]></alias>
+        <firstname><![CDATA[${firstname}]]></firstname>
+        <lastname><![CDATA[${lastname}]]></lastname>
+        <company><![CDATA[${company}]]></company>
+        <address1><![CDATA[${address1}]]></address1>
+        <postcode><![CDATA[${postcode}]]></postcode>
+        <city><![CDATA[${city}]]></city>
+        <id_country>${id_country}</id_country>
+        <phone_mobile><![CDATA[${phone_mobile || ''}]]></phone_mobile>
+        <dni><![CDATA[${dni || ''}]]></dni>
+      </address>
+    </prestashop>`;
 
     const headers = {
       'Authorization': `Basic ${API_KEY}`,
@@ -244,6 +244,123 @@ export const getCountryList = async (country_name: string | null) => {
     return { success: true, data: res.data };
   } catch (error: any) {
     console.log('Country list error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const getCartListForClient = async (id_customer: string | number) => {
+  try {
+    // gets all the carts that client has, this returns the ids of the carts
+    /*
+      {
+  "carts": [
+    {
+      "id": 2086
+    },
+    {
+      "id": 2098
+    },
+  ]
+}
+    */
+    const res = await api.get(`/carts?filter[id_customer]=[${id_customer}]&&output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log('Cart list error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const getCartDetails = async (id_cart: string | number) => {
+  // gets cart details
+  /*
+    {
+  "cart": {
+    "id": 2098,
+    "id_address_delivery": 17085,
+    "id_address_invoice": 17085,
+    "id_currency": 1,
+    "id_customer": 17078,
+    "id_lang": 3,
+    "id_shop_group": 1,
+    "id_shop": 1,
+    "delivery_option": "{\"17085\":\"0,\"}",
+    "secure_key": "00c464e345ea1b20e1c2698c3b20fdc2",
+    "date_add": "2025-10-08 01:16:07",
+    "date_upd": "2025-10-15 10:42:17",
+    "associations": {
+      "cart_rows": [
+        {
+          "id_product": 349,
+          "id_product_attribute": 0,
+          "id_address_delivery": 17085,
+          "id_customization": 0,
+          "quantity": 1
+        }
+      ]
+    }
+  }
+}
+  */
+  try {
+    const res = await api.get(`/carts/${id_cart}?output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log('Cart details error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const getOrdersFiltered = async (
+  id_customer: string | number | null,
+  id_cart: string | number | null,
+) => {
+  try {
+    // order by filter
+    /* 
+      {
+  "orders": [
+    {
+      "id": 1544
+    }
+  ]
+}
+    */
+    let filters = [];
+    if (id_customer) filters.push(`filter[id_customer]=[${id_customer}]`);
+    if (id_cart) filters.push(`filter[id_cart]=[${id_cart}]`);
+
+    const queryString = filters.length > 0 ? `?${filters.join('&')}&` : '?';
+    const res = await api.get(`/orders${queryString}output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log("Orders error", error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const getCouriers= async (id : string | number | null) => {
+  try {
+    let filters = [];
+    if (id) filters.push(`filter[id]=[${id}]`);
+    filters.push(`filter[active]=[1]`);
+    filters.push(`display=[id,name,active,is_free,delay]`);
+    const queryString = filters.length > 0 ? `?${filters.join('&')}&` : '?';
+    const res = await api.get(`/carriers${queryString}output_format=JSON&ws_key=${API_KEY}`);
+   // const res = await api.get(`/carriers?display=[id,name,active,is_free,delay]&filter[active]=[1]&filter[id]=[${id}]&output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log("Orders error", error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+}
+
+export const getDeliveries = async (id_carrier : string | number | null) => {
+  try {
+    const res = await api.get(`/deliveries?display=[id,id_carrier,id_zone,price]&filter[id_carrier]=[${id_carrier}]&ws_key=${API_KEY}&output_format=JSON`);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log("Orders error", error);
     return { success: false, error: error.response?.data?.error || error.message };
   }
 }

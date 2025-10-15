@@ -15,6 +15,8 @@ interface CartState {
   invoice_address_id : string | null;
   items: CartItem[];
   totalPrice: number;
+  id_cart: string | number | null;
+  id_carrier: string | number| null;
 }
 
 // Initial state
@@ -24,6 +26,7 @@ const initialState: CartState = {
   delivery_address_id: null,
   invoice_address_id: null,
   totalPrice: 0,
+  id_cart: null,
 };
 
 const cartSlice = createSlice({
@@ -41,6 +44,14 @@ const cartSlice = createSlice({
 
     setInvoiceAddressId: (state, action: PayloadAction<string>) => {
       state.invoice_address_id = action.payload;
+    },
+
+    setCartId: (state, action: PayloadAction<string | any>) => {
+      state.id_cart = action.payload;
+    },
+
+    setCarrierId: (state, action: PayloadAction<string | any>) => {
+      state.id_carrier = action.payload;
     },
     
     // Add item to cart
@@ -116,6 +127,8 @@ export const {
   removeItem,
   clearCart,
   initializeCart,
+  setCartId,
+  setCarrierId
 } = cartSlice.actions;
 
 // Export selectors
@@ -126,6 +139,8 @@ export const selectCartItemCount = (state: { cart: CartState }) =>
   state.cart.items.reduce((count, item) => count + item.quantity, 0);
 export const selectDeliveryAddressId = (state: { cart: CartState }) => state.cart.delivery_address_id;
 export const selectInvoiceAddressId = (state: { cart: CartState }) => state.cart.invoice_address_id;
+export const selectCartId = (state: { cart: CartState }) => state.cart.id_cart;
+export const selectCarrierId = (state: { cart: CartState }) => state.cart.id_carrier;
 
 // Export reducer
 export default cartSlice.reducer;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator, StyleSheet, ScrollView,
   TouchableOpacity, Modal, TextInput, Alert
@@ -9,9 +9,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import {
   selectCartItems, selectClientId, selectTotalPrice,
   selectDeliveryAddressId, selectInvoiceAddressId,
-  setDeliveryAddressId, setInvoiceAddressId
+  setDeliveryAddressId, setInvoiceAddressId,
+  selectCarrierId,
+  setCarrierId,
+
 } from '../store/slices/cartSlice';
-import { clientAddressGet, getCustomer, createNewAddress, getCountryList } from '../api/prestashop';
+import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries } from '../api/prestashop';
 
 const CartScreen = () => {
   const cart = useSelector(selectCartItems);
@@ -33,6 +36,11 @@ const CartScreen = () => {
 
   const [selectedAlias, setSelectedAlias] = useState('');
   const aliasOptions = ['Delivery', 'Invoice'];
+
+  const [freeDelivery, setFreeDelivery] = useState(false);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
+  const hasFetched = useRef(false);
+  const [courier, setCourier] = useState<any>(null);
 
   const [newAddress, setNewAddress] = useState({
     alias: '',
@@ -69,8 +77,8 @@ const CartScreen = () => {
       if (!client_id) return;
       const res = await clientAddressGet(client_id);
       if (res.success && res.data?.addresses) {
-        console.log(res.data.addresses);
-        
+        //  console.log(res.data.addresses);
+
         setAddresses(res.data.addresses);
       }
     }
@@ -112,6 +120,14 @@ const CartScreen = () => {
     setShowNewAddressModal(true);
   };
 
+  // Calculate total with shipping
+  const calculateTotalWithShipping = () => {
+    if (freeDelivery) return grandTotal;
+
+    const paidDelivery = deliveries.find((d: any) => parseFloat(d.price) > 0);
+    const shippingPrice = paidDelivery ? parseFloat(paidDelivery.price) : 0;
+    return grandTotal + shippingPrice;
+  };
   const handleCreateAddress = async () => {
     if (!client_id) {
       Alert.alert('Errore', 'Nessun cliente selezionato');
@@ -206,242 +222,361 @@ const CartScreen = () => {
     </TouchableOpacity>
   );
 
+  const ShippingInformation = ({
+    freeDelivery,
+    setFreeDelivery,
+    deliveries,
+    setDeliveries,
+    setCourier,
+    dispatch
+  }: any) => {
+   // const dispatch = useDispatch();
+    //  const [deliveries, setDeliveries] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    //  const [freeDelivery, setFreeDelivery] = useState(false);
+    const [showCourierDropdown, setShowCourierDropdown] = useState(false);
+
+
+    useEffect(() => {
+      if (hasFetched.current) return;
+
+      const fetchCourierData = async () => {
+        hasFetched.current = true;
+        setLoading(true);
+        console.log('fetchCourierData - ONLY ONCE');
+
+        try {
+          // Get carrier details (default to 27)
+          const courierRes = await getCouriers(27);
+        //  console.log('courierRes', courierRes);
+
+          if (courierRes.success && courierRes.data?.carriers?.length > 0) {
+            const carrierData = courierRes.data.carriers[0];
+            console.log('courierData', carrierData);
+            
+            setCourier(carrierData);
+            dispatch(setCarrierId(carrierData.id));
+
+            // Get delivery options for this carrier
+            const deliveryRes = await getDeliveries(carrierData.id);
+         //   console.log('deliveryRes', deliveryRes);
+
+            if (deliveryRes.success && deliveryRes.data?.deliveries) {
+              setDeliveries(deliveryRes.data.deliveries);
+            }
+          }
+        } catch (error) {
+          console.log('Error fetching courier data:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchCourierData();
+    }, []);
+
+    const getDeliveryPrice = () => {
+      if (freeDelivery) return 0;
+      const paidDelivery = deliveries.find((d: any) => parseFloat(d.price) > 0);
+      return paidDelivery ? parseFloat(paidDelivery.price) : 0;
+    };
+
+    return (
+      <View style={styles.shippingSection}>
+        <Text style={styles.shippingTitle}>Spedizione</Text>
+
+        {/* Courier Dropdown - Only one option */}
+        <View style={styles.shippingDropdown}>
+          <Text style={styles.shippingLabel}>Opzioni di spedizione:</Text>
+          <TouchableOpacity
+            style={styles.shippingSelector}
+            onPress={() => setShowCourierDropdown(!showCourierDropdown)}
+            disabled={loading}
+          >
+            <Text style={styles.shippingSelectorText}>
+              {loading ? 'Caricamento...' : `${courier?.name} - ${courier?.delay}`}
+            </Text>
+            <Text style={styles.dropdownArrow}>▼</Text>
+          </TouchableOpacity>
+
+          {showCourierDropdown && !loading && courier && (
+            <View style={styles.dropdown}>
+              <TouchableOpacity
+                style={styles.shippingOption}
+                onPress={() => setShowCourierDropdown(false)}
+              >
+                <Text style={styles.shippingOptionText}>{courier.name}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Free Delivery Checkbox */}
+        <View style={styles.freeDeliveryContainer}>
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setFreeDelivery(!freeDelivery)}
+          >
+            <View style={[
+              styles.checkbox,
+              freeDelivery && styles.checkboxSelected
+            ]}>
+              {freeDelivery && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.freeDeliveryText}>Spedizione gratuita</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Shipping Price Display */}
+        <View style={styles.shippingPrice}>
+          <Text style={styles.shippingPriceLabel}>Prezzo di spedizione (IVA incl.):</Text>
+          <Text style={styles.shippingPriceValue}>€{getDeliveryPrice().toFixed(2)}</Text>
+        </View>
+
+        {loading && (
+          <ActivityIndicator color="#0af" style={styles.loadingIndicator} />
+        )}
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.heading}>Carrello della spesa</Text>
+      <ScrollView >
+        <Text style={styles.heading}>Carrello della spesa</Text>
 
-      {loading ? (
-        <ActivityIndicator color="#0af" style={{ marginVertical: 16 }} />
-      ) : selectedCustomer ? (
-        <View style={styles.customerBox}>
-          <Text style={styles.customerName}>
-            {selectedCustomer.firstname} {selectedCustomer.lastname}
-          </Text>
-          <Text style={styles.customerField}>{selectedCustomer.company}</Text>
-          <Text style={styles.customerField}>{selectedCustomer.email}</Text>
-          <Text style={styles.customerField}>
-            Codice CMNR: {selectedCustomer.codice_cmnr || 'N/A'}
-          </Text>
-          <Text style={styles.customerField}>
-            Numero Ordinale: {selectedCustomer.numero_ordinale || 'N/A'}
-          </Text>
-        </View>
-      ) : (
-        <Text style={styles.noCustomer}>Nessun cliente selezionato</Text>
-      )}
-
-      <View style={styles.addressSection}>
-        <View style={styles.addressHeader}>
-          <Text style={styles.addressSectionTitle}>Indirizzi</Text>
-          <TouchableOpacity style={styles.newAddressButton} onPress={handleNewAddress}>
-            <Text style={styles.newAddressButtonText}>+ Nuovo Indirizzo</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.addressDropdown}>
-          <Text style={styles.addressLabel}>Indirizzo di Consegna:</Text>
-          <TouchableOpacity
-            style={styles.addressSelector}
-            onPress={() => setShowDeliveryDropdown(!showDeliveryDropdown)}
-          >
-            <Text style={styles.addressSelectorText}>
-              {getSelectedAddressText(delivery_address_id)}
+        {loading ? (
+          <ActivityIndicator color="#0af" style={{ marginVertical: 16 }} />
+        ) : selectedCustomer ? (
+          <View style={styles.customerBox}>
+            <Text style={styles.customerName}>
+              {selectedCustomer.firstname} {selectedCustomer.lastname}
             </Text>
-            <Text style={styles.dropdownArrow}>▼</Text>
-          </TouchableOpacity>
-
-          {showDeliveryDropdown && (
-            <View style={styles.dropdown}>
-              <FlatList
-                data={addresses}
-                renderItem={({ item }) => renderAddressItem(item)}
-                keyExtractor={(item) => item.id.toString()}
-                style={styles.dropdownList}
-              />
-            </View>
-          )}
-        </View>
-
-        <View style={styles.addressDropdown}>
-          <Text style={styles.addressLabel}>Indirizzo di Fatturazione:</Text>
-          <TouchableOpacity
-            style={styles.addressSelector}
-            onPress={() => setShowInvoiceDropdown(!showInvoiceDropdown)}
-          >
-            <Text style={styles.addressSelectorText}>
-              {getSelectedAddressText(invoice_address_id)}
+            <Text style={styles.customerField}>{selectedCustomer.company}</Text>
+            <Text style={styles.customerField}>{selectedCustomer.email}</Text>
+            <Text style={styles.customerField}>
+              Codice CMNR: {selectedCustomer.codice_cmnr || 'N/A'}
             </Text>
-            <Text style={styles.dropdownArrow}>▼</Text>
-          </TouchableOpacity>
+            <Text style={styles.customerField}>
+              Numero Ordinale: {selectedCustomer.numero_ordinale || 'N/A'}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.noCustomer}>Nessun cliente selezionato</Text>
+        )}
 
-          {showInvoiceDropdown && (
-            <View style={styles.dropdown}>
-              <FlatList
-                data={addresses}
-                renderItem={({ item }) => renderAddressItem(item)}
-                keyExtractor={(item) => item.id.toString()}
-                style={styles.dropdownList}
-              />
-            </View>
-          )}
-        </View>
-      </View>
+        <View style={styles.addressSection}>
+          <View style={styles.addressHeader}>
+            <Text style={styles.addressSectionTitle}>Indirizzi</Text>
+            <TouchableOpacity style={styles.newAddressButton} onPress={handleNewAddress}>
+              <Text style={styles.newAddressButtonText}>+ Nuovo Indirizzo</Text>
+            </TouchableOpacity>
+          </View>
 
-      <Modal
-        visible={showNewAddressModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowNewAddressModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Nuovo Indirizzo</Text>
+          <View style={styles.addressDropdown}>
+            <Text style={styles.addressLabel}>Indirizzo di Consegna:</Text>
+            <TouchableOpacity
+              style={styles.addressSelector}
+              onPress={() => setShowDeliveryDropdown(!showDeliveryDropdown)}
+            >
+              <Text style={styles.addressSelectorText}>
+                {getSelectedAddressText(delivery_address_id)}
+              </Text>
+              <Text style={styles.dropdownArrow}>▼</Text>
+            </TouchableOpacity>
 
-            <ScrollView style={styles.modalForm} nestedScrollEnabled={true}>
-              <View style={styles.readonlyField}>
-                <Text style={styles.readonlyLabel}>Cliente</Text>
-                <Text style={styles.readonlyValue}>
-                  {selectedCustomer?.firstname} {selectedCustomer?.lastname}
-                </Text>
-              </View>
-
-              <View style={styles.aliasContainer}>
-                <Text style={styles.aliasLabel}>Tipo Indirizzo:</Text>
-                <View style={styles.aliasOptions}>
-                  {aliasOptions.map((alias) => (
-                    <TouchableOpacity
-                      key={alias}
-                      style={[
-                        styles.aliasOption,
-                        selectedAlias === alias && styles.aliasOptionSelected
-                      ]}
-                      onPress={() => {
-                        setSelectedAlias(alias);
-                        setNewAddress(prev => ({ ...prev, alias }));
-                      }}
-                    >
-                      <View style={[
-                        styles.checkbox,
-                        selectedAlias === alias && styles.checkboxSelected
-                      ]}>
-                        {selectedAlias === alias && <Text style={styles.checkmark}>✓</Text>}
-                      </View>
-                      <Text style={[
-                        styles.aliasText,
-                        selectedAlias === alias && styles.aliasTextSelected
-                      ]}>
-                        {alias}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <TextInput
-                style={styles.input}
-                placeholder="Azienda"
-                placeholderTextColor="#888"
-                value={newAddress.company}
-                onChangeText={(text) => setNewAddress(prev => ({ ...prev, company: text }))}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Indirizzo *"
-                placeholderTextColor="#888"
-                value={newAddress.address1}
-                onChangeText={(text) => setNewAddress(prev => ({ ...prev, address1: text }))}
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Postcode *"
-                placeholderTextColor="#888"
-                value={newAddress.postcode}
-                onChangeText={(text) => setNewAddress(prev => ({ ...prev, postcode: text }))}
-                keyboardType="numeric"
-              />
-
-              <TextInput
-                style={styles.input}
-                placeholder="Città *"
-                placeholderTextColor="#888"
-                value={newAddress.city}
-                onChangeText={(text) => setNewAddress(prev => ({ ...prev, city: text }))}
-              />
-
-              <View style={styles.countryInputContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Cerca paese *"
-                  placeholderTextColor="#888"
-                  value={countrySearch}
-                  onChangeText={(text) => {
-                    setCountrySearch(text);
-                    setShowCountryDropdown(true);
-                  }}
-                  onFocus={() => setShowCountryDropdown(true)}
+            {showDeliveryDropdown && (
+              <View style={styles.dropdown}>
+                <FlatList
+                  data={addresses}
+                  renderItem={({ item }) => renderAddressItem(item)}
+                  keyExtractor={(item) => item.id.toString()}
+                  style={styles.dropdownList}
                 />
               </View>
+            )}
+          </View>
 
-              {showCountryDropdown && countries.length > 0 && (
-                <View style={styles.countryDropdown}>
-                  <FlatList
-                    data={countries}
-                    keyExtractor={(item) => item.id.toString()}
-                    style={styles.countryDropdownList}
-                    horizontal={true}
-                    showsHorizontalScrollIndicator={true}
-                    renderItem={({ item }) => (
-                      <TouchableOpacity
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setNewAddress(prev => ({ ...prev, id_country: item.id.toString() }));
-                          setCountrySearch(item.name);
-                          setShowCountryDropdown(false);
-                        }}
-                      >
-                        <Text style={styles.dropdownItemText}>{item.name}</Text>
-                      </TouchableOpacity>
-                    )}
-                  />
-                </View>
-              )}
+          <View style={styles.addressDropdown}>
+            <Text style={styles.addressLabel}>Indirizzo di Fatturazione:</Text>
+            <TouchableOpacity
+              style={styles.addressSelector}
+              onPress={() => setShowInvoiceDropdown(!showInvoiceDropdown)}
+            >
+              <Text style={styles.addressSelectorText}>
+                {getSelectedAddressText(invoice_address_id)}
+              </Text>
+              <Text style={styles.dropdownArrow}>▼</Text>
+            </TouchableOpacity>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Telefono"
-                placeholderTextColor="#888"
-                value={newAddress.phone_mobile}
-                onChangeText={(text) => setNewAddress(prev => ({ ...prev, phone_mobile: text }))}
-                keyboardType="phone-pad"
-              />
-            </ScrollView>
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setShowNewAddressModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.createButton]}
-                onPress={handleCreateAddress}
-                disabled={creatingAddress}
-              >
-                {creatingAddress ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.createButtonText}>Crea Indirizzo</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            {showInvoiceDropdown && (
+              <View style={styles.dropdown}>
+                <FlatList
+                  data={addresses}
+                  renderItem={({ item }) => renderAddressItem(item)}
+                  keyExtractor={(item) => item.id.toString()}
+                  style={styles.dropdownList}
+                />
+              </View>
+            )}
           </View>
         </View>
-      </Modal>
 
-      <ScrollView style={styles.cartList}>
+        <Modal
+          visible={showNewAddressModal}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setShowNewAddressModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Nuovo Indirizzo</Text>
+
+              <ScrollView style={styles.modalForm} nestedScrollEnabled={true}>
+                <View style={styles.readonlyField}>
+                  <Text style={styles.readonlyLabel}>Cliente</Text>
+                  <Text style={styles.readonlyValue}>
+                    {selectedCustomer?.firstname} {selectedCustomer?.lastname}
+                  </Text>
+                </View>
+
+                <View style={styles.aliasContainer}>
+                  <Text style={styles.aliasLabel}>Tipo Indirizzo:</Text>
+                  <View style={styles.aliasOptions}>
+                    {aliasOptions.map((alias) => (
+                      <TouchableOpacity
+                        key={alias}
+                        style={[
+                          styles.aliasOption,
+                          selectedAlias === alias && styles.aliasOptionSelected
+                        ]}
+                        onPress={() => {
+                          setSelectedAlias(alias);
+                          setNewAddress(prev => ({ ...prev, alias }));
+                        }}
+                      >
+                        <View style={[
+                          styles.checkbox,
+                          selectedAlias === alias && styles.checkboxSelected
+                        ]}>
+                          {selectedAlias === alias && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                        <Text style={[
+                          styles.aliasText,
+                          selectedAlias === alias && styles.aliasTextSelected
+                        ]}>
+                          {alias}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Azienda"
+                  placeholderTextColor="#888"
+                  value={newAddress.company}
+                  onChangeText={(text) => setNewAddress(prev => ({ ...prev, company: text }))}
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Indirizzo *"
+                  placeholderTextColor="#888"
+                  value={newAddress.address1}
+                  onChangeText={(text) => setNewAddress(prev => ({ ...prev, address1: text }))}
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Postcode *"
+                  placeholderTextColor="#888"
+                  value={newAddress.postcode}
+                  onChangeText={(text) => setNewAddress(prev => ({ ...prev, postcode: text }))}
+                  keyboardType="numeric"
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Città *"
+                  placeholderTextColor="#888"
+                  value={newAddress.city}
+                  onChangeText={(text) => setNewAddress(prev => ({ ...prev, city: text }))}
+                />
+
+                <View style={styles.countryInputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Cerca paese *"
+                    placeholderTextColor="#888"
+                    value={countrySearch}
+                    onChangeText={(text) => {
+                      setCountrySearch(text);
+                      setShowCountryDropdown(true);
+                    }}
+                    onFocus={() => setShowCountryDropdown(true)}
+                  />
+                </View>
+
+                {showCountryDropdown && countries.length > 0 && (
+                  <View style={styles.countryDropdown}>
+                    <FlatList
+                      data={countries}
+                      keyExtractor={(item) => item.id.toString()}
+                      style={styles.countryDropdownList}
+                      horizontal={true}
+                      showsHorizontalScrollIndicator={true}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setNewAddress(prev => ({ ...prev, id_country: item.id.toString() }));
+                            setCountrySearch(item.name);
+                            setShowCountryDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{item.name}</Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  </View>
+                )}
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Telefono"
+                  placeholderTextColor="#888"
+                  value={newAddress.phone_mobile}
+                  onChangeText={(text) => setNewAddress(prev => ({ ...prev, phone_mobile: text }))}
+                  keyboardType="phone-pad"
+                />
+              </ScrollView>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
+                  onPress={() => setShowNewAddressModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.createButton]}
+                  onPress={handleCreateAddress}
+                  disabled={creatingAddress}
+                >
+                  {creatingAddress ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text style={styles.createButtonText}>Crea Indirizzo</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+
         {cart.length === 0 ? (
           <Text style={styles.emptyCart}>Il carrello è vuoto</Text>
         ) : (
@@ -458,19 +593,29 @@ const CartScreen = () => {
 
             <View style={styles.grandTotal}>
               <Text style={styles.grandTotalText}>Totale Ordine:</Text>
-              <Text style={styles.grandTotalAmount}>€{grandTotal.toFixed(2)}</Text>
+              <Text style={styles.grandTotalAmount}>€{calculateTotalWithShipping().toFixed(2)}</Text>
             </View>
           </>
         )}
+
+        <ShippingInformation
+          freeDelivery={freeDelivery}
+          setFreeDelivery={setFreeDelivery}
+          deliveries={deliveries}
+          setDeliveries={setDeliveries}
+          dispatch={dispatch}
+          setCourier={setCourier}
+        />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const oldStyles = {
   container: {
     flex: 1,
-    padding: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
     backgroundColor: dark,
   },
   heading: {
@@ -803,6 +948,84 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
+}
+const styles = StyleSheet.create({
+  ...oldStyles as any,
+  shippingDropdown: {
+    marginBottom: 8,
+  },
+  shippingLabel: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  shippingSelector: {
+    backgroundColor: '#222',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  shippingSelectorText: {
+    color: '#fff',
+    fontSize: 14,
+    flex: 1,
+  },
+  shippingOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#444',
+  },
+  shippingOptionText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  shippingSection: {
+    backgroundColor: '#222',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 20,
+    marginTop: 20,
+  },
+  shippingTitle: {
+    color: '#0af',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  loadingIndicator: {
+    marginVertical: 8,
+  },
+  freeDeliveryContainer: {
+    marginBottom: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  freeDeliveryText: {
+    color: '#fff',
+    fontSize: 14,
+    marginLeft: 12,
+  },
+  shippingPrice: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 8,
+  },
+  shippingPriceLabel: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  shippingPriceValue: {
+    color: '#0af',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
-
 export default CartScreen;

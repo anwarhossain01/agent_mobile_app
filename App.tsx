@@ -120,6 +120,9 @@ function MainTabs({ navigation }) {
           headerShown: false,
           tabBarActiveTintColor: '#007AFF',
           tabBarInactiveTintColor: 'gray',
+          tabBarStyle: {
+            marginBottom: 4
+          }
         }}
       >
         {/* Clients Tab now points to the stack */}

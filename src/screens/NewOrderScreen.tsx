@@ -29,7 +29,7 @@ const NewOrderScreen = ({ route }) => {
     const cart = useSelector(selectCartItems);
     const grandTotal = useSelector(selectTotalPrice);
     const reduxClientId = useSelector(selectClientId);
-
+    
     const client_id = route.params?.client_id || null;
     const navigation = useNavigation();
 
@@ -181,7 +181,8 @@ const NewOrderScreen = ({ route }) => {
 
         setProductLoading(true);
         const res = await getProductSearchResult(searchText);
-
+        console.log("prods", res.data);
+        
         setProductLoading(false);
 
         //   const prod_stock =  await checkProductStock(res.data.products[0].id);
@@ -336,7 +337,7 @@ const NewOrderScreen = ({ route }) => {
             )}
 
             {/* Cart Selection Section */}
-            <View style={styles.cartSection}>
+            {/* <View style={styles.cartSection}>
                 <View style={styles.cartHeaderSelection}>
                     <Text style={styles.cartSectionTitle}>Seleziona Carrello</Text>
                     <TouchableOpacity
@@ -392,7 +393,9 @@ const NewOrderScreen = ({ route }) => {
                         </View>
                     )}
                 </View>
-            </View>
+            </View> */}
+
+            {/* Customer Info Section */}
             {/* {selectedCustomer && (
                 <View style={styles.customerBox}>
                     <Text style={styles.customerName}>
@@ -517,6 +520,7 @@ const NewOrderScreen = ({ route }) => {
                         </Text>
                     </TouchableOpacity>
                 )}
+
             </ScrollView>
         </KeyboardAvoidingView>
     );

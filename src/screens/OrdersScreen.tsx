@@ -3,7 +3,7 @@ import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet, Alert } fr
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { addOrder } from '../store/slices/ordersSlice';
-import { getOrdersFromServer, getSafeOrders } from '../api/prestashop';
+import { getOrdersForCustomer, getOrdersFromServer, getSafeOrders } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
 import { darkBg } from '../../colors';
 
@@ -16,7 +16,7 @@ export default function OrdersScreen({ route }) {
   const employeeId = route.params?.employee_id || auth.employeeId;
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const [showbtn , setShowBtn] = useState(false);
+  const [showbtn, setShowBtn] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -24,11 +24,18 @@ export default function OrdersScreen({ route }) {
       setLoadingServer(true);
       setServerError(null);
       try {
-      //  console.log("Emloyeeeeee", employeeId);
-      if(route.params?.employee_id){
-        setShowBtn(true);
-      }
-        const orders = await getOrdersFromServer(employeeId);//await getSafeOrders(50);
+        console.log("Emloyeeeeee", employeeId);
+        if (route.params?.employee_id) {
+          setShowBtn(true);
+        }
+        let orders = null;
+
+        if (route.params?.employee_id) {
+          orders = await getOrdersForCustomer(employeeId);
+        } else {
+          orders = await getOrdersFromServer(employeeId);//await getSafeOrders(50);
+        }
+        console.log("orders", orders);
 
         if (!mounted) return;
         setServerOrders(orders);
@@ -61,7 +68,8 @@ export default function OrdersScreen({ route }) {
     total_paid: o.total_paid,
     date_add: o.date_add,
     synced: true,
-    reference: o.reference
+    reference: o.reference,
+    payment: o.payment
   }));
 
   const parseDate = (d?: string) => (d ? new Date(String(d)) : new Date(0));
@@ -103,6 +111,19 @@ export default function OrdersScreen({ route }) {
           <Text style={styles.value}>{item.customer_name}</Text>
         </View>
 
+        {item.reference && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Reference:</Text>
+            <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.reference}</Text>
+          </View>
+        )}
+
+         {item.payment && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Payment:</Text>
+            <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.payment}</Text>
+          </View>
+        )}
         {item.company && (
           <View style={styles.row}>
             <Text style={styles.label}>Company:</Text>
@@ -128,7 +149,7 @@ export default function OrdersScreen({ route }) {
 
   return (
     <View style={{ flex: 1, padding: 13 }}>
-      <View style={{flexDirection:'row',justifyContent:'space-between'}}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         <Text style={{ fontSize: 18, marginBottom: 12, color: '#fff' }}>My Orders</Text>
         {showbtn ? <Button title="New Order +" color="#008a1eff" onPress={newOrderRouteHandler} /> : null}
       </View>

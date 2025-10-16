@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator, StyleSheet, ScrollView,
-  TouchableOpacity, Modal, TextInput, Alert
+  TouchableOpacity, Modal, TextInput, Alert,
+  Button
 } from 'react-native';
 import { dark } from '../../colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,9 +13,14 @@ import {
   setDeliveryAddressId, setInvoiceAddressId,
   selectCarrierId,
   setCarrierId,
+  selectCartId,
+  setshippingPrice,
+  selectShippingPriceIncTax,
+  selectShippingPriceExcTax,
 
 } from '../store/slices/cartSlice';
 import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries } from '../api/prestashop';
+import SubmissionModal from '../components/modals/SubmissionModal';
 
 const CartScreen = () => {
   const cart = useSelector(selectCartItems);
@@ -29,6 +35,7 @@ const CartScreen = () => {
   const [showDeliveryDropdown, setShowDeliveryDropdown] = useState(false);
   const [showInvoiceDropdown, setShowInvoiceDropdown] = useState(false);
   const [showNewAddressModal, setShowNewAddressModal] = useState(false);
+  const [showSubmissionModal, setShowSubmissionModal] = useState(false);
   const [countries, setCountries] = useState<any[]>([]);
   const [countrySearch, setCountrySearch] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -76,6 +83,8 @@ const CartScreen = () => {
     async function getClientAddresses() {
       if (!client_id) return;
       const res = await clientAddressGet(client_id);
+      //  console.log("Client addresses", res.data);
+
       if (res.success && res.data?.addresses) {
         //  console.log(res.data.addresses);
 
@@ -119,6 +128,19 @@ const CartScreen = () => {
   const handleNewAddress = () => {
     setShowNewAddressModal(true);
   };
+
+  const handleSubmit = () => {
+    if (!client_id || !delivery_address_id || !invoice_address_id) {
+      Alert.alert('Errore', 'Please select a client, delivery address, and invoice address');
+      return;
+    }
+
+    if (cart.length === 0) {
+      Alert.alert('Errore', 'Il carrello è vuoto');
+      return;
+    }
+    setShowSubmissionModal(true);
+  }
 
   // Calculate total with shipping
   const calculateTotalWithShipping = () => {
@@ -230,7 +252,7 @@ const CartScreen = () => {
     setCourier,
     dispatch
   }: any) => {
-   // const dispatch = useDispatch();
+    // const dispatch = useDispatch();
     //  const [deliveries, setDeliveries] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     //  const [freeDelivery, setFreeDelivery] = useState(false);
@@ -248,18 +270,18 @@ const CartScreen = () => {
         try {
           // Get carrier details (default to 27)
           const courierRes = await getCouriers(27);
-        //  console.log('courierRes', courierRes);
+          //  console.log('courierRes', courierRes);
 
           if (courierRes.success && courierRes.data?.carriers?.length > 0) {
             const carrierData = courierRes.data.carriers[0];
-            console.log('courierData', carrierData);
-            
+            //      console.log('courierData', carrierData);
+
             setCourier(carrierData);
             dispatch(setCarrierId(carrierData.id));
 
             // Get delivery options for this carrier
             const deliveryRes = await getDeliveries(carrierData.id);
-         //   console.log('deliveryRes', deliveryRes);
+            //   console.log('deliveryRes', deliveryRes);
 
             if (deliveryRes.success && deliveryRes.data?.deliveries) {
               setDeliveries(deliveryRes.data.deliveries);
@@ -276,9 +298,23 @@ const CartScreen = () => {
     }, []);
 
     const getDeliveryPrice = () => {
-      if (freeDelivery) return 0;
+      if (freeDelivery) {
+        dispatch(setshippingPrice({ shipping_price_inc_tax: 0, shipping_price_exc_tax: 0 }));
+        return 0;
+      };
       const paidDelivery = deliveries.find((d: any) => parseFloat(d.price) > 0);
-      return paidDelivery ? parseFloat(paidDelivery.price) : 0;
+      if (paidDelivery) {
+        // Get the base price as a number
+        const basePrice = parseFloat(paidDelivery.price);
+
+        // Calculate the price with a 22% increase (i.e., multiply by 1.22)
+        const priceWithIncrease = basePrice * 1.22;
+        dispatch(setshippingPrice({ shipping_price_inc_tax: priceWithIncrease, shipping_price_exc_tax: basePrice }));
+        // Return the new price
+        return priceWithIncrease;
+      } else {
+        return 0;
+      }
     };
 
     return (
@@ -339,6 +375,8 @@ const CartScreen = () => {
       </View>
     );
   };
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -606,6 +644,14 @@ const CartScreen = () => {
           dispatch={dispatch}
           setCourier={setCourier}
         />
+        <SubmissionModal
+          showSubmissionModal={showSubmissionModal}
+          setShowSubmissionModal={setShowSubmissionModal}
+        />
+        <Button title="Submit" color={'#0af'} onPress={handleSubmit} />
+
+        <View style={{ marginTop: 20 }} />
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -703,7 +749,7 @@ const oldStyles = {
     backgroundColor: '#333',
     borderRadius: 8,
     marginTop: 4,
-    maxHeight: 200,
+    // maxHeight: 200,
   },
   dropdownList: {
     padding: 8,

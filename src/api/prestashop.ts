@@ -86,10 +86,6 @@ export const getallCustomerss = async () => {
   }
 };
 
-export const createOrder = async (orderPayload: any) => {
-  const res = await api.post('/orders', orderPayload);
-  return res.data;
-};
 export const getOrdersFromServer = async (employeeId: any) => {
   try {
     const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}`,
@@ -104,6 +100,19 @@ export const getOrdersFromServer = async (employeeId: any) => {
     return [];
   }
 };
+
+export const getOrdersForCustomer = async (employeeId: any) => {
+  try {
+    const res = await api.get(`/orders?output_format=JSON&display=full&filter[id_customer]=[${employeeId}]&limit=50&t=${generateRandomNumber(10)}&ws_key=${API_KEY}`,
+      );
+    console.log('customer orders:', res.data.orders);
+    return res.data.orders || [];
+  } catch (err) {
+    console.log('Orders API error:', err);
+    return [];
+  }
+};
+
 export const getSafeOrders = async (limit = 50) => {
   try {
     const res = await api.get('/orders', {
@@ -339,7 +348,7 @@ export const getOrdersFiltered = async (
   }
 }
 
-export const getCouriers= async (id : string | number | null) => {
+export const getCouriers = async (id: string | number | null) => {
   try {
     let filters = [];
     if (id) filters.push(`filter[id]=[${id}]`);
@@ -347,7 +356,7 @@ export const getCouriers= async (id : string | number | null) => {
     filters.push(`display=[id,name,active,is_free,delay]`);
     const queryString = filters.length > 0 ? `?${filters.join('&')}&` : '?';
     const res = await api.get(`/carriers${queryString}output_format=JSON&ws_key=${API_KEY}`);
-   // const res = await api.get(`/carriers?display=[id,name,active,is_free,delay]&filter[active]=[1]&filter[id]=[${id}]&output_format=JSON&ws_key=${API_KEY}`);
+    // const res = await api.get(`/carriers?display=[id,name,active,is_free,delay]&filter[active]=[1]&filter[id]=[${id}]&output_format=JSON&ws_key=${API_KEY}`);
     return { success: true, data: res.data };
   } catch (error) {
     console.log("Orders error", error);
@@ -355,7 +364,7 @@ export const getCouriers= async (id : string | number | null) => {
   }
 }
 
-export const getDeliveries = async (id_carrier : string | number | null) => {
+export const getDeliveries = async (id_carrier: string | number | null) => {
   try {
     const res = await api.get(`/deliveries?display=[id,id_carrier,id_zone,price]&filter[id_carrier]=[${id_carrier}]&ws_key=${API_KEY}&output_format=JSON`);
     return { success: true, data: res.data };
@@ -364,3 +373,265 @@ export const getDeliveries = async (id_carrier : string | number | null) => {
     return { success: false, error: error.response?.data?.error || error.message };
   }
 }
+
+// export const createCart = async (
+//   id_currency: number = 1,
+//   id_lang: number = 3,
+//   id_customer: number,
+//   id_address_delivery: number,
+//   id_address_invoice: number,
+//   products: Array<{
+//     id_product: number | string;
+//     quantity: number | string;
+//   }> = []
+// ) => {
+//   try {
+//     const cartData = {
+//       cart: {
+//         id_currency: id_currency,
+//         id_lang: id_lang,
+//         id_customer: id_customer,
+//         id_address_delivery: id_address_delivery,
+//         id_address_invoice: id_address_invoice,
+//         associations: {
+//           cart_rows: {
+//             cart_row: products
+//           }
+//         }
+//       }
+//     };
+//     console.log("Cart data", cartData);
+    
+//     const res = await api.post(`/carts?output_format=JSON&ws_key=${API_KEY}`, cartData);
+//     return { success: true, data: res.data };
+//   } catch (error) {
+//     console.log("Create cart error", error);
+//     return {
+//       success: false,
+//       error: error.response?.data?.error || error.message
+//     };
+//   }
+// }
+
+export const createCart = async (
+  id_currency: number = 1,
+  id_lang: number = 3,
+  id_customer: number,
+  id_address_delivery: number,
+  id_address_invoice: number,
+  products: Array<{
+    id_product: number | string;
+    quantity: number | string;
+    id_product_attribute?: number | string;
+    id_address_delivery?: number | string;
+  }> = []
+) => {
+  try {
+    // Helper function to build the XML for cart_rows
+    const buildCartRowsXml = (products: Array<any>): string => {
+      if (!products || products.length === 0) {
+        return '';
+      }
+      return products.map(product => `
+        <cart_row>
+          <id_product><![CDATA[${product.id_product}]]></id_product>
+          <id_product_attribute><![CDATA[${product.id_product_attribute || 0}]]></id_product_attribute>
+          <id_address_delivery><![CDATA[${product.id_address_delivery || id_address_delivery}]]></id_address_delivery>
+          <quantity><![CDATA[${product.quantity}]]></quantity>
+        </cart_row>
+      `).join('');
+    };
+
+    const cartRowsXml = buildCartRowsXml(products);
+
+    // Build the complete XML payload
+    const xmlPayload = `
+      <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+        <cart>
+          <id_currency><![CDATA[${id_currency}]]></id_currency>
+          <id_lang><![CDATA[${id_lang}]]></id_lang>
+          <id_customer><![CDATA[${id_customer}]]></id_customer>
+          <id_address_delivery><![CDATA[${id_address_delivery}]]></id_address_delivery>
+          <id_address_invoice><![CDATA[${id_address_invoice}]]></id_address_invoice>
+          <id_shop_group><![CDATA[1]]></id_shop_group>
+          <id_shop><![CDATA[1]]></id_shop>
+          <id_guest><![CDATA[0]]></id_guest>
+          <associations>
+            <cart_rows>
+              ${cartRowsXml}
+            </cart_rows>
+          </associations>
+        </cart>
+      </prestashop>
+    `.trim();
+
+    // Set the headers to send XML content
+    const config = {
+      headers: {
+        'Content-Type': 'application/xml',
+      },
+    };
+    
+    const res = await api.post(`/carts?ws_key=${API_KEY}&output_format=JSON`, xmlPayload, config); 
+    
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log("Create cart error", error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message
+    };
+  }
+}
+
+export const createOrder = async ({
+  id_address_delivery,
+  id_address_invoice,
+  id_cart,
+  id_currency = 1,
+  id_lang = 3,
+  id_customer,
+  id_carrier,
+  module = 'ps_wirepayment',
+  payment = 'Manual payment',
+  total_paid,
+  total_paid_real,
+  total_products,
+  total_products_wt,
+  conversion_rate = 1.0,
+  total_shipping = 0,
+  total_shipping_tax_incl = 0,
+  total_shipping_tax_excl = 0,
+  total_discounts = 0,
+  total_discounts_tax_incl = 0,
+  total_discounts_tax_excl = 0,
+  total_wrapping = 0,
+  total_wrapping_tax_incl = 0,
+  total_wrapping_tax_excl = 0,
+  round_mode = 2,
+  round_type = 1,
+  recyclable = 0,
+  gift = 0,
+  gift_message = '',
+  mobile_theme = 0,
+  invoice_number = 0,
+  delivery_number = 0,
+  invoice_date = '0000-00-00 00:00:00',
+  delivery_date = '0000-00-00 00:00:00',
+  valid = 1,
+  Trasmesso = 0,
+  note = '',
+  carrier_tax_rate = 0.000
+}: {
+  id_address_delivery: number;
+  id_address_invoice: number;
+  id_cart: number;
+  id_currency?: number;
+  id_lang?: number;
+  id_customer: number;
+  id_carrier: number;
+  module?: string;
+  payment?: string;
+  total_paid: number;
+  total_paid_real: number;
+  total_products: number;
+  total_products_wt: number;
+  conversion_rate?: number;
+  total_shipping?: number;
+  total_shipping_tax_incl?: number;
+  total_shipping_tax_excl?: number;
+  total_discounts?: number;
+  total_discounts_tax_incl?: number;
+  total_discounts_tax_excl?: number;
+  total_wrapping?: number;
+  total_wrapping_tax_incl?: number;
+  total_wrapping_tax_excl?: number;
+  round_mode?: number;
+  round_type?: number;
+  recyclable?: number;
+  gift?: number;
+  gift_message?: string;
+  mobile_theme?: number;
+  invoice_number?: number;
+  delivery_number?: number;
+  invoice_date?: string;
+  delivery_date?: string;
+  valid?: number;
+  Trasmesso?: number;
+  note?: string;
+  carrier_tax_rate?: number;
+}) => {
+  try {
+    // Create XML payload
+    const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+  <order>
+    <id_cart>${id_cart}</id_cart>
+    <id_carrier>${id_carrier}</id_carrier>
+    <id_customer>${id_customer}</id_customer>
+    <id_address_delivery>${id_address_delivery}</id_address_delivery>
+    <id_address_invoice>${id_address_invoice}</id_address_invoice>
+    <id_currency>${id_currency}</id_currency>
+    <id_lang>${id_lang}</id_lang>
+    <payment>${payment}</payment>
+    <module>${module}</module>
+
+    <total_products>${total_products.toFixed(2)}</total_products>
+    <total_products_wt>${total_products_wt.toFixed(2)}</total_products_wt>
+    <total_shipping>${total_shipping!.toFixed(2)}</total_shipping>
+    <total_shipping_tax_incl>${total_shipping_tax_incl!.toFixed(2)}</total_shipping_tax_incl>
+    <total_shipping_tax_excl>${total_shipping_tax_excl!.toFixed(2)}</total_shipping_tax_excl>
+    <total_paid>${total_paid.toFixed(2)}</total_paid>
+    <total_paid_tax_incl>${total_paid.toFixed(2)}</total_paid_tax_incl>
+   
+    <total_paid_real>${total_paid_real.toFixed(2)}</total_paid_real>
+
+    <conversion_rate>${conversion_rate}</conversion_rate>
+    <recyclable>${recyclable}</recyclable>
+    <gift>${gift}</gift>
+    <gift_message>${gift_message}</gift_message>
+    <mobile_theme>${mobile_theme}</mobile_theme>
+
+    <total_discounts>${total_discounts!.toFixed(2)}</total_discounts>
+    <total_discounts_tax_incl>${total_discounts_tax_incl!.toFixed(2)}</total_discounts_tax_incl>
+    <total_discounts_tax_excl>${total_discounts_tax_excl!.toFixed(2)}</total_discounts_tax_excl>
+
+    <total_wrapping>${total_wrapping!.toFixed(2)}</total_wrapping>
+    <total_wrapping_tax_incl>${total_wrapping_tax_incl!.toFixed(2)}</total_wrapping_tax_incl>
+    <total_wrapping_tax_excl>${total_wrapping_tax_excl!.toFixed(2)}</total_wrapping_tax_excl>
+
+    <round_mode>${round_mode}</round_mode>
+    <round_type>${round_type}</round_type>
+
+    <invoice_number>${invoice_number}</invoice_number>
+    <delivery_number>${delivery_number}</delivery_number>
+    <invoice_date>${invoice_date}</invoice_date>
+    <delivery_date>${delivery_date}</delivery_date>
+
+    <valid>${valid}</valid>
+    <Trasmesso>${Trasmesso}</Trasmesso>
+    <date_add>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_add>
+    <date_upd>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_upd>
+    <note>${note}</note>
+
+  
+    <carrier_tax_rate>${carrier_tax_rate!.toFixed(3)}</carrier_tax_rate>
+  </order>
+</prestashop>`;
+console.log('Order XML', xmlPayload);
+    const res = await api.post('/orders?output_format=JSON&ws_key=' + API_KEY, xmlPayload, {
+      headers: {
+        'Content-Type': 'application/xml',
+      },
+    });
+    
+    console.log('Order creation response:', res.data);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    console.log("Create order error", error);
+    return { 
+      success: true, 
+      error: error.response?.data?.error || error.message 
+    };
+  }
+};

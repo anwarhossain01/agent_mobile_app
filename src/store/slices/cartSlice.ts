@@ -17,6 +17,8 @@ interface CartState {
   totalPrice: number;
   id_cart: string | number | null;
   id_carrier: string | number| null;
+  shipping_price_inc_tax: number;
+  shipping_price_exc_tax: number;
 }
 
 // Initial state
@@ -27,6 +29,9 @@ const initialState: CartState = {
   invoice_address_id: null,
   totalPrice: 0,
   id_cart: null,
+  id_carrier: null,
+  shipping_price_inc_tax: 0,
+  shipping_price_exc_tax: 0,
 };
 
 const cartSlice = createSlice({
@@ -52,6 +57,12 @@ const cartSlice = createSlice({
 
     setCarrierId: (state, action: PayloadAction<string | any>) => {
       state.id_carrier = action.payload;
+    },
+
+    setshippingPrice: (state, action: PayloadAction<any>) => {
+      const { shipping_price_inc_tax, shipping_price_exc_tax } = action.payload;
+      state.shipping_price_inc_tax = shipping_price_inc_tax;
+      state.shipping_price_exc_tax = shipping_price_exc_tax;
     },
     
     // Add item to cart
@@ -106,6 +117,14 @@ const cartSlice = createSlice({
     clearCart: (state) => {
       state.items = [];
       state.totalPrice = 0;
+      state.shipping_price_inc_tax = 0;
+      state.shipping_price_exc_tax = 0;
+      state.id_cart = null;
+      state.id_carrier = null;
+      state.client_id = null;
+      state.delivery_address_id = null;
+      state.invoice_address_id = null;
+      
     },
     
     // Initialize cart with data (useful for loading saved cart)
@@ -128,7 +147,8 @@ export const {
   clearCart,
   initializeCart,
   setCartId,
-  setCarrierId
+  setCarrierId,
+  setshippingPrice,
 } = cartSlice.actions;
 
 // Export selectors
@@ -141,6 +161,7 @@ export const selectDeliveryAddressId = (state: { cart: CartState }) => state.car
 export const selectInvoiceAddressId = (state: { cart: CartState }) => state.cart.invoice_address_id;
 export const selectCartId = (state: { cart: CartState }) => state.cart.id_cart;
 export const selectCarrierId = (state: { cart: CartState }) => state.cart.id_carrier;
-
+export const selectShippingPriceExcTax = (state: { cart: CartState }) => state.cart.shipping_price_exc_tax;
+export const selectShippingPriceIncTax = (state: { cart: CartState }) => state.cart.shipping_price_inc_tax;
 // Export reducer
 export default cartSlice.reducer;

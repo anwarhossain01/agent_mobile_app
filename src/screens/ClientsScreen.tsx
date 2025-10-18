@@ -104,11 +104,11 @@ export default function ClientsScreen() {
           </View>
         )}
       />
-      <Button
+     {/*  <Button
         title="Manual Sync (demo)"
         color="#007AFF"
         onPress={() => alert('Trigger sync from background service in a real app')}
-      />
+      /> */}
     </SafeAreaView>
   );
 }

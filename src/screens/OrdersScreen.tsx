@@ -40,7 +40,7 @@ export default function OrdersScreen({ route }) {
         if (!mounted) return;
         setServerOrders(orders);
         if (!orders.length) {
-          setServerError('No server orders returned (or server blocked some fields).');
+          setServerError('Nessun ordine ');
         }
       } catch (e: any) {
         if (!mounted) return;
@@ -150,8 +150,8 @@ export default function OrdersScreen({ route }) {
   return (
     <View style={{ flex: 1, padding: 13 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 18, marginBottom: 12, color: '#fff' }}>My Orders</Text>
-        {showbtn ? <Button title="New Order +" color="#008a1eff" onPress={newOrderRouteHandler} /> : null}
+        <Text style={{ fontSize: 18, marginBottom: 12, color: '#fff' }}>Ordini</Text>
+        {showbtn ? <Button title="NUOVO ORDINE +" color="#008a1eff" onPress={newOrderRouteHandler} /> : null}
       </View>
 
       {loadingServer ? <ActivityIndicator color="#fff" /> : null}
@@ -168,8 +168,8 @@ export default function OrdersScreen({ route }) {
           <OrderCard item={item} />
         )}
       />
-      <Button title="Create Demo Order" color="#007AFF" onPress={createDemoOrder} />
-    </View>
+{/*       <Button title="Create Demo Order" color="#007AFF" onPress={createDemoOrder} />
+ */}    </View>
   );
 }
 

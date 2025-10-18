@@ -1,5 +1,5 @@
 import axios from 'axios';
-import base64 from 'react-native-base64'
+import base64 from 'react-native-base64';
 
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
@@ -87,6 +87,7 @@ export const getallCustomerss = async () => {
 };
 
 export const getOrdersFromServer = async (employeeId: any) => {
+
   try {
     const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}`,
       { employee_id: employeeId },
@@ -485,6 +486,7 @@ export const createCart = async (
 }
 
 export const createOrder = async ({
+  id_employee,
   id_address_delivery,
   id_address_invoice,
   id_cart,
@@ -629,9 +631,58 @@ console.log('Order XML', xmlPayload);
     return { success: true, data: res.data };
   } catch (error: any) {
     console.log("Create order error", error);
+    let order_id=await getOrderIdByCartId(id_cart);
+
+    createOrderHistory(order_id,id_employee);
+    
     return { 
       success: true, 
       error: error.response?.data?.error || error.message 
     };
+  }
+};
+
+export const getOrderIdByCartId = async (cartId: number) => {
+  try {
+    const res = await api.get('/orders', {
+      params: {
+        output_format: 'JSON',
+        'filter[id_cart]': `[${cartId}]`,
+        display: '[id,id_cart,reference]',
+      },
+    });
+
+    const order = res.data.orders?.[0];
+    if (order) {
+      console.log('✅ Found order:', order);
+      return order.id;
+    }
+    console.log('⚠️ No order found for cart', cartId);
+    return null;
+  } catch (error: any) {
+    console.error('❌ Error getting order ID:', error.response?.data || error.message);
+    return null;
+  }
+};
+
+   
+export const createOrderHistory = async (orderId: number, employeeId: number) => {
+   
+  const orderHistoryXml = `<?xml version="1.0" encoding="UTF-8"?>
+<prestashop>
+  <order_history>
+    <id_employee>${employeeId}</id_employee>
+    <id_order>${orderId}</id_order>
+    <id_order_state>2</id_order_state> <!-- 2 = Payment accepted (example) -->
+  </order_history>
+</prestashop>`;
+
+  try {
+    const res = await api.post('/order_histories?output_format=JSON', orderHistoryXml);
+    console.log('✅ Order history created:', res.data);
+    return res.data;
+  } catch (error: any) {
+    console.error('❌ Error creating order history:', error.response?.data || error.message);
+    return null;
   }
 };

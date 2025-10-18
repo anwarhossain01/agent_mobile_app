@@ -16,7 +16,7 @@ export default function OrdersScreen() {
 
   return (
     <View style={{ flex:1, padding:16 }}>
-      <Text style={{ fontSize:18, marginBottom:8 }}>My Orders</Text>
+      <Text style={{ fontSize:18, marginBottom:8 }}>Ordini</Text>
       <FlatList
         data={orders}
         keyExtractor={(item)=>String(item.localId || item.id)}
@@ -27,7 +27,7 @@ export default function OrdersScreen() {
           </View>
         )}
       />
-      <Button title="Create Demo Order" onPress={createDemoOrder} />
-    </View>
+{/*       <Button title="Create Demo Order" onPress={createDemoOrder} />
+ */}    </View>
   );
 }

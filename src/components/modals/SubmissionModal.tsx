@@ -17,6 +17,7 @@ import { createCart, createOrder } from '../../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
 import { dark } from '../../../colors';
 import { useNavigation } from '@react-navigation/native';
+import { RootState } from '../store';
 
 const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) => {
     const [status, setStatus] = useState<string>('Preparing order...');
@@ -33,6 +34,8 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     const shippingPriceExc = useSelector(selectShippingPriceExcTax);
     const shippingPriceInc = useSelector(selectShippingPriceIncTax);
     const dispatch = useDispatch();
+  const auth = useSelector((s: RootState) => s.auth);
+  const employeeId =auth.employeeId;
 
     const navigation = useNavigation();
 
@@ -125,6 +128,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             setStatus('Creating order...');
 
             const orderRes = await createOrder({
+                id_employee:employeeId,
                 id_address_delivery: parseInt(delivery_address_id),
                 id_address_invoice: parseInt(invoice_address_id),
                 id_cart: parseInt(currentCartId),

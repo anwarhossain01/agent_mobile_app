@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setClients } from '../store/slices/clientsSlice';
@@ -68,7 +68,7 @@ export default function ClientsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.detailsButton]}
-                onPress={() => alert('in development')}
+                onPress={() => Alert.alert('in development')}
               >
                 <Text style={styles.buttonText}>DETTAGLI</Text>
               </TouchableOpacity>

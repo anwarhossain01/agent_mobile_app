@@ -1,5 +1,5 @@
 import axios from 'axios';
-import base64 from 'react-native-base64';
+import {  cachedDataForCarriers, cachedDataForDeliveries } from '../sync/cached';
 
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
@@ -94,7 +94,7 @@ export const getOrdersFromServer = async (employeeId: any) => {
       {
         baseURL: API_LOGIN_URL
       });
-    console.log('Server orders:', res.data.orders);
+   // console.log('Server orders:', res.data.orders);
     return res.data.orders || [];
   } catch (err) {
     console.log('Orders API error:', err);
@@ -365,6 +365,19 @@ export const getCouriers = async (id: string | number | null) => {
   }
 }
 
+export const getCachedCouriers = async (id: string | number | null) => {
+  const apiCall = () => {
+    let filters = [];
+    if (id) filters.push(`filter[id]=[${id}]`);
+    filters.push(`filter[active]=[1]`);
+    filters.push(`display=[id,name,active,is_free,delay]`);
+    const queryString = filters.length > 0 ? `?${filters.join('&')}&` : '?';
+    return api.get(`/carriers${queryString}output_format=JSON&ws_key=${API_KEY}`);
+  };
+
+  return cachedDataForCarriers('carriers', apiCall, id, 'id');
+};
+
 export const getDeliveries = async (id_carrier: string | number | null) => {
   try {
     const res = await api.get(`/deliveries?display=[id,id_carrier,id_zone,price]&filter[id_carrier]=[${id_carrier}]&ws_key=${API_KEY}&output_format=JSON`);
@@ -374,6 +387,20 @@ export const getDeliveries = async (id_carrier: string | number | null) => {
     return { success: false, error: error.response?.data?.error || error.message };
   }
 }
+
+//  for deliveries using cached data
+export const getCachedDeliveries = async (id_carrier: string | number | null) => {
+  return await cachedDataForDeliveries(
+    'deliveries',
+    async () => {
+      const res = await api.get(
+        `/deliveries?display=[id,id_carrier,id_zone,price]&filter[id_carrier]=[${id_carrier}]&ws_key=${API_KEY}&output_format=JSON`
+      );
+      return { success: true, data: res.data };
+    },
+    id_carrier
+  );
+};
 
 // export const createCart = async (
 //   id_currency: number = 1,
@@ -566,61 +593,61 @@ export const createOrder = async ({
   try {
     // Create XML payload
     const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
-<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
-  <order>
-    <id_cart>${id_cart}</id_cart>
-    <id_carrier>${id_carrier}</id_carrier>
-    <id_customer>${id_customer}</id_customer>
-    <id_address_delivery>${id_address_delivery}</id_address_delivery>
-    <id_address_invoice>${id_address_invoice}</id_address_invoice>
-    <id_currency>${id_currency}</id_currency>
-    <id_lang>${id_lang}</id_lang>
-    <payment>${payment}</payment>
-    <module>${module}</module>
+    <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+      <order>
+        <id_cart>${id_cart}</id_cart>
+        <id_carrier>${id_carrier}</id_carrier>
+        <id_customer>${id_customer}</id_customer>
+        <id_address_delivery>${id_address_delivery}</id_address_delivery>
+        <id_address_invoice>${id_address_invoice}</id_address_invoice>
+        <id_currency>${id_currency}</id_currency>
+        <id_lang>${id_lang}</id_lang>
+        <payment>${payment}</payment>
+        <module>${module}</module>
 
-    <total_products>${total_products.toFixed(2)}</total_products>
-    <total_products_wt>${total_products_wt.toFixed(2)}</total_products_wt>
-    <total_shipping>${total_shipping!.toFixed(2)}</total_shipping>
-    <total_shipping_tax_incl>${total_shipping_tax_incl!.toFixed(2)}</total_shipping_tax_incl>
-    <total_shipping_tax_excl>${total_shipping_tax_excl!.toFixed(2)}</total_shipping_tax_excl>
-    <total_paid>${total_paid.toFixed(2)}</total_paid>
-    <total_paid_tax_incl>${total_paid.toFixed(2)}</total_paid_tax_incl>
-   
-    <total_paid_real>${total_paid_real.toFixed(2)}</total_paid_real>
+        <total_products>${total_products.toFixed(2)}</total_products>
+        <total_products_wt>${total_products_wt.toFixed(2)}</total_products_wt>
+        <total_shipping>${total_shipping!.toFixed(2)}</total_shipping>
+        <total_shipping_tax_incl>${total_shipping_tax_incl!.toFixed(2)}</total_shipping_tax_incl>
+        <total_shipping_tax_excl>${total_shipping_tax_excl!.toFixed(2)}</total_shipping_tax_excl>
+        <total_paid>${total_paid.toFixed(2)}</total_paid>
+        <total_paid_tax_incl>${total_paid.toFixed(2)}</total_paid_tax_incl>
+      
+        <total_paid_real>${total_paid_real.toFixed(2)}</total_paid_real>
 
-    <conversion_rate>${conversion_rate}</conversion_rate>
-    <recyclable>${recyclable}</recyclable>
-    <gift>${gift}</gift>
-    <gift_message>${gift_message}</gift_message>
-    <mobile_theme>${mobile_theme}</mobile_theme>
+        <conversion_rate>${conversion_rate}</conversion_rate>
+        <recyclable>${recyclable}</recyclable>
+        <gift>${gift}</gift>
+        <gift_message>${gift_message}</gift_message>
+        <mobile_theme>${mobile_theme}</mobile_theme>
 
-    <total_discounts>${total_discounts!.toFixed(2)}</total_discounts>
-    <total_discounts_tax_incl>${total_discounts_tax_incl!.toFixed(2)}</total_discounts_tax_incl>
-    <total_discounts_tax_excl>${total_discounts_tax_excl!.toFixed(2)}</total_discounts_tax_excl>
+        <total_discounts>${total_discounts!.toFixed(2)}</total_discounts>
+        <total_discounts_tax_incl>${total_discounts_tax_incl!.toFixed(2)}</total_discounts_tax_incl>
+        <total_discounts_tax_excl>${total_discounts_tax_excl!.toFixed(2)}</total_discounts_tax_excl>
 
-    <total_wrapping>${total_wrapping!.toFixed(2)}</total_wrapping>
-    <total_wrapping_tax_incl>${total_wrapping_tax_incl!.toFixed(2)}</total_wrapping_tax_incl>
-    <total_wrapping_tax_excl>${total_wrapping_tax_excl!.toFixed(2)}</total_wrapping_tax_excl>
+        <total_wrapping>${total_wrapping!.toFixed(2)}</total_wrapping>
+        <total_wrapping_tax_incl>${total_wrapping_tax_incl!.toFixed(2)}</total_wrapping_tax_incl>
+        <total_wrapping_tax_excl>${total_wrapping_tax_excl!.toFixed(2)}</total_wrapping_tax_excl>
 
-    <round_mode>${round_mode}</round_mode>
-    <round_type>${round_type}</round_type>
+        <round_mode>${round_mode}</round_mode>
+        <round_type>${round_type}</round_type>
 
-    <invoice_number>${invoice_number}</invoice_number>
-    <delivery_number>${delivery_number}</delivery_number>
-    <invoice_date>${invoice_date}</invoice_date>
-    <delivery_date>${delivery_date}</delivery_date>
+        <invoice_number>${invoice_number}</invoice_number>
+        <delivery_number>${delivery_number}</delivery_number>
+        <invoice_date>${invoice_date}</invoice_date>
+        <delivery_date>${delivery_date}</delivery_date>
 
-    <valid>${valid}</valid>
-    <Trasmesso>${Trasmesso}</Trasmesso>
-    <date_add>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_add>
-    <date_upd>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_upd>
-    <note>${note}</note>
+        <valid>${valid}</valid>
+        <Trasmesso>${Trasmesso}</Trasmesso>
+        <date_add>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_add>
+        <date_upd>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_upd>
+        <note>${note}</note>
 
-  
-    <carrier_tax_rate>${carrier_tax_rate!.toFixed(3)}</carrier_tax_rate>
-  </order>
-</prestashop>`;
-console.log('Order XML', xmlPayload);
+      
+        <carrier_tax_rate>${carrier_tax_rate!.toFixed(3)}</carrier_tax_rate>
+      </order>
+    </prestashop>`;             
+
     const res = await api.post('/orders?output_format=JSON&ws_key=' + API_KEY, xmlPayload, {
       headers: {
         'Content-Type': 'application/xml',
@@ -669,13 +696,13 @@ export const getOrderIdByCartId = async (cartId: number) => {
 export const createOrderHistory = async (orderId: number, employeeId: number) => {
    
   const orderHistoryXml = `<?xml version="1.0" encoding="UTF-8"?>
-<prestashop>
-  <order_history>
-    <id_employee>${employeeId}</id_employee>
-    <id_order>${orderId}</id_order>
-    <id_order_state>2</id_order_state> <!-- 2 = Payment accepted (example) -->
-  </order_history>
-</prestashop>`;
+  <prestashop>
+    <order_history>
+      <id_employee>${employeeId}</id_employee>
+      <id_order>${orderId}</id_order>
+      <id_order_state>2</id_order_state> <!-- 2 = Payment accepted (example) -->
+    </order_history>
+  </prestashop>`;
 
   try {
     const res = await api.post('/order_histories?output_format=JSON', orderHistoryXml);

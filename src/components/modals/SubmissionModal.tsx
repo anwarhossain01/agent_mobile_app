@@ -18,6 +18,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { dark } from '../../../colors';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
+import { createCartCache, createOrderCache } from '../../sync/cached';
 
 const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) => {
     const [status, setStatus] = useState<string>('Preparing order...');
@@ -34,14 +35,15 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     const shippingPriceExc = useSelector(selectShippingPriceExcTax);
     const shippingPriceInc = useSelector(selectShippingPriceIncTax);
     const dispatch = useDispatch();
-  const auth = useSelector((s: RootState) => s.auth);
-  const employeeId =auth.employeeId;
+    const auth = useSelector((s: RootState) => s.auth);
+    const employeeId = auth.employeeId;
 
     const navigation = useNavigation();
 
     useEffect(() => {
         if (showSubmissionModal) {
-            handleCreateOrder();
+          //  handleCreateOrder();
+          handleCacheOrder();
         }
     }, [showSubmissionModal]);
 
@@ -72,6 +74,113 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             product_tax
         };
     };
+
+    async function handleCacheOrder() {
+        if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
+            setError('Missing required information: client, addresses, or carrier');
+            console.log(client_id, delivery_address_id, invoice_address_id, carrier_id);
+            
+            return;
+        }
+
+        if (cart.length === 0) {
+            setError('Cart is empty');
+            return;
+        }
+
+        setIsCreating(true);
+        setError(null);
+
+        try {
+            let currentCartId = cart_id;
+
+            // 1️⃣ Create local cart if it doesn't exist
+            if (!currentCartId) {
+                setStatus('Creating cart locally...');
+
+                const products = cart.map(item => ({
+                    id_product: item.product_id,
+                    quantity: item.quantity,
+                    id_product_attribute: item.product_attribute_id || undefined
+                }));
+
+                const cartRes = await createCartCache(
+                    1, // id_currency
+                    3, // id_lang
+                    parseInt(client_id),
+                    parseInt(delivery_address_id),
+                    parseInt(invoice_address_id),
+                    products
+                );
+
+                if (cartRes.success && cartRes.data?.cart?.id) {
+                    currentCartId = cartRes.data.cart.id.toString();
+                    dispatch(setCartId(currentCartId));
+                    setStatus('Cart cached locally!');
+                } else {
+                    throw new Error(cartRes.error || 'Failed to cache cart');
+                }
+            } else {
+                setStatus('Using existing local cart...');
+            }
+
+            // 2️⃣ Calculate order totals
+            setStatus('Calculating order totals...');
+            const totals = calculateOrderTotals();
+
+            // 3️⃣ Cache the order
+            setStatus('Caching order locally...');
+
+            const orderRes = await createOrderCache({
+                id_employee: employeeId,
+                id_address_delivery: parseInt(delivery_address_id),
+                id_address_invoice: parseInt(invoice_address_id),
+                id_cart: parseInt(currentCartId),
+                id_currency: 1,
+                id_lang: 3,
+                id_customer: parseInt(client_id),
+                id_carrier: parseInt(carrier_id),
+                module: 'ps_wirepayment',
+                payment: 'Manual payment',
+                total_paid: totals.total_paid,
+                total_paid_real: totals.total_paid_real,
+                total_products: totals.total_products,
+                total_products_wt: totals.total_products_wt,
+                total_shipping: totals.total_shipping_tax_incl,
+                total_shipping_tax_incl: totals.total_shipping_tax_incl,
+                total_shipping_tax_excl: totals.total_shipping_tax_excl,
+                conversion_rate: 1.0
+            });
+
+            if (orderRes.success) {
+                setStatus('Order cached locally!');
+
+                // Show success, clear cart, navigate
+                setTimeout(() => {
+                    setShowSubmissionModal(false);
+                    setIsCreating(false);
+                    const clientBeforeReset = client_id;
+                    dispatch(clearCart());
+                    setStatus('Preparing next order...');
+
+                    (navigation as any).replace('Main', {
+                        screen: 'OrdersTab',
+                        params: {
+                            screen: 'Orders',
+                            params: { employee_id: clientBeforeReset, cached_order_alert: true }
+                        }
+                    });
+                }, 1500);
+            } else {
+                throw new Error(orderRes.error || 'Failed to cache order');
+            }
+        } catch (err: any) {
+            console.log('Order caching error:', err);
+            setError(err.message || 'An unexpected error occurred');
+            setIsCreating(false);
+        }
+    }
+
 
     const handleCreateOrder = async () => {
         // Validate all required data
@@ -123,12 +232,12 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             // Step 2: Calculate order totals
             setStatus('Calculating order totals...');
             const totals = calculateOrderTotals();
-            
+
             // Step 3: Create order
             setStatus('Creating order...');
 
             const orderRes = await createOrder({
-                id_employee:employeeId,
+                id_employee: employeeId,
                 id_address_delivery: parseInt(delivery_address_id),
                 id_address_invoice: parseInt(invoice_address_id),
                 id_cart: parseInt(currentCartId),
@@ -148,7 +257,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 conversion_rate: 1.0
             });
 
-            if (orderRes.success ) {
+            if (orderRes.success) {
                 setStatus(`Order created successfully!`);
 
                 // Wait a moment to show success then close
@@ -166,6 +275,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                             screen: 'Orders',
                             params: {
                                 employee_id: client_id_before_cleaning,
+                                cached_order_alert: false
                             }
                         }
                     });
@@ -231,7 +341,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                             {error && (
                                 <TouchableOpacity
                                     style={[styles.submissionModalButton, styles.submissionRetryButton]}
-                                    onPress={handleCreateOrder}
+                                    onPress={handleCacheOrder}
                                 >
                                     <Text style={styles.submissionRetryButtonText}>Try Again</Text>
                                 </TouchableOpacity>

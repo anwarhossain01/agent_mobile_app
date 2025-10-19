@@ -181,7 +181,7 @@ const NewOrderScreen = ({ route }) => {
 
         setProductLoading(true);
         const res = await getProductSearchResult(searchText);
-        console.log("prods", res.data);
+      //  console.log("prods", res.data);
         
         setProductLoading(false);
 
@@ -295,8 +295,7 @@ const NewOrderScreen = ({ route }) => {
     };
 
     const handleNextBtn = () => {
-        // TODO: Validate inputs
-        console.log('Next btn pressed');
+      //  console.log('Next btn pressed');
         (navigation as any).navigate('Main', {
             screen: 'OrdersTab',
             params: {

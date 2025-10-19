@@ -47,7 +47,7 @@
 //   );
 // }
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Provider, useSelector } from 'react-redux';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -59,7 +59,7 @@ import ClientsScreen from './src/screens/ClientsScreen';
 import CatalogScreen from './src/screens/CatalogScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Modal from 'react-native-modal';
 import ClientOrderScreen from './src/screens/ClientOrderScreen';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -71,6 +71,7 @@ import OrderMenuModal from './src/components/modals/OrderMenuModal';
 import ProductListScreen from './src/screens/ProductListScreen';
 import NewOrderScreen from './src/screens/NewOrderScreen';
 import CartScreen from './src/screens/CartScreen';
+import { initDatabase } from './src/database/init';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -214,6 +215,32 @@ function MainTabs({ navigation }) {
 // Root navigation that actually uses Redux state
 function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
+  const [dbReady, setDbReady] = useState(false);
+
+   useEffect(() => {
+    const initializeDatabase = async () => {
+      try {
+        console.log('Initializing database...');
+        await initDatabase();
+        console.log('Database initialized successfully');
+        setDbReady(true);
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        setDbReady(true);
+      }
+    };
+
+    initializeDatabase();
+  }, []);
+
+  if (!dbReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: dark, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={{ color: '#fff', marginTop: 16 }}>Initializing database...</Text>
+      </View>
+    );
+  }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_bottom' }}>

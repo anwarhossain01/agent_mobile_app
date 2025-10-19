@@ -21,6 +21,10 @@ export default function OrdersScreen({ route }) {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
+      const is_alert = route.params?.cached_order_alert || false;
+      if(is_alert){
+        Alert.alert("Order is cached", "Please update this manually !");
+      }
       setLoadingServer(true);
       setServerError(null);
       try {

@@ -19,7 +19,7 @@ import {
   selectShippingPriceExcTax,
 
 } from '../store/slices/cartSlice';
-import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries } from '../api/prestashop';
+import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries, getCachedDeliveries, getCachedCouriers } from '../api/prestashop';
 import SubmissionModal from '../components/modals/SubmissionModal';
 
 const CartScreen = () => {
@@ -269,8 +269,8 @@ const CartScreen = () => {
 
         try {
           // Get carrier details (default to 27)
-          const courierRes = await getCouriers(27);
-          //  console.log('courierRes', courierRes);
+          const courierRes = await getCachedCouriers(27);
+         // console.log('courierRes', courierRes);
 
           if (courierRes.success && courierRes.data?.carriers?.length > 0) {
             const carrierData = courierRes.data.carriers[0];
@@ -280,8 +280,8 @@ const CartScreen = () => {
             dispatch(setCarrierId(carrierData.id));
 
             // Get delivery options for this carrier
-            const deliveryRes = await getDeliveries(carrierData.id);
-            //   console.log('deliveryRes', deliveryRes);
+            const deliveryRes = await getCachedDeliveries(carrierData.id);
+            // console.log('deliveryRes', deliveryRes);
 
             if (deliveryRes.success && deliveryRes.data?.deliveries) {
               setDeliveries(deliveryRes.data.deliveries);

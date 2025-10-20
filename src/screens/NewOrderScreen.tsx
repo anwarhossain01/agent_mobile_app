@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button, Platform, TouchableNativeFeedback, ScrollView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { checkProductStock, getCartDetails, getCartListForClient, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
+import { checkProductStock, getCachedCustomers, getCachedProducts, getCartDetails, getCartListForClient, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
 import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, selectTotalPrice, selectClientId, setCartId } from '../store/slices/cartSlice';
 import { useNavigation } from '@react-navigation/native';
@@ -39,7 +39,6 @@ const NewOrderScreen = ({ route }) => {
                 quantityInputs[element.product_id] = String(element.quantity);
             });
         }
-
         setLocalQuantityState();
     }, []);
 
@@ -70,7 +69,8 @@ const NewOrderScreen = ({ route }) => {
         const fetchClientById = async () => {
             if (!client_id && !reduxClientId) return;
             setLoading(true);
-            const res = await getCustomer(client_id || reduxClientId);
+            const res = await getCachedCustomers(client_id || reduxClientId);
+           // console.log("get customer res ", res.data);
             setLoading(false);
 
             if (res.success && res.data?.customers?.length > 0) {
@@ -151,7 +151,7 @@ const NewOrderScreen = ({ route }) => {
             return;
         }
         setLoading(true);
-        const res = await getCustomer(searchText);
+        const res = await getCachedCustomers(searchText);
         setLoading(false);
         if (res.success && res.data?.customers) setFilteredData(res.data.customers);
         else setFilteredData([]);
@@ -180,8 +180,8 @@ const NewOrderScreen = ({ route }) => {
         }
 
         setProductLoading(true);
-        const res = await getProductSearchResult(searchText);
-      //  console.log("prods", res.data);
+        const res = await getCachedProducts(searchText);
+      // console.log("prods", res.data);
         
         setProductLoading(false);
 

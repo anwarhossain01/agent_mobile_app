@@ -299,3 +299,152 @@ export const createOrderCache = async (orderData: Record<string, any>) => {
         return { success: false, error: error?.message || JSON.stringify(error) };
     }
 };
+
+export const cachedDataForCustomers = async (
+  tableName: string,
+  apiCall: () => Promise<any>,
+  search: string | number,
+  idColumn: string = 'id'
+) => {
+  try {
+    console.log(`⚡️ Cached API call for ${tableName}...`);
+
+    // 1️⃣ Try local DB first
+    let localData: any[] = [];
+
+    if (!isNaN(Number(search))) {
+      localData = await queryData(tableName, `${idColumn} = ?`, [Number(search)]);
+    } else if (typeof search === 'string' && search.trim() !== '') {
+      const nameParts = search.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts[1] || '';
+      if (lastName)
+        localData = await queryData(
+          tableName,
+          `firstname LIKE ? AND lastname LIKE ?`,
+          [`%${firstName}%`, `%${lastName}%`]
+        );
+      else
+        localData = await queryData(tableName, `firstname LIKE ?`, [`%${firstName}%`]);
+    }
+
+    if (localData.length > 0) {
+      console.log(`📦 Found customer(s) in local DB`);
+      return { success: true, data: { customers: localData }, fromCache: true };
+    }
+
+    // 2️⃣ If not found locally → call API
+    console.log(`🌐 Customer(s) not found locally, calling API...`);
+    const res = await apiCall();
+    const apiCustomers = res.data?.customers || [];
+
+    // 3️⃣ Save minimal info to SQLite
+    if (apiCustomers.length > 0) {
+      for (const c of apiCustomers) {
+        const minimal = {
+          id: parseInt(c.id),
+          firstname: c.firstname,
+          lastname: c.lastname,
+          email: c.email,
+          codice_cmnr: c.codice_cmnr,
+          company: c.company,
+        };
+        await insertIfNotExists(tableName, minimal, idColumn);
+      }
+      console.log(`💾 Saved customer(s) to local DB`);
+    }
+
+    return { success: true, data: res.data, fromCache: false };
+  } catch (error: any) {
+    console.error(`❌ Cached customer fetch error:`, error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
+export const cachedDataForProducts = async (
+  tableName: string,
+  apiCall: () => Promise<any>,
+  search: string,
+  idColumn: string = 'id'
+) => {
+  try {
+    console.log(`⚡️ Cached API call for ${tableName}...`);
+
+    // 1️⃣ Try local DB
+    const localData = await queryData(tableName, `name LIKE ?`, [`%${search}%`]);
+
+    if (localData.length > 0) {
+      console.log(`📦 Found products in local DB`);
+      return { success: true, data: { products: localData }, fromCache: true };
+    }
+
+    // 2️⃣ Not found locally → call API
+    console.log(`🌐 Products not found locally, calling API...`);
+    const res = await apiCall();
+    const apiProducts = res.data?.products || [];
+
+    // 3️⃣ Save all product data to SQLite
+    if (apiProducts.length > 0) {
+      for (const p of apiProducts) {
+        const productData = {
+          id: parseInt(p.id),
+          id_default_image: p.id_default_image,
+          minimal_quantity: p.minimal_quantity,
+          price: parseFloat(p.price),
+          name: p.name,
+        };
+        await insertIfNotExists(tableName, productData, idColumn);
+      }
+      console.log(`💾 Saved products to local DB`);
+    }
+
+    return { success: true, data: res.data, fromCache: false };
+  } catch (error: any) {
+    console.error(`❌ cachedDataForProducts error:`, error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
+/**
+ * Cached search for client addresses.
+ * First search local SQLite, if not found call API via passed function and save.
+ */
+export const cachedClientAddresses = async (
+  client_id: string | number | null,
+  apiCall: () => Promise<any>
+) => {
+  const tableName = 'addresses';
+  try {
+    console.log(`⚡ Searching addresses for client ${client_id} locally...`);
+
+    // 1️⃣ Try local DB
+    let localData: any[] = [];
+    if (client_id) {
+      localData = await queryData(tableName, `id_customer = ?`, [client_id]);
+    }
+
+    if (localData.length > 0) {
+      console.log(`📦 Found addresses in local DB`);
+      return { success: true, data: { addresses: localData }, fromCache: true };
+    }
+
+    // 2️⃣ Not found locally → call API
+    console.log(`🌐 Addresses not found locally, calling API...`);
+    const res = await apiCall();
+    const apiAddresses = res.data?.addresses || [];
+
+    // 3️⃣ Save all JSON data to SQLite
+    if (apiAddresses.length > 0) {
+      for (const a of apiAddresses) {
+        const addressData = { ...a };
+        await insertIfNotExists(tableName, addressData, 'id');
+      }
+      console.log(`💾 Saved addresses to local DB`);
+    }
+
+    return { success: true, data: res.data, fromCache: false };
+  } catch (error: any) {
+    console.error('❌ cachedClientAddresses error:', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};

@@ -135,3 +135,50 @@ CREATE TABLE IF NOT EXISTS deliveries (
 CREATE INDEX IF NOT EXISTS idx_deliveries_carrier ON deliveries(id_carrier);
 CREATE INDEX IF NOT EXISTS idx_deliveries_zone ON deliveries(id_zone);
 
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY,
+  firstname TEXT,
+  lastname TEXT,
+  email TEXT,
+  codice_cmnr TEXT,
+  company Text,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY,
+  id_default_image INTEGER,
+  minimal_quantity INTEGER,
+  price REAL,
+  name TEXT
+);
+
+CREATE TABLE IF NOT EXISTS addresses (
+    id INTEGER PRIMARY KEY,
+    id_customer INTEGER,
+    id_manufacturer INTEGER,
+    id_supplier INTEGER,
+    id_warehouse INTEGER,
+    id_country INTEGER,
+    id_state INTEGER,
+    alias TEXT,
+    company TEXT,
+    lastname TEXT,
+    firstname TEXT,
+    vat_number TEXT,
+    address1 TEXT,
+    address2 TEXT,
+    postcode TEXT,
+    city TEXT,
+    other TEXT,
+    phone TEXT,
+    phone_mobile TEXT,
+    dni TEXT,
+    deleted TEXT,
+    date_add TEXT,
+    date_upd TEXT,
+    numero_esercizio TEXT,
+    codice_cmnr TEXT,
+    numero_ordinale TEXT
+);

@@ -19,7 +19,7 @@ import {
   selectShippingPriceExcTax,
 
 } from '../store/slices/cartSlice';
-import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries, getCachedDeliveries, getCachedCouriers } from '../api/prestashop';
+import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries, getCachedDeliveries, getCachedCouriers, getCachedClientAddresses } from '../api/prestashop';
 import SubmissionModal from '../components/modals/SubmissionModal';
 
 const CartScreen = () => {
@@ -82,8 +82,8 @@ const CartScreen = () => {
   useEffect(() => {
     async function getClientAddresses() {
       if (!client_id) return;
-      const res = await clientAddressGet(client_id);
-      //  console.log("Client addresses", res.data);
+      const res = await getCachedClientAddresses(client_id);
+        console.log("Client addresses", res.data);
 
       if (res.success && res.data?.addresses) {
         //  console.log(res.data.addresses);
@@ -183,7 +183,7 @@ const CartScreen = () => {
     if (res.success) {
       //Alert.alert('Successo', 'Indirizzo creato con successo');
       setShowNewAddressModal(false);
-      const addressesRes = await clientAddressGet(client_id);
+      const addressesRes = await getCachedClientAddresses(client_id);
       if (addressesRes.success && addressesRes.data?.addresses) {
         setAddresses(addressesRes.data.addresses);
       }
@@ -265,7 +265,7 @@ const CartScreen = () => {
       const fetchCourierData = async () => {
         hasFetched.current = true;
         setLoading(true);
-        console.log('fetchCourierData - ONLY ONCE');
+     //   console.log('fetchCourierData - ONLY ONCE');
 
         try {
           // Get carrier details (default to 27)

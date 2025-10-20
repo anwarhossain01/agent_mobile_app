@@ -34,7 +34,7 @@ export default function OrdersScreen({ route }) {
       setServerError(null);
 
       try {
-        console.log("Employee ID:", employeeId);
+    //    console.log("Employee ID:", employeeId);
         if (route.params?.employee_id) setShowBtn(true);
 
         // 🟢 1️⃣ Fetch server orders

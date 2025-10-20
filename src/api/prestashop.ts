@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {  cachedDataForCarriers, cachedDataForDeliveries } from '../sync/cached';
+import {  cachedClientAddresses, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts } from '../sync/cached';
 
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
@@ -48,7 +48,8 @@ export const getClientsForAgent = async (agentId: number) => {
     { employee_id: agentId },
     { baseURL: API_LOGIN_URL }
   );
-
+  console.log("getClientsForAgent res", res.data);
+  
   return res.data.customers || [];
 };
 
@@ -163,6 +164,31 @@ export const getCustomer = async (search: string | number) => {
   }
 };
 
+export const getCachedCustomers = async (search: string | number) => {
+  // 1️⃣ Define the API call as a function
+  const apiCall = () => {
+    let url = `/customers/?display=full&output_format=JSON&ws_key=${API_KEY}`;
+
+    if (!isNaN(Number(search))) {
+      url += `&filter[id]=[${search}]`;
+    } else if (typeof search === 'string' && search.trim() !== '') {
+      const nameParts = search.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts[1] || '';
+
+      if (lastName)
+        url += `&filter[firstname]=%[${encodeURIComponent(firstName)}]%&filter[lastname]=%[${encodeURIComponent(lastName)}]%`;
+      else
+        url += `&filter[firstname]=%[${encodeURIComponent(firstName)}]%`;
+    }
+
+    return api.get(url);
+  };
+
+  // 2️⃣ Call generic cached function for customers
+  return cachedDataForCustomers('customers', apiCall, search, 'id');
+};
+
 export const getProductSearchResult = async (search: string) => {
   try {
     const res = await api.get(
@@ -174,6 +200,17 @@ export const getProductSearchResult = async (search: string) => {
     console.log('Product search error', error);
     return { success: false, error: error.response?.data?.error || error.message };
   }
+};
+
+export const getCachedProducts = async (search: string) => {
+  const apiCall = () =>
+    api.get(
+      `/products?filter[name]=%[${encodeURIComponent(
+        search
+      )}]%&display=[id,name,id_default_image,price,minimal_quantity]&output_format=JSON&ws_key=${API_KEY}`
+    );
+
+  return cachedDataForProducts('products', apiCall, search);
 };
 
 export const checkProductStock = async (product_id: string | number) => {
@@ -195,6 +232,15 @@ export const clientAddressGet = async (client_id: string | number | null) => {
     return { success: false, error: error.response?.data?.error || error.message };
   }
 }
+
+export const getCachedClientAddresses = async (client_id: string | number) => {
+  const apiCall = () =>
+    api.get(
+      `/addresses/?filter[id_customer]=[${client_id}]&display=full&output_format=JSON&ws_key=${API_KEY}`
+    );
+
+  return cachedClientAddresses(client_id, apiCall);
+};
 
 export const createNewAddress = async (
   customer_id: string | number | null,

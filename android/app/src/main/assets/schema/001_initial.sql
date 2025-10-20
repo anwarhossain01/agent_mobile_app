@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
   FOREIGN KEY (cart_id) REFERENCES carts (id) ON DELETE CASCADE,
   
   -- Ensure unique product in cart
-  UNIQUE(cart_id, id_product, id_product_attribute)
+  UNIQUE(cart_id, id_product)
 );
 
 -- Indexes for better performance
@@ -64,90 +64,53 @@ CREATE INDEX IF NOT EXISTS idx_carts_dirty ON carts(is_dirty);
 CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_id);
 CREATE INDEX IF NOT EXISTS idx_cart_items_product ON cart_items(id_product);
 
-
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  
-  -- Core order information
-  id_cart INTEGER NOT NULL UNIQUE, -- local cart id, don't use this for API calls
+
+  -- Core order info
+  id_cart INTEGER NOT NULL UNIQUE,
+  id_employee INTEGER DEFAULT NULL,
   id_customer INTEGER NOT NULL,
   id_carrier INTEGER NOT NULL,
   id_address_delivery INTEGER NOT NULL,
   id_address_invoice INTEGER NOT NULL,
   id_currency INTEGER DEFAULT 1,
   id_lang INTEGER DEFAULT 3,
-  
-  -- Payment information
+
+  -- Payment
   module TEXT DEFAULT 'ps_wirepayment',
   payment TEXT DEFAULT 'Manual payment',
-  
+
   -- Totals
   total_products REAL NOT NULL,
   total_products_wt REAL NOT NULL,
   total_paid REAL NOT NULL,
   total_paid_real REAL NOT NULL,
-  total_paid_tax_incl REAL NOT NULL,
-  conversion_rate REAL DEFAULT 1.0,
-  
-  -- Shipping totals
   total_shipping REAL DEFAULT 0,
   total_shipping_tax_incl REAL DEFAULT 0,
   total_shipping_tax_excl REAL DEFAULT 0,
-  
-  -- Discount totals
-  total_discounts REAL DEFAULT 0,
-  total_discounts_tax_incl REAL DEFAULT 0,
-  total_discounts_tax_excl REAL DEFAULT 0,
-  
-  -- Wrapping totals
-  total_wrapping REAL DEFAULT 0,
-  total_wrapping_tax_incl REAL DEFAULT 0,
-  total_wrapping_tax_excl REAL DEFAULT 0,
-  
-  -- Rounding
-  round_mode INTEGER DEFAULT 2,
-  round_type INTEGER DEFAULT 1,
-  
-  -- Order options
-  recyclable INTEGER DEFAULT 0,
-  gift INTEGER DEFAULT 0,
-  gift_message TEXT DEFAULT '',
-  mobile_theme INTEGER DEFAULT 0,
-  
-  -- Invoice and delivery
-  invoice_number INTEGER DEFAULT 0,
-  delivery_number INTEGER DEFAULT 0,
-  invoice_date TEXT DEFAULT '0000-00-00 00:00:00',
-  delivery_date TEXT DEFAULT '0000-00-00 00:00:00',
-  
-  -- Status
-  valid INTEGER DEFAULT 1,
-  Trasmesso INTEGER DEFAULT 0,
-  note TEXT DEFAULT '',
-  
-  -- Tax
-  carrier_tax_rate REAL DEFAULT 0.000,
-  
-  -- Local app management
-  remote_order_id INTEGER DEFAULT NULL,
-  order_status TEXT DEFAULT 'pending',
+  conversion_rate REAL DEFAULT 1.0,
+
+  -- Local sync management
   is_dirty BOOLEAN DEFAULT 1,
   sync_attempts INTEGER DEFAULT 0,
   last_sync_error TEXT,
-  
+  order_status TEXT DEFAULT 'pending',
+  remote_order_id INTEGER DEFAULT NULL,
+
   -- Timestamps
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_synced_at DATETIME
 );
 
--- Indexes for better performance
+-- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_orders_cart ON orders(id_cart);
 CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(id_customer);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
-CREATE INDEX IF NOT EXISTS idx_orders_remote_id ON orders(remote_order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_dirty ON orders(is_dirty);
 CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at);
+
 
 CREATE TABLE IF NOT EXISTS carriers (
   id INTEGER PRIMARY KEY,
@@ -171,3 +134,4 @@ CREATE TABLE IF NOT EXISTS deliveries (
 
 CREATE INDEX IF NOT EXISTS idx_deliveries_carrier ON deliveries(id_carrier);
 CREATE INDEX IF NOT EXISTS idx_deliveries_zone ON deliveries(id_zone);
+

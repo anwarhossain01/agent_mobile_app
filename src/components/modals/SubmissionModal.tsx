@@ -79,7 +79,6 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
         if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
             setError('Missing required information: client, addresses, or carrier');
             console.log(client_id, delivery_address_id, invoice_address_id, carrier_id);
-            
             return;
         }
 
@@ -114,6 +113,8 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 );
 
                 if (cartRes.success && cartRes.data?.cart?.id) {
+                    console.log("cartRes after insertion", cartRes);
+                    
                     currentCartId = cartRes.data.cart.id.toString();
                     dispatch(setCartId(currentCartId));
                     setStatus('Cart cached locally!');
@@ -123,7 +124,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             } else {
                 setStatus('Using existing local cart...');
             }
-
+            
             // 2️⃣ Calculate order totals
             setStatus('Calculating order totals...');
             const totals = calculateOrderTotals();
@@ -147,8 +148,8 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 total_products: totals.total_products,
                 total_products_wt: totals.total_products_wt,
                 total_shipping: totals.total_shipping_tax_incl,
-                total_shipping_tax_incl: totals.total_shipping_tax_incl,
-                total_shipping_tax_excl: totals.total_shipping_tax_excl,
+                total_shipping_tax_incl: shippingPriceInc,
+                total_shipping_tax_excl: shippingPriceExc,
                 conversion_rate: 1.0
             });
 

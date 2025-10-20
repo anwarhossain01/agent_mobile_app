@@ -15,7 +15,7 @@ export default function ClientsScreen() {
   const [noData, setNoData] = useState(false);
   const employeeId = auth.employeeId;
   const navigation = useNavigation();
-
+  let localindex = 0;
   useEffect(() => {
     const load = async () => {
       try {
@@ -55,7 +55,7 @@ export default function ClientsScreen() {
       ) : null}
       <FlatList
         data={clients}
-        keyExtractor={(item) => String(item.id || item.id_customer)}
+        keyExtractor={(item) => String(localindex++)}
         renderItem={({ item }) => (
           <View style={styles.card}>
             {/* Buttons on top */}

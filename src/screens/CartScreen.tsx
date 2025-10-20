@@ -270,7 +270,6 @@ const CartScreen = () => {
         try {
           // Get carrier details (default to 27)
           const courierRes = await getCachedCouriers(27);
-         // console.log('courierRes', courierRes);
 
           if (courierRes.success && courierRes.data?.carriers?.length > 0) {
             const carrierData = courierRes.data.carriers[0];

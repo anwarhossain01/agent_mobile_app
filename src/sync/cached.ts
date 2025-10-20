@@ -38,7 +38,6 @@ export const cachedDataForCarriers = async (
         // If not found locally, call API
         console.log(`🌐 Data not found locally, calling API for ${tableName}...`);
         const res = await apiCall();
-        console.log(res.data);
 
         // Save to SQLite for future use
         if (res.data?.[tableName] && res.data[tableName].length > 0) {
@@ -58,7 +57,7 @@ export const cachedDataForCarriers = async (
             console.log(`💾 ${tableName} data saved to local database`);
         }
 
-        return { ...res, fromCache: false };
+        return { success: true, data: res.data, fromCache: false };
     } catch (error) {
         console.log(`Cached API call error for ${tableName}:`, error);
         return {
@@ -120,7 +119,7 @@ export const cachedDataForDeliveries = async (
             console.log(`💾 Deliveries saved to local database`);
         }
 
-        return { ...res, fromCache: false };
+        return { success: true, data: res.data, fromCache: false };
     } catch (error) {
         console.log(`Cached API call error for ${tableName}:`, error);
         return {
@@ -141,79 +140,93 @@ export const cachedDataForDeliveries = async (
  * @param products - array of { id_product, quantity, id_product_attribute? }
  */
 export const createCartCache = async (
-    id_currency: number,
-    id_lang: number,
-    id_customer: number,
-    id_address_delivery: number,
-    id_address_invoice: number,
-    products: { id_product: number | string | any; quantity: number | string; id_product_attribute?: number | any }[]
+  id_currency: number,
+  id_lang: number,
+  id_customer: number,
+  id_address_delivery: number,
+  id_address_invoice: number,
+  products: { id_product: number | string | any; quantity: number | string; id_product_attribute?: number | any }[]
 ) => {
-    const db = await getDBConnection();
-    let generatedCartId = null;
-    console.log('createCartCache', id_currency, id_lang, id_customer, id_address_delivery, id_address_invoice, products);
+  const db = await getDBConnection();
+  const localCartId = `local_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
-    try {
-        await db.transaction(async (tx) => {
-            // 1️⃣ Create local cart ID
-            const localCartId = `local_${Date.now()}`;
+  try {
+    const generatedCartId = await new Promise<number>((resolve, reject) => {
+      db.transaction(
+        (tx) => {
+          // 1️⃣ Insert cart
+          tx.executeSql(
+            `
+            INSERT INTO carts (
+              id_currency, id_lang, id_customer,
+              id_address_delivery, id_address_invoice,
+              local_cart_id, is_dirty
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            `,
+            [
+              id_currency,
+              id_lang,
+              id_customer,
+              id_address_delivery,
+              id_address_invoice,
+              localCartId,
+              1,
+            ],
+            (txObj, resultSet) => {
+              const newCartId = resultSet.insertId;
+              console.log(`🛒 New cart created with ID: ${newCartId}`);
 
-            // 2️⃣ Insert cart
-            const insertCartQuery = `
-        INSERT INTO carts (
-          id_currency, id_lang, id_customer,
-          id_address_delivery, id_address_invoice,
-          local_cart_id, is_dirty
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `;
-            const cartResult = await tx.executeSql(insertCartQuery, [
-                id_currency,
-                id_lang,
-                id_customer,
-                id_address_delivery,
-                id_address_invoice,
-                localCartId,
-                1, // is_dirty (needs sync)
-            ]);
-            console.log(cartResult);
-
-            const newCartId = cartResult[1].insertId;
-            console.log(`🛒 New cart created with ID: ${newCartId}`);
-
-            // 3️⃣ Insert each cart item
-            for (const product of products) {
-                const insertItemQuery = `
-          INSERT OR IGNORE INTO cart_items (
-            cart_id, id_product, id_product_attribute, quantity, id_address_delivery
-          ) VALUES (?, ?, ?, ?, ?)
-        `;
-                await tx.executeSql(insertItemQuery, [
+              // 2️⃣ Insert items
+              products.forEach((product) => {
+                txObj.executeSql(
+                  `
+                  INSERT OR IGNORE INTO cart_items (
+                    cart_id, id_product, id_product_attribute, quantity, id_address_delivery
+                  ) VALUES (?, ?, ?, ?, ?)
+                  `,
+                  [
                     newCartId,
                     product.id_product,
                     product.id_product_attribute || 0,
                     product.quantity,
                     id_address_delivery,
-                ]);
-            }
-            generatedCartId = newCartId;
-            console.log(`📦 Added ${products.length} item(s) to cart ${newCartId}`);
-        });
+                  ],
+                  () => {
+                    console.log(`📦 Added product ${product.id_product} x${product.quantity}`);
+                  },
+                  (txErr, err) => {
+                    console.error('❌ cart_item insert error:', err);
+                    return false; // continue transaction
+                  }
+                );
+              });
 
-        return {
-            success: true,
-            message: 'Cart created successfully',
-            data: {
-                cart: {
-                    id: generatedCartId
-                }
+              resolve(newCartId);
             },
-        };
-    } catch (error: any) {
-        console.error('❌ createCart error (detailed):', JSON.stringify(error, null, 2));
-        return {
-            success: false,
-            error: error?.message || JSON.stringify(error),
-        };
-    }
+            (txErr, err) => {
+              console.error('❌ cart insert error:', err);
+              reject(err);
+              return false;
+            }
+          );
+        },
+        (error) => reject(error),
+        () => console.log('✅ transaction success')
+      );
+    });
+
+    return {
+      success: true,
+      message: 'Cart created successfully',
+      data: { cart: { id: generatedCartId } },
+    };
+  } catch (error: any) {
+    console.error('❌ createCart error (detailed):', error);
+    return {
+      success: false,
+      error: error?.message || JSON.stringify(error),
+    };
+  }
 };
 
 /**
@@ -225,30 +238,64 @@ export const createOrderCache = async (orderData: Record<string, any>) => {
 
     try {
         await db.transaction(async (tx) => {
-            // merge defaults for local tracking
+            // ✅ Define the valid columns from your simplified schema
+            const validColumns = [
+                'id_cart',
+                'id_employee',
+                'id_customer',
+                'id_carrier',
+                'id_address_delivery',
+                'id_address_invoice',
+                'id_currency',
+                'id_lang',
+                'module',
+                'payment',
+                'total_products',
+                'total_products_wt',
+                'total_paid',
+                'total_paid_real',
+                'total_shipping',
+                'total_shipping_tax_incl',
+                'total_shipping_tax_excl',
+                'conversion_rate',
+                'is_dirty',
+                'sync_attempts',
+                'last_sync_error',
+                'order_status',
+                'remote_order_id',
+                'last_synced_at',
+            ];
+
+            // ✅ Merge defaults for local tracking
             const dataWithDefaults = {
                 order_status: 'pending',
                 is_dirty: 1,
                 sync_attempts: 0,
                 last_sync_error: null,
                 remote_order_id: null,
-                ...orderData, // user-provided data overrides defaults if given
+                ...orderData,
             };
 
-            const columns = Object.keys(dataWithDefaults).join(', ');
-            const placeholders = Object.keys(dataWithDefaults).map(() => '?').join(', ');
-            const values = Object.values(dataWithDefaults);
+            // ✅ Filter only valid columns that exist in the table
+            const filteredEntries = Object.entries(dataWithDefaults).filter(([key]) =>
+                validColumns.includes(key)
+            );
+
+            const columns = filteredEntries.map(([key]) => key).join(', ');
+            const placeholders = filteredEntries.map(() => '?').join(', ');
+            const values = filteredEntries.map(([_, value]) => value);
 
             const sql = `INSERT INTO orders (${columns}) VALUES (${placeholders})`;
+
             const result = await tx.executeSql(sql, values);
-            const insertedId = result[0].insertId;
+            const insertedId = result[1]?.insertId;
 
             console.log(`🧾 Order created successfully (local ID: ${insertedId})`);
         });
 
         return { success: true, message: 'Order saved locally' };
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ createOrder error:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: error?.message || JSON.stringify(error) };
     }
 };

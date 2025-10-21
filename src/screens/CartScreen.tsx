@@ -19,8 +19,10 @@ import {
   selectShippingPriceExcTax,
 
 } from '../store/slices/cartSlice';
-import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries, getCachedDeliveries, getCachedCouriers, getCachedClientAddresses } from '../api/prestashop';
+import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries, getCachedDeliveries, getCachedCouriers, getCachedClientAddresses, getCachedClientsForAgent } from '../api/prestashop';
 import SubmissionModal from '../components/modals/SubmissionModal';
+import { RootState } from '../store';
+import NetInfo from '@react-native-community/netinfo';
 
 const CartScreen = () => {
   const cart = useSelector(selectCartItems);
@@ -28,6 +30,8 @@ const CartScreen = () => {
   const client_id = useSelector(selectClientId);
   const delivery_address_id = useSelector(selectDeliveryAddressId);
   const invoice_address_id = useSelector(selectInvoiceAddressId);
+  const auth = useSelector((s: RootState) => s.auth);
+  const employeeId = auth.employeeId;
 
   const [loading, setLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null);
@@ -83,7 +87,7 @@ const CartScreen = () => {
     async function getClientAddresses() {
       if (!client_id) return;
       const res = await getCachedClientAddresses(client_id);
-        console.log("Client addresses", res.data);
+      console.log("Client addresses", res.data);
 
       if (res.success && res.data?.addresses) {
         //  console.log(res.data.addresses);
@@ -98,7 +102,7 @@ const CartScreen = () => {
     const fetchClientById = async () => {
       if (!client_id) return;
       setLoading(true);
-      const res = await getCustomer(client_id);
+      const res = await getCachedClientsForAgent(employeeId, client_id);
       setLoading(false);
 
       if (res.success && res.data?.customers?.length > 0) {
@@ -125,7 +129,13 @@ const CartScreen = () => {
     setShowInvoiceDropdown(false);
   };
 
-  const handleNewAddress = () => {
+  const handleNewAddress = async () => {
+    let state = await NetInfo.fetch();
+    let isConnected = state.isConnected;
+    if (!isConnected) {
+      Alert.alert('Errore', 'verifica la connessione di rete');
+      return;
+    }
     setShowNewAddressModal(true);
   };
 
@@ -265,7 +275,7 @@ const CartScreen = () => {
       const fetchCourierData = async () => {
         hasFetched.current = true;
         setLoading(true);
-     //   console.log('fetchCourierData - ONLY ONCE');
+        //   console.log('fetchCourierData - ONLY ONCE');
 
         try {
           // Get carrier details (default to 27)

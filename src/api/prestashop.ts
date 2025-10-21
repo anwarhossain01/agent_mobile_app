@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {  cachedClientAddresses, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts } from '../sync/cached';
+import {  cachedClientAddresses, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts, cachedProductStock } from '../sync/cached';
 
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
@@ -41,7 +41,7 @@ export const loginEmployee = async (email: string, password: string) => {
 
 };
 
-export const getClientsForAgent = async (agentId: number) => {
+export const getClientsForAgent = async (agentId: number | string) => {
   // Example: fetch customers and filter by an 'id_assigned_agent' custom field in your PrestaShop DB.
   //  const res = await api.get('/customers?display=full');
   const res = await api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
@@ -51,6 +51,21 @@ export const getClientsForAgent = async (agentId: number) => {
   console.log("getClientsForAgent res", res.data);
   
   return res.data.customers || [];
+};
+
+export const getCachedClientsForAgent = async (agentId: number | string, search: string | number | null = '') => {
+  try {
+    const apiCall = () => {
+      return api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
+    { employee_id: agentId },
+    { baseURL: API_LOGIN_URL }
+  );
+    }
+    return cachedDataForCustomers('customers', apiCall, search, 'id_customer');
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+  
 };
 
 export const getProducts = async () => {
@@ -75,7 +90,7 @@ export const getallCustomerss = async () => {
     const res = await api.get('/customers', {
       params: {
         output_format: 'JSON',
-        display: 'full', // safe fields
+        display: 'full', 
         limit: 50,
       },
     });
@@ -223,6 +238,26 @@ export const checkProductStock = async (product_id: string | number) => {
 
   }
 }
+
+export const checkAllProductStock = async () => {
+  try {
+    const res = await api.get(`/stock_availables/?display=[id,id_product,id_product_attribute,quantity,depends_on_stock,out_of_stock]&output_format=JSON&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    console.log('Product stock error', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+
+  }
+}
+
+export const getCachedProductStock = async (product_id: string | number) => {
+  const apiCall = () =>
+    api.get(
+      `/stock_availables/?filter[id_product]=[${product_id}]&display=[id,id_product,id_product_attribute,quantity,depends_on_stock,out_of_stock]&output_format=JSON&ws_key=${API_KEY}`
+    );
+
+  return cachedProductStock(product_id, apiCall);
+};
 
 export const clientAddressGet = async (client_id: string | number | null) => {
   try {
@@ -598,6 +633,7 @@ export const createOrder = async ({
   note = '',
   carrier_tax_rate = 0.000
 }: {
+  id_employee: number;
   id_address_delivery: number;
   id_address_invoice: number;
   id_cart: number;

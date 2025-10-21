@@ -60,8 +60,6 @@ import CatalogScreen from './src/screens/CatalogScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
-import Modal from 'react-native-modal';
-import ClientOrderScreen from './src/screens/ClientOrderScreen';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import IndirizziScreen from './src/screens/IndirizziScreen';
 import ClientsMenuModal from './src/components/modals/ClientsMenuModal';
@@ -72,6 +70,8 @@ import ProductListScreen from './src/screens/ProductListScreen';
 import NewOrderScreen from './src/screens/NewOrderScreen';
 import CartScreen from './src/screens/CartScreen';
 import { initDatabase } from './src/database/init';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeAllProductStock } from './src/sync/cached';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -217,12 +217,30 @@ function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
   const [dbReady, setDbReady] = useState(false);
 
-   useEffect(() => {
+
+  useEffect(() => {
+    const runStockInit = async () => {
+      const done = await AsyncStorage.getItem('init');
+
+      if (!done) {
+        const res = await initializeAllProductStock();
+        if (res.success) {
+          await AsyncStorage.setItem('init', 'true');
+          console.log('✅ Product stock cached locally');
+        } else {
+          console.log('⚠️ Stock sync failed:', res.error);
+        }
+      } else {
+        console.log('🟢 Product stock already initialized, skipping...');
+      }
+    };
+
     const initializeDatabase = async () => {
       try {
         console.log('Initializing database...');
         await initDatabase();
         console.log('Database initialized successfully');
+        await runStockInit();
         setDbReady(true);
       } catch (error) {
         console.error('Failed to initialize database:', error);
@@ -231,6 +249,7 @@ function RootNavigator() {
     };
 
     initializeDatabase();
+
   }, []);
 
   if (!dbReady) {

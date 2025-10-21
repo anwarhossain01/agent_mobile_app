@@ -1,3 +1,4 @@
+import { checkAllProductStock } from "../api/prestashop";
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
 
 export const cachedDataForCarriers = async (
@@ -303,7 +304,7 @@ export const createOrderCache = async (orderData: Record<string, any>) => {
 export const cachedDataForCustomers = async (
   tableName: string,
   apiCall: () => Promise<any>,
-  search: string | number,
+  search: string | number ,
   idColumn: string = 'id'
 ) => {
   try {
@@ -342,12 +343,17 @@ export const cachedDataForCustomers = async (
     if (apiCustomers.length > 0) {
       for (const c of apiCustomers) {
         const minimal = {
-          id: parseInt(c.id),
+          id: parseInt(c.id ),
+          id_customer: parseInt(c.id_customer),
           firstname: c.firstname,
           lastname: c.lastname,
           email: c.email,
           codice_cmnr: c.codice_cmnr,
           company: c.company,
+          numero_ordinale: c.numero_ordinale || null,
+          postcode: c.postcode || null,
+          address1: c.address1 || null,
+          city: c.city || null,
         };
         await insertIfNotExists(tableName, minimal, idColumn);
       }
@@ -446,5 +452,97 @@ export const cachedClientAddresses = async (
   } catch (error: any) {
     console.error('❌ cachedClientAddresses error:', error);
     return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
+export const cachedProductStock = async (
+  product_id: string | number,
+  apiCall: () => Promise<any>
+) => {
+  const tableName = 'product_stock';
+  try {
+    console.log(`⚡ Checking stock for product ${product_id} locally...`);
+
+    // 1️⃣ Try local DB
+    const localData = await queryData(tableName, `id_product = ?`, [product_id]);
+
+    if (localData.length > 0) {
+      console.log(`📦 Found product stock in local DB`);
+      return {
+        success: true,
+        data: { stock_availables: localData },
+        fromCache: true,
+      };
+    }
+
+    // 2️⃣ Not found locally → call API
+    console.log(`🌐 Stock not found locally, calling API...`);
+    const res = await apiCall();
+    const stockItem = res.data?.stock_availables?.[0];
+
+    // 3️⃣ Save only the first object
+    if (stockItem) {
+      const stockData = {
+        id_product: stockItem.id_product,
+        id_product_attribute: stockItem.id_product_attribute,
+        quantity: stockItem.quantity,
+        depends_on_stock: stockItem.depends_on_stock,
+        out_of_stock: stockItem.out_of_stock,
+      };
+      await insertIfNotExists(tableName, stockData, 'id_product');
+      console.log(`💾 Saved stock for product ${product_id} to local DB`);
+    }
+
+    return { success: true, data: res.data, fromCache: false };
+  } catch (error: any) {
+    console.error('❌ cachedProductStock error:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message,
+    };
+  }
+};
+
+export const initializeAllProductStock = async () => {
+  const tableName = 'product_stock';
+  try {
+    console.log('🚀 Starting full product stock initialization...');
+
+    // 1️⃣ Call the API
+    const res = await checkAllProductStock();
+
+    if (!res.success || !res.data?.stock_availables) {
+      throw new Error(res.error || 'Failed to fetch all product stocks');
+    }
+
+    const db = await getDBConnection();
+    const stockList = res.data.stock_availables;
+    let insertedCount = 0;
+
+    // 2️⃣ Loop through all stock items
+    for (const stockItem of stockList) {
+      if (!stockItem?.id_product) continue; // sanity check
+
+      const stockData = {
+        id_product: stockItem.id_product,
+        id_product_attribute: stockItem.id_product_attribute,
+        quantity: stockItem.quantity,
+        depends_on_stock: stockItem.depends_on_stock,
+        out_of_stock: stockItem.out_of_stock,
+      };
+
+      // 3️⃣ Save only if not exists
+      const inserted = await insertIfNotExists(tableName, stockData, 'id_product');
+      if (inserted) insertedCount++;
+    }
+
+    console.log(`💾 Stock initialization complete — ${insertedCount} new records saved.`);
+    return { success: true, insertedCount };
+  } catch (error: any) {
+    console.error('❌ initializeAllProductStock error:', error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message,
+    };
   }
 };

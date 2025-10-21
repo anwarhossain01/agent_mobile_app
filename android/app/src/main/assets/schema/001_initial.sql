@@ -137,13 +137,20 @@ CREATE INDEX IF NOT EXISTS idx_deliveries_zone ON deliveries(id_zone);
 
 CREATE TABLE IF NOT EXISTS customers (
   id INTEGER PRIMARY KEY,
+  id_customer INTEGER,
   firstname TEXT,
   lastname TEXT,
   email TEXT,
   codice_cmnr TEXT,
   company Text,
+  numero_ordinale TEXT,
+  postcode TEXT,
+  address1 TEXT,
+  city TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE(id_customer)
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -181,4 +188,23 @@ CREATE TABLE IF NOT EXISTS addresses (
     numero_esercizio TEXT,
     codice_cmnr TEXT,
     numero_ordinale TEXT
+);
+
+CREATE TABLE IF NOT EXISTS agent (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_employee INTEGER,
+  token TEXT,
+  email TEXT,
+  id_profile INTEGER,
+  UNIQUE (id_employee)
+);
+
+CREATE TABLE IF NOT EXISTS product_stock (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id_product INTEGER,
+  depends_on_stock TEXT,
+  id_product_attribute INTEGER,
+  out_of_stock INTEGER,
+  quantity INTEGER,
+  UNIQUE (id_product)
 );

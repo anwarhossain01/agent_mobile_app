@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button, Platform, TouchableNativeFeedback, ScrollView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { checkProductStock, getCachedCustomers, getCachedProducts, getCartDetails, getCartListForClient, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
+import { checkAllProductStock, checkProductStock, getCachedClientsForAgent, getCachedCustomers, getCachedProducts, getCachedProductStock, getCartDetails, getCartListForClient, getClientsForAgent, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
 import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, selectTotalPrice, selectClientId, setCartId } from '../store/slices/cartSlice';
 import { useNavigation } from '@react-navigation/native';
+import { RootState } from '../store';
 
 const NewOrderScreen = ({ route }) => {
     const [query, setQuery] = useState('');
@@ -29,7 +30,8 @@ const NewOrderScreen = ({ route }) => {
     const cart = useSelector(selectCartItems);
     const grandTotal = useSelector(selectTotalPrice);
     const reduxClientId = useSelector(selectClientId);
-    
+    const auth = useSelector((s: RootState) => s.auth);
+    const employeeId = auth.employeeId;
     const client_id = route.params?.client_id || null;
     const navigation = useNavigation();
 
@@ -69,7 +71,7 @@ const NewOrderScreen = ({ route }) => {
         const fetchClientById = async () => {
             if (!client_id && !reduxClientId) return;
             setLoading(true);
-            const res = await getCachedCustomers(client_id || reduxClientId);
+            const res = await getCachedClientsForAgent(employeeId ,client_id || reduxClientId);
            // console.log("get customer res ", res.data);
             setLoading(false);
 
@@ -77,63 +79,63 @@ const NewOrderScreen = ({ route }) => {
                 const client = res.data.customers[0];
                 setSelectedCustomer(client);
                 setQuery(`${client.firstname} ${client.lastname}`);
-                dispatch(setClientId(client.id.toString()));
+                dispatch(setClientId(client.id_customer.toString()));
             }
         };
 
         fetchClientById();
     }, [client_id, dispatch, reduxClientId]);
 
-    useEffect(() => {
-        if (!client_id && !reduxClientId) return;
-        fetchClientCarts();
-    }, [client_id, reduxClientId]);
+    // useEffect(() => {
+    //     if (!client_id && !reduxClientId) return;
+    //     fetchClientCarts();
+    // }, [client_id, reduxClientId]);
 
-    const fetchClientCarts = async () => {
-        if (!client_id && !reduxClientId) return;
+    // const fetchClientCarts = async () => {
+    //     if (!client_id && !reduxClientId) return;
 
-        setLoadingCarts(true);
-        try {
-            // Get all carts for client
-            const cartsRes = await getCartListForClient(client_id || reduxClientId);
-            if (!cartsRes.success || !cartsRes.data?.carts) {
-                setCarts([]);
-                return;
-            }
+    //     setLoadingCarts(true);
+    //     try {
+    //         // Get all carts for client
+    //         const cartsRes = await getCartListForClient(client_id || reduxClientId);
+    //         if (!cartsRes.success || !cartsRes.data?.carts) {
+    //             setCarts([]);
+    //             return;
+    //         }
 
-            // Filter out carts that have orders AND are empty
-            const availableCarts = [];
-            for (const cart of cartsRes.data.carts) {
-                const ordersRes = await getOrdersFiltered(null, cart.id);
+    //         // Filter out carts that have orders AND are empty
+    //         const availableCarts = [];
+    //         for (const cart of cartsRes.data.carts) {
+    //             const ordersRes = await getOrdersFiltered(null, cart.id);
 
-                // Check if cart has no order AND is empty (no cart_rows)
-                if (ordersRes.success && (!ordersRes.data.orders || ordersRes.data.orders.length === 0)) {
-                    const cartDetailsRes = await getCartDetails(cart.id);
-                    if (cartDetailsRes.success) {
-                        const cartData = cartDetailsRes.data.cart;
-                        // Check if cart is empty (no associations or no cart_rows)
-                        if (!cartData.associations || !cartData.associations.cart_rows || cartData.associations.cart_rows.length === 0) {
-                            availableCarts.push(cartData);
-                        }
-                    }
-                }
-            }
+    //             // Check if cart has no order AND is empty (no cart_rows)
+    //             if (ordersRes.success && (!ordersRes.data.orders || ordersRes.data.orders.length === 0)) {
+    //                 const cartDetailsRes = await getCartDetails(cart.id);
+    //                 if (cartDetailsRes.success) {
+    //                     const cartData = cartDetailsRes.data.cart;
+    //                     // Check if cart is empty (no associations or no cart_rows)
+    //                     if (!cartData.associations || !cartData.associations.cart_rows || cartData.associations.cart_rows.length === 0) {
+    //                         availableCarts.push(cartData);
+    //                     }
+    //                 }
+    //             }
+    //         }
 
-            setCarts(availableCarts);
-        } catch (error) {
-            console.log('Error fetching carts:', error);
-            setCarts([]);
-        } finally {
-            setLoadingCarts(false);
-        }
-    };
+    //         setCarts(availableCarts);
+    //     } catch (error) {
+    //         console.log('Error fetching carts:', error);
+    //         setCarts([]);
+    //     } finally {
+    //         setLoadingCarts(false);
+    //     }
+    // };
 
-    const handleSelectCart = (cart: any) => {
-        setSelectedCart(cart);
-        setShowCartDropdown(false);
+    // const handleSelectCart = (cart: any) => {
+    //     setSelectedCart(cart);
+    //     setShowCartDropdown(false);
 
-        dispatch(setCartId({ id_cart: cart.id }));
-    };
+    //     dispatch(setCartId({ id_cart: cart.id }));
+    // };
 
     // ===== Debounce =====
     const debounce = (func: (...args: any[]) => void, delay = 600) => {
@@ -151,7 +153,8 @@ const NewOrderScreen = ({ route }) => {
             return;
         }
         setLoading(true);
-        const res = await getCachedCustomers(searchText);
+        const res = await getCachedClientsForAgent(employeeId, searchText);
+        
         setLoading(false);
         if (res.success && res.data?.customers) setFilteredData(res.data.customers);
         else setFilteredData([]);
@@ -167,7 +170,7 @@ const NewOrderScreen = ({ route }) => {
 
     const handleSelectCustomer = (item: any) => {
         setSelectedCustomer(item);
-        dispatch(setClientId(item.id.toString()));
+        dispatch(setClientId((item.id_customer ).toString()));
         setQuery(`${item.firstname} ${item.lastname}`);
         setFilteredData([]);
     };
@@ -202,10 +205,13 @@ const NewOrderScreen = ({ route }) => {
     const handleSelectProduct = async (item: any) => {
         setProductQuery('');
         setProductResults([]);
+        
+        let all_prod_stock_res = await checkAllProductStock ();
+        console.log(all_prod_stock_res);
+        
         // Check product stock
-        const stockRes = await checkProductStock(item.id);
+        const stockRes = await getCachedProductStock(item.id);
         const stockData = stockRes.data?.stock_availables?.[0];
-        //  console.log('Stock data', stockData);
 
         if (stockData?.out_of_stock == 1) {
             Alert.alert('Prodotto non disponibile in magazzino');
@@ -323,7 +329,7 @@ const NewOrderScreen = ({ route }) => {
                 <View style={styles.dropdown}>
                     <FlatList
                         data={filteredData}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => (item.id_customer ).toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => handleSelectCustomer(item)} style={styles.dropdownItem}>
                                 <Text style={styles.dropdownText}>
@@ -431,7 +437,7 @@ const NewOrderScreen = ({ route }) => {
                 <View style={styles.dropdown}>
                     <FlatList
                         data={productResults}
-                        keyExtractor={(item) => item.id.toString()}
+                        keyExtractor={(item) => (item.id).toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => handleSelectProduct(item)} style={styles.dropdownItem}>
                                 <Text style={styles.dropdownText}>

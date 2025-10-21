@@ -7,12 +7,13 @@ import { getOrdersForCustomer, getOrdersFromServer, getSafeOrders } from '../api
 import { useNavigation } from '@react-navigation/native';
 import { darkBg, lighterTheme } from '../../colors';
 import { queryData } from '../database/db';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { SyncOrders } from '../components/SyncOrders';
 
 export default function OrdersScreen({ route }) {
-  const localOrders = useSelector((s: RootState) => s.orders.items || []);
+  //  const localOrders = useSelector((s: RootState) => s.orders.items || []);
   const auth = useSelector((s: RootState) => s.auth);
   const [serverOrders, setServerOrders] = useState<any[]>([]);
+  const [localOrders, setLocalOrders] = useState<any[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const employeeId = route.params?.employee_id || auth.employeeId;
@@ -34,7 +35,7 @@ export default function OrdersScreen({ route }) {
       setServerError(null);
 
       try {
-    //    console.log("Employee ID:", employeeId);
+        //    console.log("Employee ID:", employeeId);
         if (route.params?.employee_id) setShowBtn(true);
 
         // 🟢 1️⃣ Fetch server orders
@@ -49,8 +50,8 @@ export default function OrdersScreen({ route }) {
         setServerOrders(orders);
 
         // 🟢 2️⃣ Fetch local cached orders from SQLite
-        const localDbOrders = await queryData('orders'); // returns [{...}, {...}]
-       // console.log('🧾 Local cached orders:', localDbOrders);
+        const localDbOrders = await queryData('orders', 'is_dirty = 1');
+        // console.log('🧾 Local cached orders:', localDbOrders);
 
         // 🧩 Normalize local orders to fit UI
         const normalizedLocalOrders = localDbOrders.map(o => ({
@@ -60,10 +61,12 @@ export default function OrdersScreen({ route }) {
           payment: o.payment || 'Manual payment',
           customer_name: `Local Order`, // placeholder
           date_add: o.created_at || o.updated_at,
-          synced: false,
+          synced: !o.is_dirty,
           reference: o.remote_order_id ? `#${o.remote_order_id}` : null,
           company: null
         }));
+
+        setLocalOrders(normalizedLocalOrders);
 
         // 🟢 3️⃣ Normalize server orders
         const normalizedServerOrders = orders.map(o => ({
@@ -146,15 +149,15 @@ export default function OrdersScreen({ route }) {
     });
   }
 
-  const SyncOrder = async () => {
-
+  const FloatingSyncButton = () => {
+    if (localOrders.length > 0) {
+      return <SyncOrders />;
+    } else {
+      return (
+        <></>
+      );
+    }
   }
-
-   const FloatingSyncButton = () => (
-  <TouchableOpacity style={styles.fab} onPress={SyncOrder}>
-    <Ionicons name="cloud-upload-outline" size={22} color="#fff" />
-  </TouchableOpacity>
-);
 
   const OrderCard = (item: any) => {
     item = item.item;
@@ -209,7 +212,7 @@ export default function OrdersScreen({ route }) {
     );
   };
 
-  
+
   return (
     <View style={{ flex: 1, padding: 13 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -302,20 +305,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    backgroundColor: lighterTheme,
-    borderRadius: 30,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
 });

@@ -64,6 +64,19 @@ CREATE INDEX IF NOT EXISTS idx_carts_dirty ON carts(is_dirty);
 CREATE INDEX IF NOT EXISTS idx_cart_items_cart ON cart_items(cart_id);
 CREATE INDEX IF NOT EXISTS idx_cart_items_product ON cart_items(id_product);
 
+CREATE TABLE IF NOT EXISTS server_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  company TEXT,
+  firstname TEXT,
+  lastname TEXT,
+  id_order INTEGER,
+  reference TEXT,
+  total_paid REAL NOT NULL,
+  date_add DATETIME,
+
+  UNIQUE(id_order)
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, FlatList, TouchableOpacity, TextInput, KeyboardAvoidingView, Alert, Button, Platform, TouchableNativeFeedback, ScrollView } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { checkAllProductStock, checkProductStock, getCachedClientsForAgent, getCachedCustomers, getCachedProducts, getCachedProductStock, getCartDetails, getCartListForClient, getClientsForAgent, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
+import { checkProductStock, getCachedClientsForAgent, getCachedCustomers, getCachedProducts, getCachedProductStock, getCartDetails, getCartListForClient, getClientsForAgent, getCustomer, getOrdersFiltered, getProductSearchResult } from '../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
 import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, selectTotalPrice, selectClientId, setCartId } from '../store/slices/cartSlice';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
+import NetInfo from '@react-native-community/netinfo';
 
 const NewOrderScreen = ({ route }) => {
     const [query, setQuery] = useState('');
@@ -71,8 +72,8 @@ const NewOrderScreen = ({ route }) => {
         const fetchClientById = async () => {
             if (!client_id && !reduxClientId) return;
             setLoading(true);
-            const res = await getCachedClientsForAgent(employeeId ,client_id || reduxClientId);
-           // console.log("get customer res ", res.data);
+            const res = await getCachedClientsForAgent(employeeId, client_id || reduxClientId);
+            // console.log("get customer res ", res.data);
             setLoading(false);
 
             if (res.success && res.data?.customers?.length > 0) {
@@ -154,7 +155,7 @@ const NewOrderScreen = ({ route }) => {
         }
         setLoading(true);
         const res = await getCachedClientsForAgent(employeeId, searchText);
-        
+
         setLoading(false);
         if (res.success && res.data?.customers) setFilteredData(res.data.customers);
         else setFilteredData([]);
@@ -170,7 +171,7 @@ const NewOrderScreen = ({ route }) => {
 
     const handleSelectCustomer = (item: any) => {
         setSelectedCustomer(item);
-        dispatch(setClientId((item.id_customer ).toString()));
+        dispatch(setClientId((item.id_customer).toString()));
         setQuery(`${item.firstname} ${item.lastname}`);
         setFilteredData([]);
     };
@@ -183,9 +184,15 @@ const NewOrderScreen = ({ route }) => {
         }
 
         setProductLoading(true);
-        const res = await getCachedProducts(searchText);
-      // console.log("prods", res.data);
-        
+        let res =null
+         let state = await NetInfo.fetch();
+         if(state.isConnected){
+            res = await getProductSearchResult(searchText);
+         }else{
+            res = await getCachedProducts(searchText);
+         }
+        // console.log("prods", res.data);
+
         setProductLoading(false);
 
         //   const prod_stock =  await checkProductStock(res.data.products[0].id);
@@ -205,12 +212,16 @@ const NewOrderScreen = ({ route }) => {
     const handleSelectProduct = async (item: any) => {
         setProductQuery('');
         setProductResults([]);
-        
-        let all_prod_stock_res = await checkAllProductStock ();
-        console.log(all_prod_stock_res);
-        
+
         // Check product stock
-        const stockRes = await getCachedProductStock(item.id);
+        let stockRes = null;
+        let state = await NetInfo.fetch();
+        if (state.isConnected) {
+            stockRes = await checkProductStock(item.id);
+        } else {
+            stockRes = await getCachedProductStock(item.id);
+        }
+
         const stockData = stockRes.data?.stock_availables?.[0];
 
         if (stockData?.out_of_stock == 1) {
@@ -301,7 +312,7 @@ const NewOrderScreen = ({ route }) => {
     };
 
     const handleNextBtn = () => {
-      //  console.log('Next btn pressed');
+        //  console.log('Next btn pressed');
         (navigation as any).navigate('Main', {
             screen: 'OrdersTab',
             params: {
@@ -329,7 +340,7 @@ const NewOrderScreen = ({ route }) => {
                 <View style={styles.dropdown}>
                     <FlatList
                         data={filteredData}
-                        keyExtractor={(item) => (item.id_customer ).toString()}
+                        keyExtractor={(item) => (item.id_customer).toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => handleSelectCustomer(item)} style={styles.dropdownItem}>
                                 <Text style={styles.dropdownText}>

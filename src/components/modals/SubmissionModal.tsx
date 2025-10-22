@@ -19,6 +19,7 @@ import { dark } from '../../../colors';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
 import { createCartCache, createOrderCache } from '../../sync/cached';
+import NetInfo from '@react-native-community/netinfo';
 
 const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) => {
     const [status, setStatus] = useState<string>('Preparing order...');
@@ -43,7 +44,8 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     useEffect(() => {
         if (showSubmissionModal) {
           //  handleCreateOrder();
-          handleCacheOrder();
+          //handleCacheOrder();
+          handleOrderCreationByNetwork();
         }
     }, [showSubmissionModal]);
 
@@ -76,6 +78,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     };
 
     async function handleCacheOrder() {
+        
         if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
             setError('Missing required information: client, addresses, or carrier');
             console.log(client_id, delivery_address_id, invoice_address_id, carrier_id);
@@ -184,6 +187,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
 
     const handleCreateOrder = async () => {
+
         // Validate all required data
         if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
             setError('Missing required information: client, addresses, or carrier');
@@ -291,6 +295,16 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
         }
     };
 
+    const handleOrderCreationByNetwork = async () => {
+        let state = await NetInfo.fetch();
+        if(state.isConnected){
+            await handleCreateOrder();
+        }
+        else{
+            await handleCacheOrder();
+        }
+    }
+
     const handleClose = () => {
         if (!isCreating) {
             setShowSubmissionModal(false);
@@ -342,7 +356,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                             {error && (
                                 <TouchableOpacity
                                     style={[styles.submissionModalButton, styles.submissionRetryButton]}
-                                    onPress={handleCacheOrder}
+                                    onPress={handleOrderCreationByNetwork}
                                 >
                                     <Text style={styles.submissionRetryButtonText}>Try Again</Text>
                                 </TouchableOpacity>

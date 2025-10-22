@@ -8,6 +8,8 @@ import { useNavigation } from '@react-navigation/native';
 import { darkBg, lighterTheme } from '../../colors';
 import { queryData } from '../database/db';
 import { SyncOrders } from '../components/SyncOrders';
+import { getLatestServerOrders, storeServerOrders } from '../sync/cached';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function OrdersScreen({ route }) {
   //  const localOrders = useSelector((s: RootState) => s.orders.items || []);
@@ -35,25 +37,29 @@ export default function OrdersScreen({ route }) {
       setServerError(null);
 
       try {
-        //    console.log("Employee ID:", employeeId);
+        let state = await NetInfo.fetch();
         if (route.params?.employee_id) setShowBtn(true);
 
-        // 🟢 1️⃣ Fetch server orders
         let orders = null;
-        if (route.params?.employee_id) {
-          orders = await getOrdersForCustomer(employeeId);
+        if (state.isConnected) {
+          if (route.params?.employee_id) {
+            orders = await getOrdersForCustomer(employeeId);
+          } else {
+            orders = await getOrdersFromServer(employeeId);
+            await storeServerOrders(orders);
+          }
         } else {
-          orders = await getOrdersFromServer(employeeId);
+          orders = await getLatestServerOrders(employeeId);
         }
+
+     //   console.log("Orders res ", orders);
 
         if (!mounted) return;
         setServerOrders(orders);
 
-        // 🟢 2️⃣ Fetch local cached orders from SQLite
         const localDbOrders = await queryData('orders', 'is_dirty = 1');
-        // console.log('🧾 Local cached orders:', localDbOrders);
+        // console.log(' Local cached orders:', localDbOrders);
 
-        // 🧩 Normalize local orders to fit UI
         const normalizedLocalOrders = localDbOrders.map(o => ({
           id: o.id, // local primary key
           id_customer: o.id_customer,
@@ -68,7 +74,6 @@ export default function OrdersScreen({ route }) {
 
         setLocalOrders(normalizedLocalOrders);
 
-        // 🟢 3️⃣ Normalize server orders
         const normalizedServerOrders = orders.map(o => ({
           id: o.id_order,
           id_customer: o.id_customer,
@@ -81,12 +86,10 @@ export default function OrdersScreen({ route }) {
           payment: o.payment
         }));
 
-        // 🟢 4️⃣ Merge both sets
         const allOrders = [...normalizedServerOrders, ...normalizedLocalOrders].sort(
           (a, b) => new Date(b.date_add).getTime() - new Date(a.date_add).getTime()
         );
 
-        // 🟢 5️⃣ Update state
         setServerOrders(allOrders);
 
         if (!orders.length && !localDbOrders.length) {
@@ -95,7 +98,7 @@ export default function OrdersScreen({ route }) {
 
       } catch (e: any) {
         if (!mounted) return;
-        console.error('❌ Order load error:', e);
+        console.error(' Order load error:', e);
         setServerOrders([]);
         setServerError('Failed to load orders.');
       } finally {
@@ -199,7 +202,7 @@ export default function OrdersScreen({ route }) {
         <View style={styles.details}>
           <View style={styles.detailItem}>
             <Text style={styles.label}>Total:</Text>
-            <Text style={styles.amount}>{item.total_paid ? `€${item.total_paid}` : '—'}</Text>
+            <Text style={styles.amount}>{item.total_paid ? `€${parseFloat(item.total_paid).toFixed(2)}` : '—'}</Text>
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.label}>Date:</Text>

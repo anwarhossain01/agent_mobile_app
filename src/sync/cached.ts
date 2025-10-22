@@ -1,4 +1,4 @@
-import { checkAllProductStock } from "../api/prestashop";
+import { checkAllProductStock, clientAddressGet, getClientsForAgent, getCouriers, getDeliveries } from "../api/prestashop";
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
 
 export const cachedDataForCarriers = async (
@@ -544,5 +544,193 @@ export const initializeAllProductStock = async () => {
       success: false,
       error: error.response?.data?.error || error.message,
     };
+  }
+};
+
+export const storeAgentFromJson = async (agentResponse: any) => {
+  try {
+    const db = await getDBConnection();
+
+    // extract required fields only
+    const id_employee = agentResponse?.employee?.id;
+    const email = agentResponse?.employee?.email;
+    const id_profile = agentResponse?.employee?.id_profile;
+    const token = agentResponse?.token;
+
+    if (!id_employee || !email || !token) {
+      console.log('❌ Missing required fields in agent JSON');
+      return { success: false, error: 'Missing fields' };
+    }
+
+    // store the agent info in the table
+    await db.executeSql(
+      `
+      INSERT OR IGNORE INTO agent (id_employee, token, email, id_profile)
+      VALUES (?, ?, ?, ?)
+      `,
+      [id_employee, token, email, id_profile]
+    );
+
+    console.log('✅ Agent data stored successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Error storing agent:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const storeServerOrders = async (ordersResponse: any[]) => {
+  try {
+    const db = await getDBConnection();
+
+    if (!Array.isArray(ordersResponse) || ordersResponse.length === 0) {
+      console.log('❌ No orders to store');
+      return { success: false, error: 'Empty response' };
+    }
+
+    // sort by date_add descending, get latest 5
+    const latestOrders = ordersResponse
+      .sort((a, b) => new Date(b.date_add).getTime() - new Date(a.date_add).getTime())
+      .slice(0, 5);
+
+    // loop insert each
+    for (const order of latestOrders) {
+      const { company, firstname, lastname, id_order, reference, total_paid, date_add } = order;
+
+      await db.executeSql(
+        `
+        INSERT OR IGNORE INTO server_orders
+        (company, firstname, lastname, id_order, reference, total_paid, date_add)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        `,
+        [company, firstname, lastname, id_order, reference, parseFloat(total_paid), date_add]
+      );
+    }
+
+    console.log(`✅ Stored ${latestOrders.length} latest server orders`);
+    return { success: true, count: latestOrders.length };
+  } catch (error) {
+    console.error('❌ Error storing server orders:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const getLatestServerOrders = async (employeeId: number = 0) => {
+  try {
+    const whereClause = '1=1 ORDER BY date_add DESC LIMIT 5';
+    const latestOrders = await queryData('server_orders', whereClause);
+
+    console.log('🧾 Latest 5 server orders:', latestOrders);
+
+    // return the array directly
+    return latestOrders || [];
+  } catch (error) {
+    console.error('❌ Error fetching latest server orders:', error);
+    return [];
+  }
+};
+
+export const cacheInitializer = async (agentId :any) => {
+  console.log("🧠 Starting cache initialization for agent:", agentId);
+
+  try {
+    // 1️⃣ Fetch Customers
+    const customersRes = await getClientsForAgent(agentId);
+    const customers = customersRes || [];
+    console.log(`📦 Got ${customers.length} customers`);
+
+    // 2️⃣ Insert customers
+    for (const c of customers) {
+      const customerData = {
+        id_customer: c.id_customer,
+        firstname: c.firstname,
+        lastname: c.lastname,
+        email: c.email,
+        codice_cmnr: c.codice_cmnr || '',
+        company: c.company || '',
+        numero_ordinale: c.numero_ordinale || '',
+        postcode: c.postcode || '',
+        address1: c.address1 || '',
+        city: c.city || '',
+      };
+
+      await insertIfNotExists('customers', customerData, 'id_customer');
+
+      // 3️⃣ Fetch addresses for this customer
+      const addrRes = await clientAddressGet(c.id_customer);
+      const addresses = addrRes?.data?.addresses || [];
+      console.log(`🏠 Customer ${c.id_customer} → ${addresses.length} addresses`);
+
+      for (const a of addresses) {
+        const addrData = {
+          id: a.id,
+          id_customer: a.id_customer,
+          id_manufacturer: a.id_manufacturer,
+          id_supplier: a.id_supplier,
+          id_warehouse: a.id_warehouse,
+          id_country: a.id_country,
+          id_state: a.id_state,
+          alias: a.alias,
+          company: a.company,
+          lastname: a.lastname,
+          firstname: a.firstname,
+          vat_number: a.vat_number,
+          address1: a.address1,
+          address2: a.address2,
+          postcode: a.postcode,
+          city: a.city,
+          other: a.other,
+          phone: a.phone,
+          phone_mobile: a.phone_mobile,
+          dni: a.dni,
+          deleted: a.deleted,
+          date_add: a.date_add,
+          date_upd: a.date_upd,
+          numero_esercizio: a.numero_esercizio,
+          codice_cmnr: a.codice_cmnr,
+          numero_ordinale: a.numero_ordinale,
+        };
+
+        await insertIfNotExists('addresses', addrData, 'id');
+      }
+    }
+
+    // 4️⃣ Get courier info (always id 27)
+    const courierRes = await getCouriers(27);
+    const carrier = courierRes?.data?.carriers?.[0];
+    if (carrier) {
+      const carrierData = {
+        id: carrier.id,
+        name: carrier.name,
+        active: parseInt(carrier.active),
+        is_free: parseInt(carrier.is_free),
+        delay: carrier.delay,
+      };
+      await insertIfNotExists('carriers', carrierData, 'id');
+      console.log("🚚 Courier cached:", carrier.name);
+
+      // 5️⃣ Get deliveries for this courier
+      const delivRes = await getDeliveries(carrier.id);
+      const deliveries = delivRes?.data?.deliveries || [];
+      console.log(`📦 Found ${deliveries.length} deliveries for carrier ${carrier.id}`);
+
+      for (const d of deliveries) {
+        const deliveryData = {
+          id: d.id,
+          id_carrier: d.id_carrier,
+          id_zone: d.id_zone,
+          price: parseFloat(d.price),
+        };
+        await insertIfNotExists('deliveries', deliveryData, 'id');
+      }
+    } else {
+      console.warn("⚠️ No courier data found for ID 27");
+    }
+
+    console.log("✅ Cache initialized successfully!");
+    return { success: true };
+  } catch (error) {
+    console.error("💀 Cache initialization failed:", error);
+    return { success: false, error: error.message };
   }
 };

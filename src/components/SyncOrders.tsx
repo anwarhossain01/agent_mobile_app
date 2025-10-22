@@ -13,19 +13,21 @@ import { getDBConnection, queryData } from '../database/db';
 import { createCart, createOrder } from '../api/prestashop';
 import NetInfo from '@react-native-community/netinfo';
 import { lighterTheme } from '../../colors';
+import { useNavigation } from '@react-navigation/native';
 
 export const SyncOrders = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [status, setStatus] = useState('Preparing to sync...');
+  const navigation = useNavigation();
 
   const handleSyncOrders = async () => {
-     let state = await NetInfo.fetch();
+    let state = await NetInfo.fetch();
     let isConnected = state.isConnected;
     if (!isConnected) {
       Alert.alert('Internet Is Required', 'verifica la connessione di rete');
       return;
     }
-    
+
     const db = await getDBConnection();
     try {
       setIsSyncing(true);
@@ -66,10 +68,6 @@ export const SyncOrders = () => {
           id_address_delivery: item.id_address_delivery || cart.id_address_delivery,
         }));
 
-        // console.log("Cart items", products);
-        // console.log("Cart", cart);
-        // console.log("Order ", order);
-        // return;
         const cartRes = await createCart(
           cart.id_currency,
           cart.id_lang,
@@ -131,6 +129,17 @@ export const SyncOrders = () => {
 
       setStatus('✅ All orders synced successfully!');
       setTimeout(() => setIsSyncing(false), 1500);
+      setTimeout(() => {
+        (navigation as any).replace('Main', {
+          screen: 'OrdersTab',
+          params: {
+            screen: 'Orders',
+            params: {
+              employee_id: null,
+            }
+          }
+        });
+      }, 1900)
     } catch (error) {
       console.error('❌ handleSyncOrders error:', error);
       setStatus('Sync failed: ' + error.message);

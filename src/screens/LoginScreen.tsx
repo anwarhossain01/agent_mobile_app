@@ -18,7 +18,8 @@ import { useDispatch } from 'react-redux';
 import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import { dark, theme } from '../../colors';
-import { loginEmployee } from '../api/prestashop';
+import { getClientsForAgent, loginEmployee } from '../api/prestashop';
+import { cacheInitializer, storeAgentFromJson } from '../sync/cached';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -36,9 +37,10 @@ export default function LoginScreen() {
     setError(false);
     setLoading(true);
     const res = await loginEmployee(email, password);
-    console.log(res);
     
     if (res.success) {
+      await storeAgentFromJson(res);
+      await cacheInitializer(res.employee?.id);
       dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
     } else {
       setError(true);

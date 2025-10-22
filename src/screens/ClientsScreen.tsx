@@ -20,6 +20,8 @@ export default function ClientsScreen() {
     const load = async () => {
       try {
         const data = await getClientsForAgent(employeeId || 0);
+        console.log(data);
+        
         if (data.length === 0) {
           setNoData(true);
         }

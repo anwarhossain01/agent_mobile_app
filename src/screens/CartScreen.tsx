@@ -86,8 +86,13 @@ const CartScreen = () => {
   useEffect(() => {
     async function getClientAddresses() {
       if (!client_id) return;
-      const res = await getCachedClientAddresses(client_id);
-      console.log("Client addresses", res.data);
+      let state = await NetInfo.fetch();
+      let res = null;
+      if (state.isConnected) {
+        res = await clientAddressGet(client_id);
+      }
+      else { res = await getCachedClientAddresses(client_id); }
+      //  console.log("Client addresses", res.data);
 
       if (res.success && res.data?.addresses) {
         //  console.log(res.data.addresses);
@@ -279,8 +284,14 @@ const CartScreen = () => {
 
         try {
           // Get carrier details (default to 27)
-          const courierRes = await getCachedCouriers(27);
-
+          let state = await NetInfo.fetch();
+          let res = null;
+          let courierRes = null;
+          if (state.isConnected) {
+            courierRes = await getCouriers(27);
+          } else {
+            courierRes = await getCachedCouriers(27);
+          }
           if (courierRes.success && courierRes.data?.carriers?.length > 0) {
             const carrierData = courierRes.data.carriers[0];
             //      console.log('courierData', carrierData);
@@ -288,9 +299,13 @@ const CartScreen = () => {
             setCourier(carrierData);
             dispatch(setCarrierId(carrierData.id));
 
-            // Get delivery options for this carrier
-            const deliveryRes = await getCachedDeliveries(carrierData.id);
-            // console.log('deliveryRes', deliveryRes);
+            let deliveryRes = null;
+            if (state.isConnected) {
+              deliveryRes = await getDeliveries(carrierData.id);
+            } else {
+              deliveryRes = await getCachedDeliveries(carrierData.id);
+            }
+         //   console.log('deliveryRes', deliveryRes);
 
             if (deliveryRes.success && deliveryRes.data?.deliveries) {
               setDeliveries(deliveryRes.data.deliveries);

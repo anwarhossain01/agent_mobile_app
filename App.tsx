@@ -64,7 +64,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import IndirizziScreen from './src/screens/IndirizziScreen';
 import ClientsMenuModal from './src/components/modals/ClientsMenuModal';
 import CatalogueMenuModal from './src/components/modals/CatalogueMenuModal';
-import { dark } from './colors';
+import { dark, textColor } from './colors';
 import OrderMenuModal from './src/components/modals/OrderMenuModal';
 import ProductListScreen from './src/screens/ProductListScreen';
 import NewOrderScreen from './src/screens/NewOrderScreen';
@@ -256,7 +256,7 @@ function RootNavigator() {
     return (
       <View style={{ flex: 1, backgroundColor: dark, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ color: '#fff', marginTop: 16 }}>Initializing database...</Text>
+        <Text style={{ color: textColor, marginTop: 16 }}>Initializing database...</Text>
       </View>
     );
   }

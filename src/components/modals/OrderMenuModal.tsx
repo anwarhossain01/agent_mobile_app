@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Modal from 'react-native-modal';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { dark } from '../../../colors';
+import { dark, darkBg, textColor } from '../../../colors';
 
 interface OrderMenuModalProps {
     visible: boolean;
@@ -67,11 +67,11 @@ export default function OrderMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Ordini</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Ordini</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />
 
                 <TouchableOpacity
                     style={{
@@ -98,11 +98,11 @@ export default function OrderMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Nuovo Ordine</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Nuovo Ordine</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />
 
                 {/* Indirizzi option */}
                 <TouchableOpacity
@@ -127,7 +127,7 @@ export default function OrderMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Carrello della spesa</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Carrello della spesa</Text>
                 </TouchableOpacity>
             </View>
         </Modal>

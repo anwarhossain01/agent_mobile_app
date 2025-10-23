@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet, Alert, TextInput } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setClients } from '../store/slices/clientsSlice';
-import { getClientsForAgent } from '../api/prestashop';
+import { getCachedClientsForAgent, getCachedClientsForAgentFrontPage, getClientsForAgent } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
-import { darkBg } from '../../colors';
+import { darkBg, textColor, theme, darkerBg } from '../../colors'; // Imported darkerBg
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import NetInfo from '@react-native-community/netinfo';
+
 
 export default function ClientsScreen() {
   const dispatch = useDispatch();
@@ -19,9 +22,13 @@ export default function ClientsScreen() {
   useEffect(() => {
     const load = async () => {
       try {
-        const data = await getClientsForAgent(employeeId || 0);
-        console.log(data);
-        
+        let state = await NetInfo.fetch();
+        let data = null;
+
+        data = await getCachedClientsForAgentFrontPage(employeeId || 0);
+
+        console.log("Clients res", data);
+
         if (data.length === 0) {
           setNoData(true);
         }
@@ -46,17 +53,89 @@ export default function ClientsScreen() {
       }
     });
   }
+  const SearchHeader = () => {
+    const [citySearch, setCitySearch] = useState('');
+    const [ordinalNumberSearch, setOrdinalNumberSearch] = useState('');
+    const dispatch = useDispatch();
+
+    const handleSearch = async () => {
+      try {
+        const city = citySearch.trim() || null;
+        const numero_ordinale = ordinalNumberSearch.trim() || null;
+
+        const data = await getCachedClientsForAgentFrontPage(
+          employeeId || 0,
+          '', // normal search param not used here
+          city,
+          numero_ordinale
+        );
+
+        console.log('Search result', data);
+        dispatch(setClients(data)); // update redux
+      } catch (e) {
+        console.log('Search error', e);
+      }
+    };
+
+    return (
+      <View style={styles.searchContainer}>
+        <View style={styles.searchFieldContainer}>
+          <Text style={styles.searchLabel}>Città</Text>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search-outline" size={18} color={textColor} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              value={citySearch}
+              onChangeText={setCitySearch}
+              placeholder="Search by city"
+              placeholderTextColor="#888"
+            />
+          </View>
+        </View>
+
+        <View style={styles.searchFieldContainer}>
+          <Text style={styles.searchLabel}>Numero Ordinale</Text>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search-outline" size={18} color={textColor} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              value={ordinalNumberSearch}
+              onChangeText={setOrdinalNumberSearch}
+              placeholder="Search by ordinal number"
+              placeholderTextColor="#888"
+            />
+          </View>
+        </View>
+
+        {/* Search Button */}
+        <TouchableOpacity
+          style={{
+            marginTop: 8,
+            backgroundColor: '#007AFF',
+            paddingVertical: 10,
+            borderRadius: 5,
+            alignItems: 'center',
+          }}
+          onPress={handleSearch}
+        >
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>Search</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 14 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Clienti</Text>
+      <Text style={{ fontSize: 20, marginBottom: 8, color: textColor }}>Clienti</Text>
+
       {noData ? (
         <View style={{ display: 'flex', flex: 1, padding: 2, alignItems: 'center' }}>
-          <Text style={{ fontSize: 21, marginBottom: 8, color: '#ffffff27', fontWeight: 'bold' }}>Empty</Text>
+          <Text style={{ fontSize: 21, marginBottom: 8, color: '#00000027', fontWeight: 'bold' }}>Empty</Text>
         </View>
       ) : null}
       <FlatList
         data={clients}
+        ListHeaderComponent={SearchHeader}
         keyExtractor={(item) => String(localindex++)}
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -106,7 +185,7 @@ export default function ClientsScreen() {
           </View>
         )}
       />
-     {/*  <Button
+      {/*  <Button
         title="Manual Sync (demo)"
         color="#007AFF"
         onPress={() => alert('Trigger sync from background service in a real app')}
@@ -119,42 +198,25 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: darkBg,
     paddingTop: 14,
+    paddingBottom: 10,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#bebebeff',
     borderRadius: 8,
     marginBottom: 10,
   },
-
-  // infoSection: {
-  //   flex: 1,
-  //   marginRight: 12,
-  // },
-  row: {
-    flexDirection: 'row',
-    marginBottom: 6,
-    alignItems: 'flex-start',
-    flexWrap: 'wrap', // allow wrapping if needed
-  },
   label: {
-    color: '#0af',
+    color: 'rgba(0, 111, 167, 1)',
     fontSize: 13,
     fontWeight: '600',
     marginRight: 8,
-
-  },
-  value: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    flex: 2,          // more space than label
-    flexWrap: 'wrap', // wrap long text
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
     marginBottom: 8,
-    flexWrap: 'wrap', // buttons wrap if small screen
+    flexWrap: 'wrap',
   },
   button: {
     paddingHorizontal: 12,
@@ -163,32 +225,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minWidth: 70,
   },
-
   orderButton: {
-    backgroundColor: '#059669', // Green
+    backgroundColor: '#059669',
   },
-
   detailsButton: {
-    backgroundColor: '#2563EB', // Blue
+    backgroundColor: theme,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: 'white',
     fontWeight: '600',
     fontSize: 11,
   },
-
   infoSection: {
     flexDirection: 'column',
   },
-
   infoText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 14,
     marginBottom: 4,
   },
-
-  // label: {
-  //   fontWeight: '600',
-  //   color: '#0af',
-  // },
+  searchContainer: {
+    marginBottom: 12,
+  },
+  searchFieldContainer: {
+    marginBottom: 10,
+  },
+  searchLabel: {
+    color: textColor,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkBg,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: darkerBg,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: textColor,
+    fontSize: 15,
+    paddingVertical: 6,
+  },
 });

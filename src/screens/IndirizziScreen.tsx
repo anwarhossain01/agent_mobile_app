@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
-import { dark } from '../../colors';
+import { dark, textColor } from '../../colors';
 
 const IndirizziScreen = () => {
   return (
@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 18,
     marginBottom: 8,
-    color: '#fff'
+    color: textColor
   },
 });
 

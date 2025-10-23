@@ -304,7 +304,7 @@ export const createOrderCache = async (orderData: Record<string, any>) => {
 export const cachedDataForCustomers = async (
   tableName: string,
   apiCall: () => Promise<any>,
-  search: string | number ,
+  search: string | number | null ,
   idColumn: string = 'id'
 ) => {
   try {
@@ -363,6 +363,98 @@ export const cachedDataForCustomers = async (
     return { success: true, data: res.data, fromCache: false };
   } catch (error: any) {
     console.error(`❌ Cached customer fetch error:`, error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
+export const cachedDataForAgentFrontPage = async (
+  tableName: string,
+  apiCall: () => Promise<any>,
+  search: string | number | null,
+  city: string | null,
+  numero_ordinale: string | number | null,
+  idColumn: string = 'id'
+) => {
+  try {
+    console.log(`⚡️ Cached API call for ${tableName}...`);
+
+    let whereClauses: string[] = [];
+    let params: any[] = [];
+
+    // 🟢 Build dynamic WHERE clause
+    if (search === null || (typeof search === 'string' && search.trim() === '')) {
+      // no search condition → fetch all
+      whereClauses.push('1=1');
+    } else if (!isNaN(Number(search))) {
+      // numeric ID search
+      whereClauses.push(`${idColumn} = ?`);
+      params.push(Number(search));
+    } else if (typeof search === 'string') {
+      const nameParts = search.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts[1] || '';
+      if (lastName) {
+        whereClauses.push(`firstname LIKE ? AND lastname LIKE ?`);
+        params.push(`%${firstName}%`, `%${lastName}%`);
+      } else {
+        whereClauses.push(`(firstname LIKE ? OR lastname LIKE ?)`);
+        params.push(`%${firstName}%`, `%${firstName}%`);
+      }
+    }
+
+    // 🏙️ Add city filter if provided
+    if (city && city.trim() !== '') {
+      whereClauses.push(`city LIKE ?`);
+      params.push(`%${city.trim()}%`);
+    }
+
+    // 🔢 Add numero_ordinale filter if provided
+    if (numero_ordinale && numero_ordinale.toString().trim() !== '') {
+      whereClauses.push(`numero_ordinale LIKE ?`);
+      params.push(`%${numero_ordinale.toString().trim()}%`);
+    }
+
+    // Combine all conditions
+    const whereClause = whereClauses.join(' AND ');
+    console.log('🧩 Query condition:', whereClause, params);
+
+    // 1️⃣ Try to get data locally
+    const localData = await queryData(tableName, whereClause, params);
+
+   // if (localData.length > 0) {
+   //   console.log(`📦 Found ${localData.length} record(s) in local DB`);
+      return localData;
+   // }
+
+    // 2️⃣ Otherwise fetch from API
+    console.log(`🌐 Not found locally, calling API...`);
+    const res = await apiCall();
+    const apiCustomers = res.data?.customers || [];
+
+    // 3️⃣ Save them locally
+    if (apiCustomers.length > 0) {
+      for (const c of apiCustomers) {
+        const minimal = {
+          id: parseInt(c.id),
+          id_customer: parseInt(c.id_customer),
+          firstname: c.firstname,
+          lastname: c.lastname,
+          email: c.email,
+          codice_cmnr: c.codice_cmnr || null,
+          company: c.company || null,
+          numero_ordinale: c.numero_ordinale || null,
+          postcode: c.postcode || null,
+          address1: c.address1 || null,
+          city: c.city || null,
+        };
+        await insertIfNotExists(tableName, minimal, idColumn);
+      }
+      console.log(`💾 Cached ${apiCustomers.length} customer(s) locally`);
+    }
+
+    return res.data;
+  } catch (error: any) {
+    console.error(`❌ cachedDataForAgentFrontPage error:`, error);
     return { success: false, error: error.response?.data?.error || error.message };
   }
 };

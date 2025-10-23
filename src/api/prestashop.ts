@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {  cachedClientAddresses, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts, cachedProductStock } from '../sync/cached';
+import {  cachedClientAddresses, cachedDataForAgentFrontPage, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts, cachedProductStock } from '../sync/cached';
 
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
@@ -65,8 +65,36 @@ export const getCachedClientsForAgent = async (agentId: number | string, search:
   } catch (error) {
     return { success: false, error: error.response?.data?.error || error.message };
   }
-  
 };
+
+export const getCachedClientsForAgentFrontPage = async (
+  agentId: number | string,
+  search: string | number | null = '',
+  city: string | null = null,
+  numero_ordinale: number | string | null = null
+) => {
+  try {
+    const apiCall = () => {
+      return api.post(
+        `/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
+        { employee_id: agentId },
+        { baseURL: API_LOGIN_URL }
+      );
+    };
+
+    return cachedDataForAgentFrontPage(
+      'customers',
+      apiCall,
+      search,
+      city,
+      numero_ordinale
+    );
+  } catch (error: any) {
+    console.error('❌ getCachedClientsForAgentFrontPage error:', error);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
 
 export const getProducts = async () => {
   const res = await api.get('/products?output_format=JSON&display=full&limit=50');

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setProducts } from '../store/slices/productsSlice';
 import { getActiveCategories, getProducts } from '../api/prestashop';
+import { textColor } from '../../colors';
 
 export default function CatalogScreen() {
   //const dispatch = useDispatch();
@@ -37,13 +38,13 @@ export default function CatalogScreen() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Categorie</Text>
+      <Text style={{ fontSize: 18, marginBottom: 8, color: textColor }}>Categorie</Text>
       <FlatList
         data={categories}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#333' }}>
-            <Text style={{ color: '#fff' }}>{item.name}</Text>
+            <Text style={{ color: textColor }}>{item.name}</Text>
           </View>
         )}
       />

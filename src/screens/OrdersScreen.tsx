@@ -5,7 +5,7 @@ import { RootState } from '../store';
 import { addOrder } from '../store/slices/ordersSlice';
 import { getOrdersForCustomer, getOrdersFromServer, getSafeOrders } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
-import { darkBg, lighterTheme } from '../../colors';
+import { darkBg, lighterTheme, textColor } from '../../colors';
 import { queryData } from '../database/db';
 import { SyncOrders } from '../components/SyncOrders';
 import { getLatestServerOrders, storeServerOrders } from '../sync/cached';
@@ -73,7 +73,7 @@ export default function OrdersScreen({ route }) {
         }));
 
         setLocalOrders(normalizedLocalOrders);
-
+        
         const normalizedServerOrders = orders.map(o => ({
           id: o.id_order,
           id_customer: o.id_customer,
@@ -219,11 +219,11 @@ export default function OrdersScreen({ route }) {
   return (
     <View style={{ flex: 1, padding: 13 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 18, marginBottom: 12, color: '#fff' }}>Ordini</Text>
+        <Text style={{ fontSize: 18, marginBottom: 12, color: textColor }}>Ordini</Text>
         {showbtn ? <Button title="NUOVO ORDINE +" color="#00bd29ff" onPress={newOrderRouteHandler} /> : null}
       </View>
 
-      {loadingServer ? <ActivityIndicator color="#fff" /> : null}
+      {loadingServer ? <ActivityIndicator color={textColor} /> : null}
       {serverError ? (
         <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
           <Text style={{ color: 'red', marginBottom: 8, fontSize: 15 }}>{serverError}</Text>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: '#3a3a3aff',
+    borderLeftColor: '#bbbbbbff',
   },
   header: {
     flexDirection: 'row',
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   orderId: {
-    color: '#fff',
+    color: textColor,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   statusText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 12,
     fontWeight: '500',
   },
@@ -290,21 +290,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    color: '#A0AEC0',
+    color: "#505050ff",
     fontSize: 13,
     marginRight: 6,
   },
   value: {
-    color: '#fff',
+    color: textColor,
+    fontWeight: 'bold',
     fontSize: 13,
   },
   companyvalue: {
-    color: '#fff',
+    color: textColor,
     fontSize: 13,
     width: 150
   },
   amount: {
-    color: '#fff',
+    color: textColor,
     fontSize: 13,
     fontWeight: '600',
   },

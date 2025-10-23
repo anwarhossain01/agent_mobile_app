@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, FlatList, Image } from 'react-native';
-import { dark, darkBg } from '../../colors';
+import { dark, darkBg, textColor } from '../../colors';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { API_KEY, getProducts } from '../api/prestashop';
@@ -35,8 +35,8 @@ const ProductListScreen = () => {
     const ProductInformation = (props: { label: string; value: string; prefix?: string }) => {
         return (
             <View style={{ display: 'flex', flexDirection: 'row' }}>
-                <Text style={{ color: '#fff', fontSize: 15 }}>{props.label}: </Text>
-                <Text style={{ color: '#fff', fontSize: 15, fontWeight: 'bold' }}>{props.value} {props.prefix}</Text>
+                <Text style={{ color: textColor, fontSize: 15 }}>{props.label}: </Text>
+                <Text style={{ color: textColor, fontSize: 15, fontWeight: 'bold' }}>{props.value} {props.prefix}</Text>
             </View>
         );
     }
@@ -53,7 +53,7 @@ const ProductListScreen = () => {
             <View style={{ marginLeft: 16, flex: 1 }}>
                 <Text 
                     style={{ 
-                        color: '#fff', 
+                        color: textColor, 
                         fontSize: 17, 
                         fontWeight: 'bold', 
                         marginBottom: 10,
@@ -74,7 +74,7 @@ const ProductListScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={{ fontSize: 18, marginBottom: 12, color: '#fff', padding: 2 }}>Prodotti</Text>
+            <Text style={{ fontSize: 18, marginBottom: 12, color: textColor, padding: 2 }}>Prodotti</Text>
                 <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
                  {error ? <Text style={{ color: 'red', marginBottom: 8 }}>Server error, Please try again later</Text> : null}
               </View>
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: 'bold',
         marginBottom: 20,
-        color: '#fff'
+        color: textColor
     },
     productsBox: {
         padding: 10,

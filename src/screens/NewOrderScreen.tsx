@@ -7,6 +7,7 @@ import { setClientId, addItem, updateQuantity, removeItem, selectCartItems, sele
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
 import NetInfo from '@react-native-community/netinfo';
+import { dark, darkBg, textColor } from '../../colors';
 
 const NewOrderScreen = ({ route }) => {
     const [query, setQuery] = useState('');
@@ -329,7 +330,7 @@ const NewOrderScreen = ({ route }) => {
             <TextInput
                 style={styles.input}
                 placeholder="Cerca cliente..."
-                placeholderTextColor="#c7c7c7ff"
+                placeholderTextColor="#686868ff"
                 value={query}
                 onChangeText={handleSearch}
             />
@@ -437,7 +438,7 @@ const NewOrderScreen = ({ route }) => {
             <TextInput
                 style={styles.input}
                 placeholder="Cerca prodotto..."
-                placeholderTextColor="#aaa"
+                placeholderTextColor="#686868ff"
                 value={productQuery}
                 onChangeText={handleProductSearch}
             />
@@ -542,16 +543,16 @@ const NewOrderScreen = ({ route }) => {
     );
 };
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#111', padding: 16 },
-    title: { fontSize: 16, marginBottom: 8, color: '#fff' },
-    input: { backgroundColor: '#222', color: '#fff', padding: 10, borderRadius: 8, marginBottom: 8 },
-    dropdown: { backgroundColor: '#333', borderRadius: 8, maxHeight: 200, marginBottom: 8 },
-    dropdownItem: { padding: 10, borderBottomColor: '#444', borderBottomWidth: 1 },
-    dropdownText: { color: '#fff' },
+    container: { flex: 1, backgroundColor: dark, padding: 16 },
+    title: { fontSize: 16, marginBottom: 8, color: textColor },
+    input: { backgroundColor: darkBg, color: textColor, padding: 10, borderRadius: 8, marginBottom: 8 },
+    dropdown: { backgroundColor: darkBg, borderRadius: 8, maxHeight: 200, marginBottom: 8 },
+    dropdownItem: { padding: 10, borderBottomColor: '#c2c2c2ff', borderBottomWidth: 1 },
+    dropdownText: { color: textColor },
     customerBox: { backgroundColor: '#222', padding: 12, borderRadius: 10, marginTop: 12 },
     customerName: { color: '#0af', fontSize: 16, fontWeight: 'bold' },
     customerField: { color: '#ccc', fontSize: 14, marginTop: 4 },
-    cartBox: { marginTop: 20, backgroundColor: '#222', borderRadius: 8, padding: 10 },
+    cartBox: { marginTop: 20, backgroundColor: darkBg, borderRadius: 8, padding: 10 },
     cartItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -560,22 +561,22 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         paddingVertical: 8,
     },
-    cartName: { flex: 2, color: '#fff', fontSize: 13 },
+    cartName: { flex: 2, color: textColor, fontSize: 13 },
     qtyInput: {
-        backgroundColor: '#333',
-        color: '#fff',
+        backgroundColor: '#b4b4b4ff',
+        color: textColor,
         width: 50,
         textAlign: 'center',
         borderRadius: 6,
         marginHorizontal: 8,
         padding: 4,
     },
-    cartText: { flex: 1, color: '#ccc', textAlign: 'center', fontSize: 13 },
+    cartText: { flex: 1, color: textColor, textAlign: 'center', fontSize: 13 },
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-    totalText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-    totalValue: { color: '#0af', fontSize: 16, fontWeight: 'bold' },
+    totalText: { color: textColor, fontSize: 16, fontWeight: 'bold' },
+    totalValue: { color: 'rgba(0, 122, 184, 1)', fontSize: 16, fontWeight: 'bold' },
     cartHeader: {
-        color: '#0af',
+        color: 'rgba(0, 122, 184, 1)',
         fontWeight: 'bold',
         fontSize: 12,
         textTransform: 'uppercase',
@@ -591,7 +592,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     cartSectionTitle: {
-        color: '#fff',
+        color: textColor,
         fontSize: 15,
         fontWeight: 'bold',
     },
@@ -605,7 +606,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     refreshButtonText: {
-        color: '#fff',
+        color: textColor,
         fontSize: 16,
     },
     cartDropdown: {
@@ -620,7 +621,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cartSelectorText: {
-        color: '#fff',
+        color: textColor,
         fontSize: 14,
         flex: 1,
     },

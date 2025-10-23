@@ -2,13 +2,15 @@ import React from 'react';
 import { View, Text, Button, TouchableOpacity, Dimensions } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
+import { textColor } from '../../colors';
 // import { LineChart } from 'react-native-chart-kit';
 
 export default function SettingsScreen() {
   const dispatch = useDispatch();
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8, color: '#fff' }}>Statistiche</Text>
+      <Text style={{ fontSize: 18, marginBottom: 8, color: textColor }}>Statistiche</Text>
+      <View style={{ marginBottom: 16 }}></View>
       {/* <View>
         <Text>Bezier Line Chart</Text>
         <LineChart

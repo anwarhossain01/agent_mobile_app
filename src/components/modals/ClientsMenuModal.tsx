@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Modal from 'react-native-modal';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { dark } from '../../../colors';
+import { dark, darkBg, textColor } from '../../../colors';
 
 interface ClientsMenuModalProps {
     visible: boolean;
@@ -64,11 +64,11 @@ export default function ClientsMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Clienti</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Clienti</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />
 
                 {/* Indirizzi option */}
                 <TouchableOpacity
@@ -93,7 +93,7 @@ export default function ClientsMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Indirizzi</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Indirizzi</Text>
                 </TouchableOpacity>
             </View>
         </Modal>

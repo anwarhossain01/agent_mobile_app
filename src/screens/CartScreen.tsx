@@ -4,7 +4,7 @@ import {
   TouchableOpacity, Modal, TextInput, Alert,
   Button
 } from 'react-native';
-import { dark } from '../../colors';
+import { dark, darkBg, darkerBg, textColor } from '../../colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -23,6 +23,7 @@ import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCou
 import SubmissionModal from '../components/modals/SubmissionModal';
 import { RootState } from '../store';
 import NetInfo from '@react-native-community/netinfo';
+import { Color } from 'react-native/types_generated/Libraries/Animated/AnimatedExports';
 
 const CartScreen = () => {
   const cart = useSelector(selectCartItems);
@@ -692,23 +693,23 @@ const oldStyles = {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#fff',
+    color: textColor,
     textAlign: 'center',
   },
   customerBox: {
-    backgroundColor: '#222',
+    backgroundColor: darkBg,
     padding: 16,
     borderRadius: 10,
     marginBottom: 20,
   },
   customerName: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   customerField: {
-    color: '#ccc',
+    color: textColor,
     fontSize: 14,
     marginBottom: 4,
   },
@@ -728,7 +729,7 @@ const oldStyles = {
     marginBottom: 16,
   },
   addressSectionTitle: {
-    color: '#fff',
+    color: textColor,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -739,7 +740,7 @@ const oldStyles = {
     borderRadius: 6,
   },
   newAddressButtonText: {
-    color: '#fff',
+    color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -747,13 +748,13 @@ const oldStyles = {
     marginBottom: 16,
   },
   addressLabel: {
-    color: '#fff',
+    color: textColor,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   addressSelector: {
-    backgroundColor: '#222',
+    backgroundColor: darkBg,
     padding: 12,
     borderRadius: 8,
     flexDirection: 'row',
@@ -761,16 +762,16 @@ const oldStyles = {
     alignItems: 'center',
   },
   addressSelectorText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 14,
     flex: 1,
   },
   dropdownArrow: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 12,
   },
   dropdown: {
-    backgroundColor: '#333',
+    backgroundColor: darkBg,
     borderRadius: 8,
     marginTop: 4,
     // maxHeight: 200,
@@ -781,16 +782,16 @@ const oldStyles = {
   addressItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#444',
+    borderBottomColor: '#bebebeff',
   },
   addressCompany: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   addressText: {
-    color: '#ccc',
+    color: textColor,
     fontSize: 12,
   },
   modalOverlay: {
@@ -807,7 +808,7 @@ const oldStyles = {
     maxHeight: '80%',
   },
   modalTitle: {
-    color: '#fff',
+    color: textColor,
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
@@ -825,23 +826,23 @@ const oldStyles = {
     marginBottom: 4,
   },
   readonlyValue: {
-    color: '#fff',
+    color: textColor,
     fontSize: 16,
   },
   input: {
-    backgroundColor: '#222',
-    color: '#fff',
+    backgroundColor: darkBg,
+    color: textColor,
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#444',
+    borderColor: '#c0c0c0ff',
   },
   countryInputContainer: {
     marginBottom: 12,
   },
   inputText: {
-    color: '#fff',
+    color: textColor,
   },
   placeholderText: {
     color: '#888',
@@ -903,12 +904,12 @@ const oldStyles = {
     marginBottom: 12,
   },
   cartHeaderText: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 18,
     fontWeight: 'bold',
   },
   cartItem: {
-    backgroundColor: '#222',
+    backgroundColor: darkBg,
     padding: 16,
     borderRadius: 8,
     marginBottom: 12,
@@ -920,13 +921,13 @@ const oldStyles = {
     marginBottom: 8,
   },
   productName: {
-    color: '#fff',
+    color: textColor,
     fontSize: 16,
     fontWeight: 'bold',
     flex: 1,
   },
   itemTotal: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -935,30 +936,30 @@ const oldStyles = {
     justifyContent: 'space-between',
   },
   detailText: {
-    color: '#ccc',
+    color: textColor,
     fontSize: 14,
   },
   grandTotal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#333',
+    backgroundColor: darkBg,
     padding: 16,
     borderRadius: 8,
     marginTop: 16,
   },
   grandTotalText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 18,
     fontWeight: 'bold',
   },
   grandTotalAmount: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 20,
     fontWeight: 'bold',
   },
   emptyCart: {
-    color: '#ccc',
+    color: textColor,
     textAlign: 'center',
     fontSize: 16,
     marginTop: 50,
@@ -967,7 +968,7 @@ const oldStyles = {
     marginBottom: 16,
   },
   aliasLabel: {
-    color: '#fff',
+    color: textColor,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
@@ -980,7 +981,7 @@ const oldStyles = {
   aliasOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#222',
+    backgroundColor: darkBg,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
@@ -1011,7 +1012,7 @@ const oldStyles = {
     fontWeight: 'bold',
   },
   aliasText: {
-    color: '#ccc',
+    color: 'black',
     fontSize: 14,
   },
   aliasTextSelected: {
@@ -1025,13 +1026,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   shippingLabel: {
-    color: '#fff',
+    color: textColor,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
   },
   shippingSelector: {
-    backgroundColor: '#222',
+    backgroundColor: darkerBg,
     padding: 12,
     borderRadius: 8,
     flexDirection: 'row',
@@ -1039,28 +1040,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shippingSelectorText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 14,
     flex: 1,
   },
   shippingOption: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#444',
+    backgroundColor: darkerBg,
+    borderBottomColor: '#c7c7c7ff',
+    
   },
   shippingOptionText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 14,
   },
   shippingSection: {
-    backgroundColor: '#222',
+    backgroundColor: darkBg,
     padding: 16,
     borderRadius: 10,
     marginBottom: 20,
     marginTop: 20,
   },
   shippingTitle: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 16,
@@ -1076,7 +1079,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   freeDeliveryText: {
-    color: '#fff',
+    color: textColor,
     fontSize: 14,
     marginLeft: 12,
   },
@@ -1084,16 +1087,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#333',
+    backgroundColor: darkerBg,
     padding: 12,
     borderRadius: 8,
   },
   shippingPriceLabel: {
-    color: '#fff',
+    color: textColor,
     fontSize: 14,
   },
   shippingPriceValue: {
-    color: '#0af',
+    color: 'rgba(0, 110, 165, 1)',
     fontSize: 16,
     fontWeight: 'bold',
   },

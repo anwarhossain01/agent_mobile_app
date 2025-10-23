@@ -15,7 +15,7 @@ import {
 } from '../../store/slices/cartSlice';
 import { createCart, createOrder } from '../../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
-import { dark } from '../../../colors';
+import { dark, darkBg, textColor } from '../../../colors';
 import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
 import { createCartCache, createOrderCache } from '../../sync/cached';
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     submissionModalTitle: {
-        color: '#fff',
+        color: textColor,
         fontSize: 20,
         fontWeight: 'bold',
         marginBottom: 20,
@@ -400,13 +400,13 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     submissionStatusText: {
-        color: '#fff',
+        color: textColor,
         fontSize: 16,
         textAlign: 'center',
         lineHeight: 22,
     },
     submissionErrorContainer: {
-        backgroundColor: 'rgba(255, 68, 68, 0.1)',
+        backgroundColor: darkBg,
         padding: 12,
         borderRadius: 8,
         marginTop: 12,

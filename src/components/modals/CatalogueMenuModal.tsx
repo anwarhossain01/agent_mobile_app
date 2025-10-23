@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import Modal from 'react-native-modal';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { dark } from '../../../colors';
+import { dark, darkBg, textColor } from '../../../colors';
 
 interface CatalogueMenuModalProps {
     visible: boolean;
@@ -64,11 +64,11 @@ export default function CatalogueMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Categorie</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Categorie</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />
 
                 {/* Prodotti option */}
                 <TouchableOpacity
@@ -94,11 +94,11 @@ export default function CatalogueMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Prodotti</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Prodotti</Text>
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />
 
                 {/* Buoni sconto option */}
                 <TouchableOpacity
@@ -118,7 +118,7 @@ export default function CatalogueMenuModal({
                         color="#007AFF"
                         style={{ marginRight: 12 }}
                     />
-                    <Text style={{ fontSize: 18, color: '#fff' }}>Buoni sconto</Text>
+                    <Text style={{ fontSize: 18, color: textColor }}>Buoni sconto</Text>
                 </TouchableOpacity>
             </View>
         </Modal>

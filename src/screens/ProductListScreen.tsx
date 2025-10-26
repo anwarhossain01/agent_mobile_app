@@ -54,7 +54,7 @@ const ProductListScreen = () => {
                 <Text 
                     style={{ 
                         color: textColor, 
-                        fontSize: 17, 
+                        fontSize: 16, 
                         fontWeight: 'bold', 
                         marginBottom: 10,
                         flexWrap: 'wrap',
@@ -74,7 +74,7 @@ const ProductListScreen = () => {
 
     return (
         <View style={styles.container}>
-            <Text style={{ fontSize: 18, marginBottom: 12, color: textColor, padding: 2 }}>Prodotti</Text>
+            <Text style={{ fontSize: 18, marginBottom: 12, color: textColor, padding: 2, fontWeight: 800 }}>Prodotti</Text>
                 <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center' }}>
                  {error ? <Text style={{ color: 'red', marginBottom: 8 }}>Server error, Please try again later</Text> : null}
               </View>
@@ -95,12 +95,7 @@ const styles = StyleSheet.create({
         padding: 16,
         backgroundColor: dark,
     },
-    heading: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        color: textColor
-    },
+
     productsBox: {
         padding: 10,
         marginBottom: 8,

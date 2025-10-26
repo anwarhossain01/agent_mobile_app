@@ -38,7 +38,7 @@ export default function CatalogScreen() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 18, marginBottom: 8, color: textColor }}>Categorie</Text>
+      <Text style={{ fontSize: 18, marginBottom: 8, color: textColor, fontWeight: 800, }}>Categorie</Text>
       <FlatList
         data={categories}
         keyExtractor={(item) => String(item.id)}

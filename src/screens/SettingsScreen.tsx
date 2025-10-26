@@ -68,7 +68,7 @@ export default function SettingsScreen() {
         }}
         onPress={() => dispatch(logout())}
       >
-        <Text style={{ color: 'white', fontWeight: '600' }}>Logout (demo)</Text>
+        <Text style={{ color: 'white', fontWeight: 800 }}>Logout (demo)</Text>
       </TouchableOpacity>
     </View>
   );

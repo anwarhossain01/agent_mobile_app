@@ -71,7 +71,8 @@ export const getCachedClientsForAgentFrontPage = async (
   agentId: number | string,
   search: string | number | null = '',
   city: string | null = null,
-  numero_ordinale: number | string | null = null
+  numero_ordinale: number | string | null = null,
+  cap: number | string | null = null
 ) => {
   try {
     const apiCall = () => {
@@ -87,7 +88,8 @@ export const getCachedClientsForAgentFrontPage = async (
       apiCall,
       search,
       city,
-      numero_ordinale
+      numero_ordinale,
+      cap
     );
   } catch (error: any) {
     console.error('❌ getCachedClientsForAgentFrontPage error:', error);

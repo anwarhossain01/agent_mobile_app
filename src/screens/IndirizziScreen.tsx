@@ -6,7 +6,6 @@ import { dark, textColor } from '../../colors';
 const IndirizziScreen = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.heading}>Indirizzi Cliente</Text>
     
     </View>
   );

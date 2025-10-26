@@ -373,6 +373,7 @@ export const cachedDataForAgentFrontPage = async (
   search: string | number | null,
   city: string | null,
   numero_ordinale: string | number | null,
+  cap: string | number | null,
   idColumn: string = 'id'
 ) => {
   try {
@@ -381,12 +382,9 @@ export const cachedDataForAgentFrontPage = async (
     let whereClauses: string[] = [];
     let params: any[] = [];
 
-    // 🟢 Build dynamic WHERE clause
     if (search === null || (typeof search === 'string' && search.trim() === '')) {
-      // no search condition → fetch all
       whereClauses.push('1=1');
     } else if (!isNaN(Number(search))) {
-      // numeric ID search
       whereClauses.push(`${idColumn} = ?`);
       params.push(Number(search));
     } else if (typeof search === 'string') {
@@ -402,23 +400,24 @@ export const cachedDataForAgentFrontPage = async (
       }
     }
 
-    // 🏙️ Add city filter if provided
     if (city && city.trim() !== '') {
       whereClauses.push(`city LIKE ?`);
       params.push(`%${city.trim()}%`);
     }
 
-    // 🔢 Add numero_ordinale filter if provided
     if (numero_ordinale && numero_ordinale.toString().trim() !== '') {
       whereClauses.push(`numero_ordinale LIKE ?`);
       params.push(`%${numero_ordinale.toString().trim()}%`);
     }
 
-    // Combine all conditions
+    if(cap && cap.toString().trim() !== '') {
+      whereClauses.push(`codice_cmnr LIKE ?`);
+      params.push(`%${cap.toString().trim()}%`);
+    }
+
     const whereClause = whereClauses.join(' AND ');
     console.log('🧩 Query condition:', whereClause, params);
 
-    // 1️⃣ Try to get data locally
     const localData = await queryData(tableName, whereClause, params);
 
    // if (localData.length > 0) {
@@ -426,12 +425,10 @@ export const cachedDataForAgentFrontPage = async (
       return localData;
    // }
 
-    // 2️⃣ Otherwise fetch from API
     console.log(`🌐 Not found locally, calling API...`);
     const res = await apiCall();
     const apiCustomers = res.data?.customers || [];
 
-    // 3️⃣ Save them locally
     if (apiCustomers.length > 0) {
       for (const c of apiCustomers) {
         const minimal = {
@@ -826,3 +823,7 @@ export const cacheInitializer = async (agentId :any) => {
     return { success: false, error: error.message };
   }
 };
+
+export const classifyCustomersCache = ( ) =>{
+  
+}

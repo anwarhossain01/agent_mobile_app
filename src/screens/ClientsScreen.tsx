@@ -9,12 +9,15 @@ import { darkBg, textColor, theme, darkerBg } from '../../colors'; // Imported d
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
+import { getDBConnection } from '../database/db';
+import { selectIsClassified, setCity, setClassified, setCodiceCmnr, setNumeroOrdinal } from '../store/slices/customerClassificationSlice';
 
 
 export default function ClientsScreen() {
   const dispatch = useDispatch();
   const clients = useSelector((s: RootState) => s.clients.items);
   const auth = useSelector((s: RootState) => s.auth);
+  const is_classified = useSelector(selectIsClassified);
   const [noData, setNoData] = useState(false);
   const employeeId = auth.employeeId;
   const navigation = useNavigation();
@@ -26,8 +29,8 @@ export default function ClientsScreen() {
         let data = null;
 
         data = await getCachedClientsForAgentFrontPage(employeeId || 0);
-
-        console.log("Clients res", data);
+        await classifyCustomers(dispatch);
+      // console.log("Clients res", data);
 
         if (data.length === 0) {
           setNoData(true);
@@ -53,6 +56,56 @@ export default function ClientsScreen() {
       }
     });
   }
+
+  const classifyCustomers = async (dispatch : any) => {
+  try {
+    if(is_classified) return;
+    const db = await getDBConnection();
+
+    const query = `SELECT city, codice_cmnr, numero_ordinale FROM customers`;
+    const results = await db.executeSql(query);
+
+    const rows = results[0].rows;
+    const cityMap: Record<string, number> = {};
+    const codiceMap: Record<string, number> = {};
+    const ordinaleMap: Record<string, number> = {};
+
+    for (let i = 0; i < rows.length; i++) {
+      const item = rows.item(i);
+
+      // city
+      if (item.city) {
+        cityMap[item.city] = (cityMap[item.city] || 0) + 1;
+      }
+
+      // codice_cmnr (cap)
+      if (item.codice_cmnr) {
+        codiceMap[item.codice_cmnr] = (codiceMap[item.codice_cmnr] || 0) + 1;
+      }
+
+      // numero_ordinale
+      if (item.numero_ordinale) {
+        ordinaleMap[item.numero_ordinale] =
+          (ordinaleMap[item.numero_ordinale] || 0) + 1;
+      }
+    }
+
+    // convert to tuples
+    const cityArray: [string, number][] = Object.entries(cityMap);
+    const codiceArray: [string, number][] = Object.entries(codiceMap);
+    const ordinaleArray: [string, number][] = Object.entries(ordinaleMap);
+
+    // dispatch results to Redux
+    dispatch(setCity(cityArray));
+    dispatch(setCodiceCmnr(codiceArray));
+    dispatch(setNumeroOrdinal(ordinaleArray));
+    dispatch(setClassified(true));
+
+    console.log('✅ Customer classification completed successfully');
+  } catch (err) {
+    console.log('❌ classifyCustomers() error:', err);
+  }
+};
   const SearchHeader = () => {
     const [citySearch, setCitySearch] = useState('');
     const [ordinalNumberSearch, setOrdinalNumberSearch] = useState('');
@@ -65,7 +118,7 @@ export default function ClientsScreen() {
 
         const data = await getCachedClientsForAgentFrontPage(
           employeeId || 0,
-          '', // normal search param not used here
+          '', 
           city,
           numero_ordinale
         );
@@ -126,7 +179,7 @@ export default function ClientsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, padding: 14 }}>
-      <Text style={{ fontSize: 20, marginBottom: 8, color: textColor }}>Clienti</Text>
+      {/* <Text style={{ fontSize: 20, marginBottom: 8, color: textColor }}>Clienti</Text> */}
 
       {noData ? (
         <View style={{ display: 'flex', flex: 1, padding: 2, alignItems: 'center' }}>
@@ -135,26 +188,10 @@ export default function ClientsScreen() {
       ) : null}
       <FlatList
         data={clients}
-        ListHeaderComponent={SearchHeader}
+      // ListHeaderComponent={SearchHeader}
         keyExtractor={(item) => String(localindex++)}
         renderItem={({ item }) => (
           <View style={styles.card}>
-            {/* Buttons on top */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.orderButton]}
-                onPress={() => ClientOrderNavigate(item.id_customer)}
-              >
-                <Text style={styles.buttonText}>ORDINE</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.detailsButton]}
-                onPress={() => Alert.alert('in development')}
-              >
-                <Text style={styles.buttonText}>DETTAGLI</Text>
-              </TouchableOpacity>
-            </View>
-
             {/* Client Information stacked */}
             <View style={styles.infoSection}>
               <Text style={styles.infoText}>
@@ -181,6 +218,22 @@ export default function ClientsScreen() {
                 <Text style={styles.label}>Email: </Text>
                 {item.email}
               </Text>
+            </View>
+
+            {/* Buttons on top */}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[styles.button, styles.orderButton]}
+                onPress={() => ClientOrderNavigate(item.id_customer)}
+              >
+                <Text style={styles.buttonText}>ORDINE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.detailsButton]}
+                onPress={() => Alert.alert('in development')}
+              >
+                <Text style={styles.buttonText}>DETTAGLI</Text>
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -215,7 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
-    marginBottom: 8,
+    marginTop: 8,
     flexWrap: 'wrap',
   },
   button: {

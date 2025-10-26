@@ -6,6 +6,7 @@ import clientsReducer from './slices/clientsSlice';
 import productsReducer from './slices/productsSlice';
 import ordersReducer from './slices/ordersSlice';
 import cartReducer from './slices/cartSlice';
+import customerClassificationReducer from './slices/customerClassificationSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
@@ -13,6 +14,7 @@ const rootReducer = combineReducers({
   products: productsReducer,
   orders: ordersReducer,
   cart: cartReducer,
+  customerClassification: customerClassificationReducer
 });
 
 const persistConfig = {

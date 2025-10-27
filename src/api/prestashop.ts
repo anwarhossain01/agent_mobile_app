@@ -98,21 +98,23 @@ export const getCachedClientsForAgentFrontPage = async (
 };
 
 
-export const getProducts = async () => {
-  const res = await api.get('/products?output_format=JSON&display=full&limit=50');
+export const getProducts = async (category_id: number | string | null = null) => {
+  let filters = [];
+  if (category_id) filters.push(`filter[id_category_default]=[${category_id}]`);
+  const res = await api.get(`/products?output_format=JSON&display=full&limit=50&${filters.join('&')}`);
+//  const res = await api.get('/products?output_format=JSON&filter[id_category_default]=60&display=full&limit=50');
   //console.log('API products sample:', JSON.stringify(res.data.products[0], null, 2));
   return res.data.products || [];
 };
 
 export const getActiveCategories = async () => {
   try {
-    const res = await api.get(`/categories?display=[id,name]&filter[active]=1&output_format=JSON&ws_key=${API_KEY}`);
+    const res = await api.get(`/categories?display=[id, id_parent ,name]&filter[active]=1&filter[id_parent]=1&output_format=JSON&ws_key=${API_KEY}`);
     return res.data;
   } catch (error: any) {
     console.log("Categories api error", error);
     return { success: false, error: error.response?.data?.error };
   }
-
 }
 
 export const getallCustomerss = async () => {
@@ -237,9 +239,9 @@ export const getCachedCustomers = async (search: string | number) => {
 export const getProductSearchResult = async (search: string) => {
   try {
     const res = await api.get(
-      `/products?filter[name]=%[${encodeURIComponent(search)}]%&display=[id,name,id_default_image,price,minimal_quantity]&output_format=JSON&ws_key=${API_KEY}`
+      `/products?filter[name]=%[${encodeURIComponent(search)}]%&display=[id,name,id_default_image,price,minimal_quantity,id_category_default]&output_format=JSON&ws_key=${API_KEY}`
     );
-    // console.log('Product search result', res);
+     console.log('Product search result', res);
     return { success: true, data: res.data };
   } catch (error: any) {
     console.log('Product search error', error);
@@ -252,7 +254,7 @@ export const getCachedProducts = async (search: string) => {
     api.get(
       `/products?filter[name]=%[${encodeURIComponent(
         search
-      )}]%&display=[id,name,id_default_image,price,minimal_quantity]&output_format=JSON&ws_key=${API_KEY}`
+      )}]%&display=[id,name,id_default_image,price,minimal_quantity,id_category_default]&output_format=JSON&ws_key=${API_KEY}`
     );
 
   return cachedDataForProducts('products', apiCall, search);
@@ -825,3 +827,17 @@ export const createOrderHistory = async (orderId: number, employeeId: number) =>
     return null;
   }
 };
+
+export const getCategoriesSubsAndProds = async () =>{
+  try {
+     let int_random = generateRandomNumber(10);
+    const res = await api.get(`employeeapi/customescategoryapi?t=${int_random}`, {
+      baseURL: API_LOGIN_URL, 
+    });
+    console.log("getCategoriesSubsAndProds res", res.data);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log("Categories api error", error);
+    return { success: false, error: error.response?.data?.error };
+  }
+}

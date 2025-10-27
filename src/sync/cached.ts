@@ -2,132 +2,132 @@ import { checkAllProductStock, clientAddressGet, getClientsForAgent, getCouriers
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
 
 export const cachedDataForCarriers = async (
-    tableName: string,
-    apiCall: () => Promise<any>,
-    id?: string | number,
-    idColumn: string = 'id'
+  tableName: string,
+  apiCall: () => Promise<any>,
+  id?: string | number,
+  idColumn: string = 'id'
 ) => {
-    try {
+  try {
 
-        // Try to get from SQLite first if ID is provided
-        if (id) {
-            const localData = await queryData(tableName, `${idColumn} = ?`, [id]);
+    // Try to get from SQLite first if ID is provided
+    if (id) {
+      const localData = await queryData(tableName, `${idColumn} = ?`, [id]);
 
-            if (localData.length > 0) {
-                console.log(`📦 Data found in local database: ${tableName}`);
-                const item = localData[0];
+      if (localData.length > 0) {
+        console.log(`📦 Data found in local database: ${tableName}`);
+        const item = localData[0];
 
-                // Convert back to string format to match API response
-                const formattedItem = Object.keys(item).reduce((acc, key) => {
-                    // For carriers table, convert active and is_free back to strings
-                    if (key === 'active' || key === 'is_free') {
-                        acc[key] = item[key].toString();
-                    } else {
-                        acc[key] = typeof item[key] === 'number' ? item[key].toString() : item[key];
-                    }
-                    return acc;
-                }, {} as any);
+        // Convert back to string format to match API response
+        const formattedItem = Object.keys(item).reduce((acc, key) => {
+          // For carriers table, convert active and is_free back to strings
+          if (key === 'active' || key === 'is_free') {
+            acc[key] = item[key].toString();
+          } else {
+            acc[key] = typeof item[key] === 'number' ? item[key].toString() : item[key];
+          }
+          return acc;
+        }, {} as any);
 
-                return {
-                    success: true,
-                    data: { [tableName]: [formattedItem] },
-                    fromCache: true
-                };
-            }
-        }
-
-        // If not found locally, call API
-        console.log(`🌐 Data not found locally, calling API for ${tableName}...`);
-        const res = await apiCall();
-
-        // Save to SQLite for future use
-        if (res.data?.[tableName] && res.data[tableName].length > 0) {
-            for (const item of res.data[tableName]) {
-                const dbData = Object.keys(item).reduce((acc, key) => {
-                    // For carriers table, convert active and is_free to integers
-                    if (key === 'active' || key === 'is_free') {
-                        acc[key] = parseInt(item[key]) || 0;
-                    } else {
-                        acc[key] = !isNaN(Number(item[key])) ? parseInt(item[key]) : item[key];
-                    }
-                    return acc;
-                }, {} as any);
-
-                await insertIfNotExists(tableName, dbData, idColumn);
-            }
-            console.log(`💾 ${tableName} data saved to local database`);
-        }
-
-        return { success: true, data: res.data, fromCache: false };
-    } catch (error) {
-        console.log(`Cached API call error for ${tableName}:`, error);
         return {
-            success: false,
-            error: error.response?.data?.error || error.message
+          success: true,
+          data: { [tableName]: [formattedItem] },
+          fromCache: true
         };
+      }
     }
+
+    // If not found locally, call API
+    console.log(`🌐 Data not found locally, calling API for ${tableName}...`);
+    const res = await apiCall();
+
+    // Save to SQLite for future use
+    if (res.data?.[tableName] && res.data[tableName].length > 0) {
+      for (const item of res.data[tableName]) {
+        const dbData = Object.keys(item).reduce((acc, key) => {
+          // For carriers table, convert active and is_free to integers
+          if (key === 'active' || key === 'is_free') {
+            acc[key] = parseInt(item[key]) || 0;
+          } else {
+            acc[key] = !isNaN(Number(item[key])) ? parseInt(item[key]) : item[key];
+          }
+          return acc;
+        }, {} as any);
+
+        await insertIfNotExists(tableName, dbData, idColumn);
+      }
+      console.log(`💾 ${tableName} data saved to local database`);
+    }
+
+    return { success: true, data: res.data, fromCache: false };
+  } catch (error) {
+    console.log(`Cached API call error for ${tableName}:`, error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message
+    };
+  }
 }
 
 export const cachedDataForDeliveries = async (
-    tableName: string,
-    apiCall: () => Promise<any>,
-    id_carrier?: string | number | null,
-    idColumn: string = 'id'
+  tableName: string,
+  apiCall: () => Promise<any>,
+  id_carrier?: string | number | null,
+  idColumn: string = 'id'
 ) => {
-    try {
-        console.log(`⚡️ Cached API call for ${tableName}...`);
+  try {
+    console.log(`⚡️ Cached API call for ${tableName}...`);
 
-        // 1️⃣ Try local DB if id_carrier provided
-        if (id_carrier) {
-            const localData = await queryData(tableName, `id_carrier = ?`, [id_carrier]);
+    // 1️⃣ Try local DB if id_carrier provided
+    if (id_carrier) {
+      const localData = await queryData(tableName, `id_carrier = ?`, [id_carrier]);
 
-            if (localData.length > 0) {
-                console.log(`📦 Deliveries found in local database for carrier ${id_carrier}`);
+      if (localData.length > 0) {
+        console.log(`📦 Deliveries found in local database for carrier ${id_carrier}`);
 
-                // Format rows back to match API structure
-                const formatted = localData.map(item => ({
-                    ...item,
-                    id: item.id.toString(),
-                    id_carrier: item.id_carrier.toString(),
-                    id_zone: item.id_zone.toString(),
-                    price: item.price.toString(),
-                }));
+        // Format rows back to match API structure
+        const formatted = localData.map(item => ({
+          ...item,
+          id: item.id.toString(),
+          id_carrier: item.id_carrier.toString(),
+          id_zone: item.id_zone.toString(),
+          price: item.price.toString(),
+        }));
 
-                return {
-                    success: true,
-                    data: { [tableName]: formatted },
-                    fromCache: true,
-                };
-            }
-        }
-
-        // 2️⃣ If not found locally, call API
-        console.log(`🌐 No local deliveries found, calling API...`);
-        const res = await apiCall();
-
-        // 3️⃣ Save to SQLite
-        if (res.data?.[tableName] && res.data[tableName].length > 0) {
-            for (const item of res.data[tableName]) {
-                const dbData = {
-                    id: parseInt(item.id),
-                    id_carrier: parseInt(item.id_carrier),
-                    id_zone: parseInt(item.id_zone),
-                    price: parseFloat(item.price),
-                };
-
-                await insertIfNotExists(tableName, dbData, 'id');
-            }
-            console.log(`💾 Deliveries saved to local database`);
-        }
-
-        return { success: true, data: res.data, fromCache: false };
-    } catch (error) {
-        console.log(`Cached API call error for ${tableName}:`, error);
         return {
-            success: false,
-            error: error.response?.data?.error || error.message,
+          success: true,
+          data: { [tableName]: formatted },
+          fromCache: true,
         };
+      }
     }
+
+    // 2️⃣ If not found locally, call API
+    console.log(`🌐 No local deliveries found, calling API...`);
+    const res = await apiCall();
+
+    // 3️⃣ Save to SQLite
+    if (res.data?.[tableName] && res.data[tableName].length > 0) {
+      for (const item of res.data[tableName]) {
+        const dbData = {
+          id: parseInt(item.id),
+          id_carrier: parseInt(item.id_carrier),
+          id_zone: parseInt(item.id_zone),
+          price: parseFloat(item.price),
+        };
+
+        await insertIfNotExists(tableName, dbData, 'id');
+      }
+      console.log(`💾 Deliveries saved to local database`);
+    }
+
+    return { success: true, data: res.data, fromCache: false };
+  } catch (error) {
+    console.log(`Cached API call error for ${tableName}:`, error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message,
+    };
+  }
 };
 
 /**
@@ -235,76 +235,76 @@ export const createCartCache = async (
  * @param orderData - key/value pairs matching `orders` table columns
  */
 export const createOrderCache = async (orderData: Record<string, any>) => {
-    const db = await getDBConnection();
+  const db = await getDBConnection();
 
-    try {
-        await db.transaction(async (tx) => {
-            // ✅ Define the valid columns from your simplified schema
-            const validColumns = [
-                'id_cart',
-                'id_employee',
-                'id_customer',
-                'id_carrier',
-                'id_address_delivery',
-                'id_address_invoice',
-                'id_currency',
-                'id_lang',
-                'module',
-                'payment',
-                'total_products',
-                'total_products_wt',
-                'total_paid',
-                'total_paid_real',
-                'total_shipping',
-                'total_shipping_tax_incl',
-                'total_shipping_tax_excl',
-                'conversion_rate',
-                'is_dirty',
-                'sync_attempts',
-                'last_sync_error',
-                'order_status',
-                'remote_order_id',
-                'last_synced_at',
-            ];
+  try {
+    await db.transaction(async (tx) => {
+      // ✅ Define the valid columns from your simplified schema
+      const validColumns = [
+        'id_cart',
+        'id_employee',
+        'id_customer',
+        'id_carrier',
+        'id_address_delivery',
+        'id_address_invoice',
+        'id_currency',
+        'id_lang',
+        'module',
+        'payment',
+        'total_products',
+        'total_products_wt',
+        'total_paid',
+        'total_paid_real',
+        'total_shipping',
+        'total_shipping_tax_incl',
+        'total_shipping_tax_excl',
+        'conversion_rate',
+        'is_dirty',
+        'sync_attempts',
+        'last_sync_error',
+        'order_status',
+        'remote_order_id',
+        'last_synced_at',
+      ];
 
-            // ✅ Merge defaults for local tracking
-            const dataWithDefaults = {
-                order_status: 'pending',
-                is_dirty: 1,
-                sync_attempts: 0,
-                last_sync_error: null,
-                remote_order_id: null,
-                ...orderData,
-            };
+      // ✅ Merge defaults for local tracking
+      const dataWithDefaults = {
+        order_status: 'pending',
+        is_dirty: 1,
+        sync_attempts: 0,
+        last_sync_error: null,
+        remote_order_id: null,
+        ...orderData,
+      };
 
-            // ✅ Filter only valid columns that exist in the table
-            const filteredEntries = Object.entries(dataWithDefaults).filter(([key]) =>
-                validColumns.includes(key)
-            );
+      // ✅ Filter only valid columns that exist in the table
+      const filteredEntries = Object.entries(dataWithDefaults).filter(([key]) =>
+        validColumns.includes(key)
+      );
 
-            const columns = filteredEntries.map(([key]) => key).join(', ');
-            const placeholders = filteredEntries.map(() => '?').join(', ');
-            const values = filteredEntries.map(([_, value]) => value);
+      const columns = filteredEntries.map(([key]) => key).join(', ');
+      const placeholders = filteredEntries.map(() => '?').join(', ');
+      const values = filteredEntries.map(([_, value]) => value);
 
-            const sql = `INSERT INTO orders (${columns}) VALUES (${placeholders})`;
+      const sql = `INSERT INTO orders (${columns}) VALUES (${placeholders})`;
 
-            const result = await tx.executeSql(sql, values);
-            const insertedId = result[1]?.insertId;
+      const result = await tx.executeSql(sql, values);
+      const insertedId = result[1]?.insertId;
 
-            console.log(`🧾 Order created successfully (local ID: ${insertedId})`);
-        });
+      console.log(`🧾 Order created successfully (local ID: ${insertedId})`);
+    });
 
-        return { success: true, message: 'Order saved locally' };
-    } catch (error: any) {
-        console.error('❌ createOrder error:', error);
-        return { success: false, error: error?.message || JSON.stringify(error) };
-    }
+    return { success: true, message: 'Order saved locally' };
+  } catch (error: any) {
+    console.error('❌ createOrder error:', error);
+    return { success: false, error: error?.message || JSON.stringify(error) };
+  }
 };
 
 export const cachedDataForCustomers = async (
   tableName: string,
   apiCall: () => Promise<any>,
-  search: string | number | null ,
+  search: string | number | null,
   idColumn: string = 'id'
 ) => {
   try {
@@ -343,7 +343,7 @@ export const cachedDataForCustomers = async (
     if (apiCustomers.length > 0) {
       for (const c of apiCustomers) {
         const minimal = {
-          id: parseInt(c.id ),
+          id: parseInt(c.id),
           id_customer: parseInt(c.id_customer),
           firstname: c.firstname,
           lastname: c.lastname,
@@ -410,7 +410,7 @@ export const cachedDataForAgentFrontPage = async (
       params.push(`%${numero_ordinale.toString().trim()}%`);
     }
 
-    if(cap && cap.toString().trim() !== '') {
+    if (cap && cap.toString().trim() !== '') {
       whereClauses.push(`codice_cmnr LIKE ?`);
       params.push(`%${cap.toString().trim()}%`);
     }
@@ -420,10 +420,10 @@ export const cachedDataForAgentFrontPage = async (
 
     const localData = await queryData(tableName, whereClause, params);
 
-   // if (localData.length > 0) {
-   //   console.log(`📦 Found ${localData.length} record(s) in local DB`);
-      return localData;
-   // }
+    // if (localData.length > 0) {
+    //   console.log(`📦 Found ${localData.length} record(s) in local DB`);
+    return localData;
+    // }
 
     console.log(`🌐 Not found locally, calling API...`);
     const res = await apiCall();
@@ -463,7 +463,7 @@ export const cachedDataForProducts = async (
   idColumn: string = 'id'
 ) => {
   try {
-    console.log(`⚡️ Cached API call for ${tableName}...`);
+    console.log(` Cached API call for ${tableName}...`);
 
     // 1️⃣ Try local DB
     const localData = await queryData(tableName, `name LIKE ?`, [`%${search}%`]);
@@ -484,6 +484,7 @@ export const cachedDataForProducts = async (
         const productData = {
           id: parseInt(p.id),
           id_default_image: p.id_default_image,
+          id_category_default: p.id_category_default,
           minimal_quantity: p.minimal_quantity,
           price: parseFloat(p.price),
           name: p.name,
@@ -719,7 +720,7 @@ export const getLatestServerOrders = async (employeeId: number = 0) => {
   }
 };
 
-export const cacheInitializer = async (agentId :any) => {
+export const cacheInitializer = async (agentId: any) => {
   console.log("🧠 Starting cache initialization for agent:", agentId);
 
   try {
@@ -824,6 +825,151 @@ export const cacheInitializer = async (agentId :any) => {
   }
 };
 
-export const classifyCustomersCache = ( ) =>{
-  
-}
+export const saveCategoryTree = async (data: any[]) => {
+  const db = await getDBConnection();
+
+  // Step 1: Flatten the data into separate arrays
+  const categories: any[] = [];
+  const subcategories: any[] = [];
+  const products: any[] = [];
+
+  for (const category of data) {
+    categories.push({ id: category.id, name: category.name });
+
+    for (const sub of category.subcategories || []) {
+      subcategories.push({ id: sub.id, name: sub.name, category_id: category.id });
+
+      for (const p of sub.products || []) {
+        products.push({
+          id_product: p.id_product,
+          subcategory_id: sub.id,
+          id_supplier: p.id_supplier,
+          id_manufacturer: p.id_manufacturer,
+          id_category_default: p.id_category_default,
+          id_shop_default: p.id_shop_default,
+          id_tax_rules_group: p.id_tax_rules_group,
+          on_sale: p.on_sale,
+          online_only: p.online_only,
+          ean13: p.ean13,
+          isbn: p.isbn,
+          upc: p.upc,
+          mpn: p.mpn,
+          ecotax: p.ecotax,
+          quantity: p.quantity,
+          minimal_quantity: p.minimal_quantity,
+          low_stock_threshold: p.low_stock_threshold,
+          low_stock_alert: p.low_stock_alert,
+          price: p.price,
+          wholesale_price: p.wholesale_price,
+          unity: p.unity,
+          unit_price: p.unit_price,
+          unit_price_ratio: p.unit_price_ratio,
+          additional_shipping_cost: p.additional_shipping_cost,
+          reference: p.reference,
+          supplier_reference: p.supplier_reference,
+          location: p.location,
+          width: p.width,
+          height: p.height,
+          depth: p.depth,
+          weight: p.weight,
+          out_of_stock: p.out_of_stock,
+          additional_delivery_times: p.additional_delivery_times,
+          quantity_discount: p.quantity_discount,
+          customizable: p.customizable,
+          uploadable_files: p.uploadable_files,
+          text_fields: p.text_fields,
+          active: p.active,
+          redirect_type: p.redirect_type,
+          id_type_redirected: p.id_type_redirected,
+          available_for_order: p.available_for_order,
+          available_date: p.available_date,
+          show_condition: p.show_condition,
+          condition: p.condition,
+          show_price: p.show_price,
+          indexed: p.indexed,
+          visibility: p.visibility,
+          cache_is_pack: p.cache_is_pack,
+          cache_has_attachments: p.cache_has_attachments,
+          is_virtual: p.is_virtual,
+          cache_default_attribute: p.cache_default_attribute,
+          date_add: p.date_add,
+          date_upd: p.date_upd,
+          advanced_stock_management: p.advanced_stock_management,
+          pack_stock_type: p.pack_stock_type,
+          state: p.state,
+          product_type: p.product_type,
+          accisa: p.accisa,
+          id_shop: p.id_shop,
+          id_lang: p.id_lang,
+          link_rewrite: p.link_rewrite,
+          description: p.description,
+          description_short: p.description_short,
+          meta_description: p.meta_description,
+          meta_keywords: p.meta_keywords,
+          meta_title: p.meta_title,
+          name: p.name,
+          available_now: p.available_now,
+          available_later: p.available_later,
+          delivery_in_stock: p.delivery_in_stock,
+          delivery_out_stock: p.delivery_out_stock,
+          manufacturer_name: p.manufacturer_name,
+          supplier_name: p.supplier_name,
+          rate: p.rate,
+          tax_name: p.tax_name,
+        });
+      }
+    }
+  }
+
+  // Step 2: Categories transaction
+  try {
+    for (const cat of categories) {
+      await db.executeSql(
+        `INSERT OR REPLACE INTO category_tree_categories (id, name) VALUES (?, ?)`,
+        [cat.id, cat.name]
+      );
+    }
+    console.log('✅ Categories saved.');
+  } catch (error) {
+    console.log('❌ Categories save error:', error);
+  }
+
+  // Step 3: Subcategories
+  try {
+    for (const sub of subcategories) {
+      await db.executeSql(
+        `INSERT OR REPLACE INTO category_tree_subcategories (id, name, category_id) VALUES (?, ?, ?)`,
+        [sub.id, sub.name, sub.category_id]
+      );
+    }
+    console.log('✅ Subcategories saved.');
+  } catch (error) {
+    console.log('❌ Subcategories save error:', error);
+  }
+
+  // Step 4: Products
+  try {
+    for (const p of products) {
+      await db.executeSql(
+        `INSERT OR REPLACE INTO category_tree_products (
+        id_product, subcategory_id, id_supplier, id_manufacturer, id_category_default, id_shop_default, id_tax_rules_group,
+        on_sale, online_only, ean13, isbn, upc, mpn, ecotax, quantity, minimal_quantity, low_stock_threshold, low_stock_alert,
+        price, wholesale_price, unity, unit_price, unit_price_ratio, additional_shipping_cost,
+        reference, supplier_reference, location, width, height, depth, weight, out_of_stock, additional_delivery_times,
+        quantity_discount, customizable, uploadable_files, text_fields, active, redirect_type, id_type_redirected,
+        available_for_order, available_date, show_condition, condition, show_price, indexed, visibility,
+        cache_is_pack, cache_has_attachments, is_virtual, cache_default_attribute, date_add, date_upd,
+        advanced_stock_management, pack_stock_type, state, product_type, accisa, id_shop, id_lang, link_rewrite,
+        description, description_short, meta_description, meta_keywords, meta_title, name, available_now,
+        available_later, delivery_in_stock, delivery_out_stock, manufacturer_name, supplier_name, rate, tax_name
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        Object.values(p)
+      );
+    }
+    console.log('✅ Products saved.');
+  } catch (error) {
+    console.log('❌ Products save error:', error);
+  }
+
+  return { categories, subcategories, products }; // optional, for reuse
+};

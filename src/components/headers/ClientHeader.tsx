@@ -291,12 +291,12 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 const styles = StyleSheet.create({
     headerContainer: {
         paddingTop: 5,
-        paddingBottom: 5,
+        paddingBottom: 2,
         paddingHorizontal: 15,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        height: 55,
+        height: 50,
     },
     title: { color: 'black', fontSize: 18, fontWeight: 'bold' },
     iconRow: { flexDirection: 'row' },

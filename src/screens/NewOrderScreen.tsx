@@ -186,12 +186,12 @@ const NewOrderScreen = ({ route }) => {
 
         setProductLoading(true);
         let res =null
-         let state = await NetInfo.fetch();
-         if(state.isConnected){
-            res = await getProductSearchResult(searchText);
-         }else{
-            res = await getCachedProducts(searchText);
-         }
+        // let state = await NetInfo.fetch();
+        //  if(state.isConnected){
+        //     res = await getProductSearchResult(searchText);
+        //  } else {
+        res = await getCachedProducts(searchText);
+       //  }
         // console.log("prods", res.data);
 
         setProductLoading(false);

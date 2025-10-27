@@ -17,7 +17,7 @@ import { View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platfor
 import { useDispatch } from 'react-redux';
 import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
-import { dark, textColor, theme } from '../../colors';
+import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { getClientsForAgent, loginEmployee } from '../api/prestashop';
 import { cacheInitializer, storeAgentFromJson } from '../sync/cached';
 
@@ -57,14 +57,14 @@ export default function LoginScreen() {
         <Text style={styles.title}>Employee Login</Text>
         <TextInput
           placeholder="Email"
-          placeholderTextColor="#808080ff"
+          placeholderTextColor={lighterTextColor}
           value={email}
           onChangeText={setEmail}
           style={styles.input}
         />
         <TextInput
           placeholder="Password"
-          placeholderTextColor="#808080ff"
+          placeholderTextColor={lighterTextColor}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -101,13 +101,13 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#555',
+    borderColor: darkerBg,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 16,
     color: textColor,
-  //  backgroundColor: '#222',
+   backgroundColor: darkBg,
   },
   button: {
     width: '100%',

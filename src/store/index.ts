@@ -7,14 +7,15 @@ import productsReducer from './slices/productsSlice';
 import ordersReducer from './slices/ordersSlice';
 import cartReducer from './slices/cartSlice';
 import customerClassificationReducer from './slices/customerClassificationSlice';
-
+import categoryTreeReducer from './slices/categoryTreeSlice';
 const rootReducer = combineReducers({
   auth: authReducer,
   clients: clientsReducer,
   products: productsReducer,
   orders: ordersReducer,
   cart: cartReducer,
-  customerClassification: customerClassificationReducer
+  customerClassification: customerClassificationReducer,
+  categoryTree: categoryTreeReducer,
 });
 
 const persistConfig = {

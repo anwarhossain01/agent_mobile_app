@@ -76,6 +76,7 @@ import { ClientHeader } from './src/components/headers/ClientHeader';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SplashScreen from './src/screens/SplashScreen';
+import ProductDetailPage from './src/screens/ProductDetailsPage';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -347,7 +348,7 @@ function RootNavigator() {
       {isLoggedIn ? (
         <>
           <Stack.Screen name="Main" component={MainTabs} />
-          {/* <Stack.Screen name="ClientOrder" component={ClientOrderScreen} /> */}
+          <Stack.Screen name="ProductDetails" component={ProductDetailPage} /> 
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

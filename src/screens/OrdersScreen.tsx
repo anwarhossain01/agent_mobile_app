@@ -10,6 +10,7 @@ import { queryData } from '../database/db';
 import { SyncOrders } from '../components/SyncOrders';
 import { getLatestServerOrders, storeServerOrders } from '../sync/cached';
 import NetInfo from '@react-native-community/netinfo';
+import { setClientId } from '../store/slices/cartSlice';
 
 export default function OrdersScreen({ route }) {
   //  const localOrders = useSelector((s: RootState) => s.orders.items || []);
@@ -52,7 +53,7 @@ export default function OrdersScreen({ route }) {
           orders = await getLatestServerOrders(employeeId);
         }
 
-     //   console.log("Orders res ", orders);
+        //   console.log("Orders res ", orders);
 
         if (!mounted) return;
         setServerOrders(orders);
@@ -73,7 +74,7 @@ export default function OrdersScreen({ route }) {
         }));
 
         setLocalOrders(normalizedLocalOrders);
-        
+
         const normalizedServerOrders = orders.map(o => ({
           id: o.id_order,
           id_customer: o.id_customer,
@@ -141,15 +142,25 @@ export default function OrdersScreen({ route }) {
   // );
 
   const newOrderRouteHandler = () => {
-    (navigation as any).navigate('Main', {
-      screen: 'OrdersTab',
+    dispatch(setClientId(employeeId));
+    (navigation as any).replace('Main', {
+      screen: 'CatalogTab',
       params: {
-        screen: 'NewOrders',
+        screen: 'Catalog',
         params: {
-          client_id: employeeId,
+          title: 'Nuovo ordine'
         }
       }
     });
+    // (navigation as any).navigate('Main', {
+    //   screen: 'OrdersTab',
+    //   params: {
+    //     screen: 'NewOrders',
+    //     params: {
+    //       client_id: employeeId,
+    //     }
+    //   }
+    // });
   }
 
   const FloatingSyncButton = () => {
@@ -218,8 +229,8 @@ export default function OrdersScreen({ route }) {
 
   return (
     <View style={{ flex: 1, padding: 13 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 18, marginBottom: 12, color: textColor }}>Ordini</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 6 }}>
+        <Text style={{ fontSize: 18, marginBottom: 12, color: textColor, fontWeight: 800 }}>Ordini</Text>
         {showbtn ? <Button title="NUOVO ORDINE +" color="#00bd29ff" onPress={newOrderRouteHandler} /> : null}
       </View>
 
@@ -271,7 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   statusText: {
-    color: textColor,
+    color: '#fff',
     fontSize: 12,
     fontWeight: '500',
   },

@@ -77,6 +77,7 @@ import { createMaterialTopTabNavigator } from '@react-navigation/material-top-ta
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SplashScreen from './src/screens/SplashScreen';
 import ProductDetailPage from './src/screens/ProductDetailsPage';
+import FloatingCartButton from './src/components/FloatingCartButton';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -382,6 +383,7 @@ export default function App() {
         <SafeAreaView style={{ flex: 1 }}>
           <NavigationContainer theme={navTheme}>
             <RootNavigator />
+            <FloatingCartButton />
           </NavigationContainer>
         </SafeAreaView>
       </PersistGate>

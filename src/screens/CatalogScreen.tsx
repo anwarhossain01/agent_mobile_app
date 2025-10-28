@@ -4,14 +4,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setProducts } from '../store/slices/productsSlice';
 import { getActiveCategories, getCategoriesSubsAndProds, getProducts } from '../api/prestashop';
-import { dark, darkBg, lightdark, textColor } from '../../colors';
+import { dark, darkBg, darkerBg, darkestBg, lightdark, textColor } from '../../colors';
 import { selectIsCategoryTreeSaved, setIsTreeSaved } from '../store/slices/categoryTreeSlice';
 import { saveCategoryTree } from '../sync/cached';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryData } from '../database/db';
 import { useNavigation } from '@react-navigation/native';
 
-export default function CatalogScreen() {
+export default function CatalogScreen({route }: { route: any }) {
   const [categories, setCategories] = useState<any[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -24,31 +24,32 @@ export default function CatalogScreen() {
   const is_saved = useSelector(selectIsCategoryTreeSaved);
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  
   useEffect(() => {
     const load = async () => {
       try {
         let categoriesTreeData = [];
 
-        if (is_saved) {
+     //   if (is_saved) {
           // ✅ Load from SQLite
-          console.log('📦 Loading categories from local SQLite...');
+        //  console.log('📦 Loading categories from local SQLite...');
           categoriesTreeData = await queryData('category_tree_categories', '1=1');
-          console.log(categoriesTreeData);
+          //console.log(categoriesTreeData);
 
           setCategories(categoriesTreeData);
           setFilteredCategories(categoriesTreeData);
-        } else {
-          // 🌐 Fetch from server
-          console.log('🌍 Fetching categories from server...');
-          const categoriesTree = await getCategoriesSubsAndProds();
+        // } else {
+        //   // 🌐 Fetch from server
+        //   console.log('🌍 Fetching categories from server...');
+        //   const categoriesTree = await getCategoriesSubsAndProds();
 
-          if (categoriesTree.success) {
-            await saveCategoryTree(categoriesTree.data);
-            dispatch(setIsTreeSaved(true));
-            setCategories(categoriesTree.data);
-            setFilteredCategories(categoriesTree.data);
-          }
-        }
+        //   if (categoriesTree.success) {
+        //     await saveCategoryTree(categoriesTree.data);
+        //     dispatch(setIsTreeSaved(true));
+        //     setCategories(categoriesTree.data);
+        //     setFilteredCategories(categoriesTree.data);
+        //   }
+        // }
       } catch (e) {
         console.log('❌ products load err:', e);
       }
@@ -148,7 +149,7 @@ export default function CatalogScreen() {
     return (
       <TouchableOpacity style={styles.subRow} onPress={goToProducts}>
         <Text style={styles.subRowText}>{item.name}</Text>
-        <Ionicons name="chevron-forward" size={16} color="#ccc" />
+        <Ionicons name="chevron-forward" size={16} color={darkestBg} />
       </TouchableOpacity>
     );
   };
@@ -166,7 +167,7 @@ export default function CatalogScreen() {
         {!searchMode ? (
           <>
             <Text style={styles.title}>
-              {selectedCategory ? 'Sottocategorie' : 'Categorie'}
+              {selectedCategory ? 'Sottocategorie' : 'Categorie'} {(route.params?.title) || ''}
             </Text>
             <TouchableOpacity
               onPress={() => setSearchMode(true)}
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: 600,
     color: textColor,
   },
   iconButton: {

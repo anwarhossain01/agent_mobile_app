@@ -157,6 +157,7 @@ export const selectTotalPrice = (state: { cart: CartState }) => state.cart.total
 export const selectClientId = (state: { cart: CartState }) => state.cart.client_id;
 export const selectCartItemCount = (state: { cart: CartState }) => 
   state.cart.items.reduce((count, item) => count + item.quantity, 0);
+export const selectCartItemCountMinimal = (state: { cart: CartState }) => state.cart.items.length;
 export const selectDeliveryAddressId = (state: { cart: CartState }) => state.cart.delivery_address_id;
 export const selectInvoiceAddressId = (state: { cart: CartState }) => state.cart.invoice_address_id;
 export const selectCartId = (state: { cart: CartState }) => state.cart.id_cart;

@@ -1,5 +1,6 @@
-import { checkAllProductStock, clientAddressGet, getClientsForAgent, getCouriers, getDeliveries } from "../api/prestashop";
+import { checkAllProductStock, checkProductStock, clientAddressGet, getCachedProductStock, getClientsForAgent, getCouriers, getDeliveries } from "../api/prestashop";
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
+import NetInfo from "@react-native-community/netinfo";
 
 export const cachedDataForCarriers = async (
   tableName: string,
@@ -972,4 +973,69 @@ export const saveCategoryTree = async (data: any[]) => {
   }
 
   return { categories, subcategories, products }; // optional, for reuse
+};
+
+/**
+ * Universal function to check if a product can be added to the cart.
+ * Returns an object describing what happened.
+ */
+export const verifyProductStock = async (product: any) => {
+  try {
+    // check if we have internet
+    const state = await NetInfo.fetch();
+    let stockRes = null;
+
+    if (state.isConnected) {
+      stockRes = await checkProductStock(product.id);
+    } else {
+      stockRes = await getCachedProductStock(product.id);
+    }
+
+    const stockData = stockRes?.data?.stock_availables?.[0];
+
+    if (!stockData) {
+      return { success: false, reason: "Stock information unavailable" };
+    }
+
+    // Out of stock
+    if (stockData?.out_of_stock == 1) {
+      return { success: false, reason: "Prodotto non disponibile in magazzino" };
+    }
+
+    // Depends on stock — check quantity
+    if (stockData?.depends_on_stock === "1") {
+      const availableStock = parseInt(stockData.quantity) || 0;
+
+      if (availableStock <= 0) {
+        return { success: false, reason: "Prodotto non disponibile in magazzino" };
+      }
+
+      // All good
+      return {
+        success: true,
+        data: {
+          quantity: parseInt(product.minimal_quantity) || 1,
+          max_quantity: availableStock,
+          price: parseFloat(product.price || 0),
+          name: product.name,
+          product_id: product.id,
+        },
+      };
+    }
+
+    // Doesn't depend on stock — just add
+    return {
+      success: true,
+      data: {
+        quantity: parseInt(product.minimal_quantity) || 1,
+        max_quantity: stockData.quantity != 0 ? stockData.quantity : null,
+        price: parseFloat(product.price || 0),
+        name: product.name,
+        product_id: product.id,
+      },
+    };
+  } catch (err) {
+    console.log("Stock check failed:", err);
+    return { success: false, reason: "Errore durante la verifica dello stock" };
+  }
 };

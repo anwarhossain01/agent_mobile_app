@@ -14,18 +14,20 @@
 
 import React, { useState } from 'react';
 import { View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
-import { getClientsForAgent, loginEmployee } from '../api/prestashop';
-import { cacheInitializer, storeAgentFromJson } from '../sync/cached';
+import { getCategoriesSubsAndProds, getClientsForAgent, loginEmployee } from '../api/prestashop';
+import { cacheInitializer, saveCategoryTree, storeAgentFromJson } from '../sync/cached';
+import { selectIsCategoryTreeSaved, setIsTreeSaved } from '../store/slices/categoryTreeSlice';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const is_saved = useSelector(selectIsCategoryTreeSaved);
   const dispatch = useDispatch();
   const navigation = useNavigation();
 
@@ -37,10 +39,18 @@ export default function LoginScreen() {
     setError(false);
     setLoading(true);
     const res = await loginEmployee(email, password);
-    
+
     if (res.success) {
       await storeAgentFromJson(res);
       await cacheInitializer(res.employee?.id);
+      if (!is_saved) {
+        const categoriesTree = await getCategoriesSubsAndProds();
+        if (categoriesTree.success) {
+          await saveCategoryTree(categoriesTree.data);
+          dispatch(setIsTreeSaved(true));
+        }
+      }
+
       dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
     } else {
       setError(true);
@@ -107,7 +117,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 16,
     color: textColor,
-   backgroundColor: darkBg,
+    backgroundColor: darkBg,
   },
   button: {
     width: '100%',

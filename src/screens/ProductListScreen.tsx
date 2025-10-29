@@ -35,27 +35,34 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
   }, [dispatch, subcategoryId]);
 
   const handleAddToCart = async (item: any) => {
-    // show loading spinner for this product
-    setLoadingItems(prev => ({ ...prev, [item.id]: true }));
+  // show loading spinner for this product
+  setLoadingItems(prev => ({ ...prev, [item.id]: true }));
 
-    try {
-      const result = await verifyProductStock(item);
+  try {
+    const result = await verifyProductStock(item);
 
-      if (!result.success) {
-        ToastAndroid.show(result.reason, ToastAndroid.SHORT);
-        return;
-      }
-
-      dispatch(addItem(result.data));
-      setAdded(prev => ({ ...prev, [item.id]: true }));
-    } catch (err) {
-      console.log('cart add error', err);
-      ToastAndroid.show('Errore aggiunta prodotto', ToastAndroid.SHORT);
-    } finally {
-      // hide loading spinner
-      setLoadingItems(prev => ({ ...prev, [item.id]: false }));
+    if (!result.success) {
+      ToastAndroid.show(result.reason, ToastAndroid.SHORT);
+      return;
     }
-  };
+
+    dispatch(addItem(result.data));
+    setAdded(prev => ({ ...prev, [item.id]: true }));
+
+    // 🕒 reset the checkmark after 2 seconds
+    setTimeout(() => {
+      setAdded(prev => ({ ...prev, [item.id]: false }));
+    }, 2000);
+
+  } catch (err) {
+    console.log('cart add error', err);
+    ToastAndroid.show('Errore aggiunta prodotto', ToastAndroid.SHORT);
+  } finally {
+    // hide loading spinner
+    setLoadingItems(prev => ({ ...prev, [item.id]: false }));
+  }
+};
+
 
   const fetchProductImage = (productId: number, imageId: number): string =>
     `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;

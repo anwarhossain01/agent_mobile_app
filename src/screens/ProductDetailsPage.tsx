@@ -1,15 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, StyleSheet, Dimensions, TouchableOpacity  } from 'react-native';
-import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
+import { View, Text, ScrollView, Image, StyleSheet, Dimensions, TouchableOpacity, ToastAndroid, ActivityIndicator } from 'react-native';
+import { dark, darkBg, darkerBg, darkerTheme, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import RenderHTML from 'react-native-render-html';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { API_KEY } from '../api/prestashop';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useDispatch } from 'react-redux';
+import { verifyProductStock } from '../sync/cached';
+import { addItem } from '../store/slices/cartSlice';
 
 export default function ProductDetailPage() {
   const route = useRoute();
   const navigation = useNavigation();
   const { product }: any = route.params;
+  const dispatch = useDispatch();
+  const [loading, setLoading] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAddToCart = async () => {
+    setLoading(true);
+    try {
+      const result = await verifyProductStock(product);
+
+      if (!result.success) {
+        ToastAndroid.show(result.reason, ToastAndroid.SHORT);
+        return;
+      }
+
+      dispatch(addItem(result.data));
+      setAdded(true);
+
+      // reset after 2 seconds
+      setTimeout(() => {
+        setAdded(false);
+      }, 2000);
+
+    } catch (err) {
+      console.log('cart add error', err);
+      ToastAndroid.show('Errore aggiunta prodotto', ToastAndroid.SHORT);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   const fetchProductImage = (productId: number, imageId: number): string =>
     `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;
@@ -92,6 +126,31 @@ export default function ProductDetailPage() {
 
         <View style={{ height: 50 }} />
       </ScrollView>
+
+      {/* Floating Add to Cart button */}
+      <View style={styles.cartButtonContainer}>
+        <TouchableOpacity
+          onPress={handleAddToCart}
+          style={[
+            styles.cartButton,
+            { backgroundColor: added ? 'green' : darkerTheme },
+          ]}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons
+              name={added ? 'checkmark' : 'cart'}
+              size={22}
+              color="#fff"
+            />
+          )}
+          <Text style={styles.cartButtonText}>
+            {added ? 'Added' : 'Add to Cart'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -183,4 +242,27 @@ const styles = StyleSheet.create({
     color: lighterTextColor,
     marginBottom: 4,
   },
+  cartButtonContainer: {
+    position: 'absolute',
+    bottom: 16,
+    left: 16,
+    right: 16,
+    alignItems: 'center',
+  },
+  cartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 30,
+    elevation: 3,
+  },
+  cartButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+
 });

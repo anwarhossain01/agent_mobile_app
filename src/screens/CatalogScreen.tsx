@@ -167,7 +167,7 @@ export default function CatalogScreen({route }: { route: any }) {
         {!searchMode ? (
           <>
             <Text style={styles.title}>
-              {selectedCategory ? 'Sottocategorie' : 'Categorie'} {(route.params?.title) || ''}
+              {selectedCategory ? 'Sottocategorie' : 'Categorie'} {`(${route.params?.title})` || ''}
             </Text>
             <TouchableOpacity
               onPress={() => setSearchMode(true)}

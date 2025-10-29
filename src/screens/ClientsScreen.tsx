@@ -11,6 +11,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { getDBConnection } from '../database/db';
 import { selectIsClassified, setCity, setClassified, setCodiceCmnr, setNumeroOrdinal } from '../store/slices/customerClassificationSlice';
+import { setClientId } from '../store/slices/cartSlice';
 
 
 export default function ClientsScreen() {
@@ -30,7 +31,7 @@ export default function ClientsScreen() {
 
         data = await getCachedClientsForAgentFrontPage(employeeId || 0);
         await classifyCustomers(dispatch);
-      // console.log("Clients res", data);
+        // console.log("Clients res", data);
 
         if (data.length === 0) {
           setNoData(true);
@@ -45,67 +46,76 @@ export default function ClientsScreen() {
   }, [dispatch, employeeId]);
 
   const ClientOrderNavigate = (client_id: string) => {
-
+    dispatch(setClientId(client_id));
     (navigation as any).replace('Main', {
-      screen: 'OrdersTab',
+      screen: 'CatalogTab',
       params: {
-        screen: 'Orders',
+        screen: 'Catalog',
         params: {
-          employee_id: client_id,
+          title: 'Nuovo ordine'
         }
       }
     });
+    // (navigation as any).replace('Main', {
+    //   screen: 'OrdersTab',
+    //   params: {
+    //     screen: 'Orders',
+    //     params: {
+    //       employee_id: client_id,
+    //     }
+    //   }
+    // });
   }
 
-  const classifyCustomers = async (dispatch : any) => {
-  try {
-    if(is_classified) return;
-    const db = await getDBConnection();
+  const classifyCustomers = async (dispatch: any) => {
+    try {
+      if (is_classified) return;
+      const db = await getDBConnection();
 
-    const query = `SELECT city, codice_cmnr, numero_ordinale FROM customers`;
-    const results = await db.executeSql(query);
+      const query = `SELECT city, codice_cmnr, numero_ordinale FROM customers`;
+      const results = await db.executeSql(query);
 
-    const rows = results[0].rows;
-    const cityMap: Record<string, number> = {};
-    const codiceMap: Record<string, number> = {};
-    const ordinaleMap: Record<string, number> = {};
+      const rows = results[0].rows;
+      const cityMap: Record<string, number> = {};
+      const codiceMap: Record<string, number> = {};
+      const ordinaleMap: Record<string, number> = {};
 
-    for (let i = 0; i < rows.length; i++) {
-      const item = rows.item(i);
+      for (let i = 0; i < rows.length; i++) {
+        const item = rows.item(i);
 
-      // city
-      if (item.city) {
-        cityMap[item.city] = (cityMap[item.city] || 0) + 1;
+        // city
+        if (item.city) {
+          cityMap[item.city] = (cityMap[item.city] || 0) + 1;
+        }
+
+        // codice_cmnr (cap)
+        if (item.codice_cmnr) {
+          codiceMap[item.codice_cmnr] = (codiceMap[item.codice_cmnr] || 0) + 1;
+        }
+
+        // numero_ordinale
+        if (item.numero_ordinale) {
+          ordinaleMap[item.numero_ordinale] =
+            (ordinaleMap[item.numero_ordinale] || 0) + 1;
+        }
       }
 
-      // codice_cmnr (cap)
-      if (item.codice_cmnr) {
-        codiceMap[item.codice_cmnr] = (codiceMap[item.codice_cmnr] || 0) + 1;
-      }
+      // convert to tuples
+      const cityArray: [string, number][] = Object.entries(cityMap);
+      const codiceArray: [string, number][] = Object.entries(codiceMap);
+      const ordinaleArray: [string, number][] = Object.entries(ordinaleMap);
 
-      // numero_ordinale
-      if (item.numero_ordinale) {
-        ordinaleMap[item.numero_ordinale] =
-          (ordinaleMap[item.numero_ordinale] || 0) + 1;
-      }
+      // dispatch results to Redux
+      dispatch(setCity(cityArray));
+      dispatch(setCodiceCmnr(codiceArray));
+      dispatch(setNumeroOrdinal(ordinaleArray));
+      dispatch(setClassified(true));
+
+      console.log('✅ Customer classification completed successfully');
+    } catch (err) {
+      console.log('❌ classifyCustomers() error:', err);
     }
-
-    // convert to tuples
-    const cityArray: [string, number][] = Object.entries(cityMap);
-    const codiceArray: [string, number][] = Object.entries(codiceMap);
-    const ordinaleArray: [string, number][] = Object.entries(ordinaleMap);
-
-    // dispatch results to Redux
-    dispatch(setCity(cityArray));
-    dispatch(setCodiceCmnr(codiceArray));
-    dispatch(setNumeroOrdinal(ordinaleArray));
-    dispatch(setClassified(true));
-
-    console.log('✅ Customer classification completed successfully');
-  } catch (err) {
-    console.log('❌ classifyCustomers() error:', err);
-  }
-};
+  };
   const SearchHeader = () => {
     const [citySearch, setCitySearch] = useState('');
     const [ordinalNumberSearch, setOrdinalNumberSearch] = useState('');
@@ -118,7 +128,7 @@ export default function ClientsScreen() {
 
         const data = await getCachedClientsForAgentFrontPage(
           employeeId || 0,
-          '', 
+          '',
           city,
           numero_ordinale
         );
@@ -188,7 +198,7 @@ export default function ClientsScreen() {
       ) : null}
       <FlatList
         data={clients}
-      // ListHeaderComponent={SearchHeader}
+        // ListHeaderComponent={SearchHeader}
         keyExtractor={(item) => String(localindex++)}
         renderItem={({ item }) => (
           <View style={styles.card}>

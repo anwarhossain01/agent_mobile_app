@@ -161,11 +161,13 @@ const CartScreen = () => {
   // Calculate total with shipping
   const calculateTotalWithShipping = () => {
     if (freeDelivery) return grandTotal;
-
+    const TAX_RATE = 0.22; 
     const paidDelivery = deliveries.find((d: any) => parseFloat(d.price) > 0);
-    const shippingPrice = paidDelivery ? parseFloat(paidDelivery.price) : 0;
+    let shippingPrice = paidDelivery ? parseFloat(paidDelivery.price) : 0;
+    shippingPrice += ( shippingPrice * TAX_RATE);    
     return grandTotal + shippingPrice;
   };
+
   const handleCreateAddress = async () => {
     if (!client_id) {
       Alert.alert('Errore', 'Nessun cliente selezionato');
@@ -281,7 +283,6 @@ const CartScreen = () => {
       const fetchCourierData = async () => {
         hasFetched.current = true;
         setLoading(true);
-        //   console.log('fetchCourierData - ONLY ONCE');
 
         try {
           // Get carrier details (default to 27)
@@ -319,7 +320,14 @@ const CartScreen = () => {
         }
       };
 
+      const checkDeliveryApplicable = async () => {
+        if(grandTotal > 200){
+          setFreeDelivery(true);
+        }
+      }
+
       fetchCourierData();
+      checkDeliveryApplicable();
     }, []);
 
     const getDeliveryPrice = () => {
@@ -638,7 +646,6 @@ const CartScreen = () => {
             </View>
           </View>
         </Modal>
-
 
         {cart.length === 0 ? (
           <Text style={styles.emptyCart}>Il carrello è vuoto</Text>

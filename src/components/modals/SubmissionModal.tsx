@@ -96,7 +96,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
         try {
             let currentCartId = cart_id;
 
-            // 1️⃣ Create local cart if it doesn't exist
+            // 1 Create local cart if it doesn't exist
             if (!currentCartId) {
                 setStatus('Creating cart locally...');
 
@@ -128,11 +128,11 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 setStatus('Using existing local cart...');
             }
             
-            // 2️⃣ Calculate order totals
+            // 2 Calculate order totals
             setStatus('Calculating order totals...');
             const totals = calculateOrderTotals();
-
-            // 3️⃣ Cache the order
+            
+            // 3 Cache the order
             setStatus('Caching order locally...');
 
             const orderRes = await createOrderCache({

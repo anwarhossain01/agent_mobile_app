@@ -173,10 +173,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: lighterTheme,
     borderRadius: 50,
-    padding: 16,
+    padding: 14,
     elevation: 5,
-    bottom: 30,
-    right: 20,
+    top: 8,
+    right: 18
   },
   overlay: {
     flex: 1,

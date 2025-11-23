@@ -501,10 +501,10 @@ const NewOrderScreen = ({ route }) => {
                 )}
 
                 {Platform.OS === 'android' ? (
-                    <TouchableNativeFeedback
+                    <TouchableOpacity
                         onPress={handleNextBtn}
                         disabled={!isNextBtnEnabled}
-                        background={TouchableNativeFeedback.Ripple('#003c7cff', false)}
+                      //  background={TouchableNativeFeedback.Ripple('#003c7cff', false)}
                     >
                         <View style={{
                             backgroundColor: isNextBtnEnabled ? '#007AFF' : '#ccc',
@@ -518,7 +518,7 @@ const NewOrderScreen = ({ route }) => {
                                 Next ▶
                             </Text>
                         </View>
-                    </TouchableNativeFeedback>
+                    </TouchableOpacity>
                 ) : (
                     <TouchableOpacity
                         onPress={handleNextBtn}

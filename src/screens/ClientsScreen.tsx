@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { getDBConnection } from '../database/db';
-import { selectIsClassified, setCity, setClassified, setCodiceCmnr, setNumeroOrdinal } from '../store/slices/customerClassificationSlice';
+import { selectIsClassified, setCity, setClassified, setNumeroOrdinal, setPostcode } from '../store/slices/customerClassificationSlice';
 import { setClientId } from '../store/slices/cartSlice';
 
 
@@ -23,6 +23,7 @@ export default function ClientsScreen() {
   const employeeId = auth.employeeId;
   const navigation = useNavigation();
   let localindex = 0;
+  
   useEffect(() => {
     const load = async () => {
       try {
@@ -31,7 +32,7 @@ export default function ClientsScreen() {
 
         data = await getCachedClientsForAgentFrontPage(employeeId || 0);
         await classifyCustomers(dispatch);
-        // console.log("Clients res", data);
+      //   console.log("Clients res", data);
 
         if (data.length === 0) {
           setNoData(true);
@@ -72,7 +73,7 @@ export default function ClientsScreen() {
       if (is_classified) return;
       const db = await getDBConnection();
 
-      const query = `SELECT city, codice_cmnr, numero_ordinale FROM customers`;
+      const query = `SELECT city, codice_cmnr, numero_ordinale, postcode FROM customers`;
       const results = await db.executeSql(query);
 
       const rows = results[0].rows;
@@ -82,15 +83,16 @@ export default function ClientsScreen() {
 
       for (let i = 0; i < rows.length; i++) {
         const item = rows.item(i);
-
+        console.log("item", item);
+        
         // city
         if (item.city) {
           cityMap[item.city] = (cityMap[item.city] || 0) + 1;
         }
 
-        // codice_cmnr (cap)
-        if (item.codice_cmnr) {
-          codiceMap[item.codice_cmnr] = (codiceMap[item.codice_cmnr] || 0) + 1;
+        // postcode (cap)
+        if (item.postcode) {
+          codiceMap[item.postcode] = (codiceMap[item.postcode] || 0) + 1;
         }
 
         // numero_ordinale
@@ -107,15 +109,16 @@ export default function ClientsScreen() {
 
       // dispatch results to Redux
       dispatch(setCity(cityArray));
-      dispatch(setCodiceCmnr(codiceArray));
+      dispatch(setPostcode(codiceArray)); // this is actually postcode
       dispatch(setNumeroOrdinal(ordinaleArray));
       dispatch(setClassified(true));
 
-      console.log('✅ Customer classification completed successfully');
+    //  console.log('✅ Customer classification completed successfully');
     } catch (err) {
       console.log('❌ classifyCustomers() error:', err);
     }
   };
+
   const SearchHeader = () => {
     const [citySearch, setCitySearch] = useState('');
     const [ordinalNumberSearch, setOrdinalNumberSearch] = useState('');

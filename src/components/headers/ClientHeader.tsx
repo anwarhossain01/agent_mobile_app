@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
+import debounce from "lodash/debounce";
 import { RootState } from '../../store';
 
 import { dark, lightdark } from '../../../colors';
@@ -54,7 +55,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
     const classification = useSelector((s: RootState) => s.customerClassification);
 
-    const performSearch = async (
+    const performSearch = debounce( async (
         query: string = searchText.trim(),
         filters = selectedFilterValues
     ) => {
@@ -71,7 +72,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         } catch (e) {
             console.log('search err', e);
         }
-    };
+    }, 300);
 
     const openModal = (title: string) => {
         setModalTitle(title);
@@ -91,7 +92,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                 );
                 break;
             case 'CAP':
-                data = classification.codice_cmnr || [];
+                data = classification.postcode || [];                
                 setSelectedIndex(
                     typeof selectedFilters.cap === 'number' ? selectedFilters.cap : null
                 );
@@ -118,7 +119,8 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         const selectedText = selectedItem[0];
 
         let updatedFilters = { ...selectedFilterValues };
-
+        console.log("selectedText", selectedText);
+        
         if (modalTitle === 'Città') {
             setSelectedFilters((s) => ({ ...s, city: selectedIndex }));
             updatedFilters.city = selectedText;
@@ -157,6 +159,11 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         await performSearch(searchText.trim(), updatedFilters);
     };
 
+    const onChangeText = (text: string) => {
+        setSearchText(text);
+        performSearch(text, selectedFilterValues);
+    }
+
     return (
         <>
             <View
@@ -188,7 +195,8 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                         <TouchableOpacity
                             onPress={() => {
                                 setSearchMode(false);
-                                //   setSearchText('');
+                                performSearch('', {});
+                                setSearchText('');
                             }}
                             style={styles.backButton}
                         >
@@ -198,7 +206,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                         <View style={{ flex: 1 }}>
                             <TextInput
                                 value={searchText}
-                                onChangeText={setSearchText}
+                                onChangeText={onChangeText}
                                 placeholder="Ricerca clienti"
                                 placeholderTextColor="#666"
                                 style={styles.searchInput}

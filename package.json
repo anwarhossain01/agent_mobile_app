@@ -1,5 +1,5 @@
 {
-  "name": "AgetApp",
+  "name": "agentapp",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -19,10 +19,12 @@
     "@react-navigation/native-stack": "^7.3.26",
     "@reduxjs/toolkit": "^2.9.0",
     "axios": "^1.12.2",
+    "lodash": "^4.17.21",
     "react": "19.1.0",
     "react-native": "0.81.4",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "^2.28.0",
+    "react-native-image-pan-zoom": "^2.1.12",
     "react-native-modal": "^14.0.0-rc.1",
     "react-native-pager-view": "^6.9.1",
     "react-native-reanimated": "^4.1.2",

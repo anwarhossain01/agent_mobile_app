@@ -274,6 +274,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   subRow: {
+    flexDirection: 'row',
     paddingVertical: 10,
     paddingLeft: 16,
     borderBottomWidth: 1,

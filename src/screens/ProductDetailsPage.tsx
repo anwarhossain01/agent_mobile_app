@@ -8,6 +8,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useDispatch } from 'react-redux';
 import { verifyProductStock } from '../sync/cached';
 import { addItem } from '../store/slices/cartSlice';
+import ImageZoomView from '../components/modals/ImageZoomView';
 
 export default function ProductDetailPage() {
   const route = useRoute();
@@ -16,6 +17,7 @@ export default function ProductDetailPage() {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(false);
   const [added, setAdded] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const handleAddToCart = async () => {
     setLoading(true);
@@ -65,13 +67,15 @@ export default function ProductDetailPage() {
 
       <ScrollView style={styles.container}>
         {/* Image */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.image}
-            resizeMode="contain"
-          />
-        </View>
+        <TouchableOpacity onPress={() => setModalVisible(true)}>
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.image}
+              resizeMode="contain"
+            />
+          </View>
+        </TouchableOpacity>
 
         {/* Product Title */}
         <Text style={styles.title}>{product.name}</Text>
@@ -126,6 +130,12 @@ export default function ProductDetailPage() {
 
         <View style={{ height: 50 }} />
       </ScrollView>
+
+      <ImageZoomView
+        modalVisible={modalVisible}
+        setModalVisible={setModalVisible}
+        uri={imageUrl}
+      />
 
       {/* Floating Add to Cart button */}
       <View style={styles.cartButtonContainer}>

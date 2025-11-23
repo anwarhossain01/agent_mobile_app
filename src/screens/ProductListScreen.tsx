@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, Image, TouchableOpacity, ToastAndroid } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, Image, TouchableOpacity, ToastAndroid, TextInput } from 'react-native';
 import { dark, darkBg, darkerTheme, textColor, theme } from '../../colors';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -19,6 +19,13 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
   const [error, setError] = useState(false);
   const [added, setAdded] = useState<{ [key: number]: boolean }>({});
   const [loadingItems, setLoadingItems] = useState<{ [key: number]: boolean }>({});
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState(products);
+
+  useEffect(() => {
+    setFilteredProducts(products);
+  }, [products]);
 
   useEffect(() => {
     const load = async () => {
@@ -34,35 +41,49 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     load();
   }, [dispatch, subcategoryId]);
 
-  const handleAddToCart = async (item: any) => {
-  // show loading spinner for this product
-  setLoadingItems(prev => ({ ...prev, [item.id]: true }));
+  const handleSearchSubmit = () => {
+    const text = searchText.trim().toLowerCase();
 
-  try {
-    const result = await verifyProductStock(item);
-
-    if (!result.success) {
-      ToastAndroid.show(result.reason, ToastAndroid.SHORT);
+    if (!text) {
+      setFilteredProducts(products);
       return;
     }
 
-    dispatch(addItem(result.data));
-    setAdded(prev => ({ ...prev, [item.id]: true }));
+    const result = products.filter((p) =>
+      p.name?.toLowerCase().includes(text)
+    );
 
-    // 🕒 reset the checkmark after 2 seconds
-    setTimeout(() => {
-      setAdded(prev => ({ ...prev, [item.id]: false }));
-    }, 2000);
+    setFilteredProducts(result);
+  };
 
-  } catch (err) {
-    console.log('cart add error', err);
-    ToastAndroid.show('Errore aggiunta prodotto', ToastAndroid.SHORT);
-  } finally {
-    // hide loading spinner
-    setLoadingItems(prev => ({ ...prev, [item.id]: false }));
-  }
-};
+  const handleAddToCart = async (item: any) => {
+    // show loading spinner for this product
+    setLoadingItems(prev => ({ ...prev, [item.id]: true }));
 
+    try {
+      const result = await verifyProductStock(item);
+
+      if (!result.success) {
+        ToastAndroid.show(result.reason, ToastAndroid.SHORT);
+        return;
+      }
+
+      dispatch(addItem(result.data));
+      setAdded(prev => ({ ...prev, [item.id]: true }));
+
+      // 🕒 reset the checkmark after 2 seconds
+      setTimeout(() => {
+        setAdded(prev => ({ ...prev, [item.id]: false }));
+      }, 2000);
+
+    } catch (err) {
+      console.log('cart add error', err);
+      ToastAndroid.show('Errore aggiunta prodotto', ToastAndroid.SHORT);
+    } finally {
+      // hide loading spinner
+      setLoadingItems(prev => ({ ...prev, [item.id]: false }));
+    }
+  };
 
   const fetchProductImage = (productId: number, imageId: number): string =>
     `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;
@@ -142,9 +163,11 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
   };
 
   return (
+
+
     <View style={styles.container}>
       {/* Custom Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+      {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         {subcategoryId && (
           <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
             <Ionicons name="arrow-back" size={24} color="#000" />
@@ -153,12 +176,72 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         <Text style={{ fontSize: 18, color: textColor, fontWeight: '800' }}>
           {subcategoryName || 'Prodotti'}
         </Text>
+      </View> */}
+
+      {/* Custom Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+
+        {/* Back button if subcategoryId exists */}
+        {subcategoryId && !searchMode && (
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
+            <Ionicons name="arrow-back" size={24} color="#000" />
+          </TouchableOpacity>
+        )}
+
+        {/* ---------- SEARCH ACTIVE MODE ---------- */}
+        {searchMode ? (
+          <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
+            <TextInput
+              autoFocus
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: '#ccc',
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                borderRadius: 6,
+                color: textColor,
+              }}
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Search product..."
+              placeholderTextColor="#999"
+              returnKeyType="search"
+              onSubmitEditing={handleSearchSubmit} // <-- ANDROID KEYBOARD SUBMIT
+            />
+
+            {/* CLOSE SEARCH */}
+            <TouchableOpacity
+              onPress={() => {
+                setSearchMode(false);
+                setSearchText('');
+                setFilteredProducts(products); // reset
+              }}
+              style={{ marginLeft: 10 }}
+            >
+              <Ionicons name="close" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          /* ---------- NORMAL MODE ---------- */
+          <>
+            <Text style={{ fontSize: 18, color: textColor, fontWeight: '800', flex: 1 }}>
+              {subcategoryName || 'Prodotti'}
+            </Text>
+
+            {/* SEARCH ICON */}
+            <TouchableOpacity onPress={() => setSearchMode(true)}>
+              <Ionicons name="search" size={24} color="#000" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
+
 
       {error && <Text style={{ color: 'red', marginBottom: 8 }}>Server error, please try again later</Text>}
 
       <FlatList
-        data={products}
+        data={filteredProducts}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => <ProductsList item={item} />}
       />

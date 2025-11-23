@@ -15,7 +15,7 @@ export const cachedDataForCarriers = async (
       const localData = await queryData(tableName, `${idColumn} = ?`, [id]);
 
       if (localData.length > 0) {
-        console.log(`📦 Data found in local database: ${tableName}`);
+      //  console.log(`📦 Data found in local database: ${tableName}`);
         const item = localData[0];
 
         // Convert back to string format to match API response
@@ -38,7 +38,7 @@ export const cachedDataForCarriers = async (
     }
 
     // If not found locally, call API
-    console.log(`🌐 Data not found locally, calling API for ${tableName}...`);
+  //  console.log(`🌐 Data not found locally, calling API for ${tableName}...`);
     const res = await apiCall();
 
     // Save to SQLite for future use
@@ -56,7 +56,7 @@ export const cachedDataForCarriers = async (
 
         await insertIfNotExists(tableName, dbData, idColumn);
       }
-      console.log(`💾 ${tableName} data saved to local database`);
+    //  console.log(`💾 ${tableName} data saved to local database`);
     }
 
     return { success: true, data: res.data, fromCache: false };
@@ -76,14 +76,14 @@ export const cachedDataForDeliveries = async (
   idColumn: string = 'id'
 ) => {
   try {
-    console.log(`⚡️ Cached API call for ${tableName}...`);
+  //  console.log(`⚡️ Cached API call for ${tableName}...`);
 
     // 1️⃣ Try local DB if id_carrier provided
     if (id_carrier) {
       const localData = await queryData(tableName, `id_carrier = ?`, [id_carrier]);
 
       if (localData.length > 0) {
-        console.log(`📦 Deliveries found in local database for carrier ${id_carrier}`);
+    //    console.log(`📦 Deliveries found in local database for carrier ${id_carrier}`);
 
         // Format rows back to match API structure
         const formatted = localData.map(item => ({
@@ -103,7 +103,7 @@ export const cachedDataForDeliveries = async (
     }
 
     // 2️⃣ If not found locally, call API
-    console.log(`🌐 No local deliveries found, calling API...`);
+//    console.log(`🌐 No local deliveries found, calling API...`);
     const res = await apiCall();
 
     // 3️⃣ Save to SQLite
@@ -118,7 +118,7 @@ export const cachedDataForDeliveries = async (
 
         await insertIfNotExists(tableName, dbData, 'id');
       }
-      console.log(`💾 Deliveries saved to local database`);
+   //   console.log(`💾 Deliveries saved to local database`);
     }
 
     return { success: true, data: res.data, fromCache: false };
@@ -176,7 +176,7 @@ export const createCartCache = async (
             ],
             (txObj, resultSet) => {
               const newCartId = resultSet.insertId;
-              console.log(`🛒 New cart created with ID: ${newCartId}`);
+            //  console.log(`🛒 New cart created with ID: ${newCartId}`);
 
               // 2️⃣ Insert items
               products.forEach((product) => {
@@ -194,7 +194,7 @@ export const createCartCache = async (
                     id_address_delivery,
                   ],
                   () => {
-                    console.log(`📦 Added product ${product.id_product} x${product.quantity}`);
+                  //  console.log(`📦 Added product ${product.id_product} x${product.quantity}`);
                   },
                   (txErr, err) => {
                     console.error('❌ cart_item insert error:', err);
@@ -292,7 +292,7 @@ export const createOrderCache = async (orderData: Record<string, any>) => {
       const result = await tx.executeSql(sql, values);
       const insertedId = result[1]?.insertId;
 
-      console.log(`🧾 Order created successfully (local ID: ${insertedId})`);
+    //  console.log(`🧾 Order created successfully (local ID: ${insertedId})`);
     });
 
     return { success: true, message: 'Order saved locally' };
@@ -309,7 +309,7 @@ export const cachedDataForCustomers = async (
   idColumn: string = 'id'
 ) => {
   try {
-    console.log(`⚡️ Cached API call for ${tableName}...`);
+  //  console.log(`⚡️ Cached API call for ${tableName}...`);
 
     // 1️⃣ Try local DB first
     let localData: any[] = [];
@@ -331,12 +331,12 @@ export const cachedDataForCustomers = async (
     }
 
     if (localData.length > 0) {
-      console.log(`📦 Found customer(s) in local DB`);
+   //   console.log(`📦 Found customer(s) in local DB`);
       return { success: true, data: { customers: localData }, fromCache: true };
     }
 
     // 2️⃣ If not found locally → call API
-    console.log(`🌐 Customer(s) not found locally, calling API...`);
+  //  console.log(`🌐 Customer(s) not found locally, calling API...`);
     const res = await apiCall();
     const apiCustomers = res.data?.customers || [];
 
@@ -358,7 +358,7 @@ export const cachedDataForCustomers = async (
         };
         await insertIfNotExists(tableName, minimal, idColumn);
       }
-      console.log(`💾 Saved customer(s) to local DB`);
+   //   console.log(`💾 Saved customer(s) to local DB`);
     }
 
     return { success: true, data: res.data, fromCache: false };
@@ -378,7 +378,7 @@ export const cachedDataForAgentFrontPage = async (
   idColumn: string = 'id'
 ) => {
   try {
-    console.log(`⚡️ Cached API call for ${tableName}...`);
+  //  console.log(`⚡️ Cached API call for ${tableName}...`);
 
     let whereClauses: string[] = [];
     let params: any[] = [];
@@ -412,12 +412,12 @@ export const cachedDataForAgentFrontPage = async (
     }
 
     if (cap && cap.toString().trim() !== '') {
-      whereClauses.push(`codice_cmnr LIKE ?`);
+      whereClauses.push(`postcode LIKE ?`);
       params.push(`%${cap.toString().trim()}%`);
     }
 
     const whereClause = whereClauses.join(' AND ');
-    console.log('🧩 Query condition:', whereClause, params);
+  //  console.log('🧩 Query condition:', whereClause, params);
 
     const localData = await queryData(tableName, whereClause, params);
 
@@ -464,18 +464,18 @@ export const cachedDataForProducts = async (
   idColumn: string = 'id'
 ) => {
   try {
-    console.log(` Cached API call for ${tableName}...`);
+  //  console.log(` Cached API call for ${tableName}...`);
 
     // 1️⃣ Try local DB
     const localData = await queryData(tableName, `name LIKE ?`, [`%${search}%`]);
 
     if (localData.length > 0) {
-      console.log(`📦 Found products in local DB`);
+   //   console.log(`📦 Found products in local DB`);
       return { success: true, data: { products: localData }, fromCache: true };
     }
 
     // 2️⃣ Not found locally → call API
-    console.log(`🌐 Products not found locally, calling API...`);
+   // console.log(`🌐 Products not found locally, calling API...`);
     const res = await apiCall();
     const apiProducts = res.data?.products || [];
 
@@ -492,7 +492,7 @@ export const cachedDataForProducts = async (
         };
         await insertIfNotExists(tableName, productData, idColumn);
       }
-      console.log(`💾 Saved products to local DB`);
+    //  console.log(`💾 Saved products to local DB`);
     }
 
     return { success: true, data: res.data, fromCache: false };
@@ -512,7 +512,7 @@ export const cachedClientAddresses = async (
 ) => {
   const tableName = 'addresses';
   try {
-    console.log(`⚡ Searching addresses for client ${client_id} locally...`);
+  //  console.log(`⚡ Searching addresses for client ${client_id} locally...`);
 
     // 1️⃣ Try local DB
     let localData: any[] = [];
@@ -521,12 +521,12 @@ export const cachedClientAddresses = async (
     }
 
     if (localData.length > 0) {
-      console.log(`📦 Found addresses in local DB`);
+   //   console.log(`📦 Found addresses in local DB`);
       return { success: true, data: { addresses: localData }, fromCache: true };
     }
 
     // 2️⃣ Not found locally → call API
-    console.log(`🌐 Addresses not found locally, calling API...`);
+  //  console.log(`🌐 Addresses not found locally, calling API...`);
     const res = await apiCall();
     const apiAddresses = res.data?.addresses || [];
 
@@ -536,7 +536,7 @@ export const cachedClientAddresses = async (
         const addressData = { ...a };
         await insertIfNotExists(tableName, addressData, 'id');
       }
-      console.log(`💾 Saved addresses to local DB`);
+   //   console.log(`💾 Saved addresses to local DB`);
     }
 
     return { success: true, data: res.data, fromCache: false };
@@ -552,13 +552,13 @@ export const cachedProductStock = async (
 ) => {
   const tableName = 'product_stock';
   try {
-    console.log(`⚡ Checking stock for product ${product_id} locally...`);
+  //  console.log(`⚡ Checking stock for product ${product_id} locally...`);
 
     // 1️⃣ Try local DB
     const localData = await queryData(tableName, `id_product = ?`, [product_id]);
 
     if (localData.length > 0) {
-      console.log(`📦 Found product stock in local DB`);
+    //  console.log(`📦 Found product stock in local DB`);
       return {
         success: true,
         data: { stock_availables: localData },
@@ -567,7 +567,7 @@ export const cachedProductStock = async (
     }
 
     // 2️⃣ Not found locally → call API
-    console.log(`🌐 Stock not found locally, calling API...`);
+    //console.log(`🌐 Stock not found locally, calling API...`);
     const res = await apiCall();
     const stockItem = res.data?.stock_availables?.[0];
 
@@ -581,7 +581,7 @@ export const cachedProductStock = async (
         out_of_stock: stockItem.out_of_stock,
       };
       await insertIfNotExists(tableName, stockData, 'id_product');
-      console.log(`💾 Saved stock for product ${product_id} to local DB`);
+    //  console.log(`💾 Saved stock for product ${product_id} to local DB`);
     }
 
     return { success: true, data: res.data, fromCache: false };
@@ -597,7 +597,7 @@ export const cachedProductStock = async (
 export const initializeAllProductStock = async () => {
   const tableName = 'product_stock';
   try {
-    console.log('🚀 Starting full product stock initialization...');
+  //  console.log('🚀 Starting full product stock initialization...');
 
     // 1️⃣ Call the API
     const res = await checkAllProductStock();
@@ -627,7 +627,7 @@ export const initializeAllProductStock = async () => {
       if (inserted) insertedCount++;
     }
 
-    console.log(`💾 Stock initialization complete — ${insertedCount} new records saved.`);
+  //  console.log(`💾 Stock initialization complete — ${insertedCount} new records saved.`);
     return { success: true, insertedCount };
   } catch (error: any) {
     console.error('❌ initializeAllProductStock error:', error);
@@ -649,7 +649,7 @@ export const storeAgentFromJson = async (agentResponse: any) => {
     const token = agentResponse?.token;
 
     if (!id_employee || !email || !token) {
-      console.log('❌ Missing required fields in agent JSON');
+   //   console.log('❌ Missing required fields in agent JSON');
       return { success: false, error: 'Missing fields' };
     }
 
@@ -661,8 +661,8 @@ export const storeAgentFromJson = async (agentResponse: any) => {
       `,
       [id_employee, token, email, id_profile]
     );
-
-    console.log('✅ Agent data stored successfully');
+//
+  //  console.log('✅ Agent data stored successfully');
     return { success: true };
   } catch (error) {
     console.error('❌ Error storing agent:', error);
@@ -675,7 +675,7 @@ export const storeServerOrders = async (ordersResponse: any[]) => {
     const db = await getDBConnection();
 
     if (!Array.isArray(ordersResponse) || ordersResponse.length === 0) {
-      console.log('❌ No orders to store');
+   //   console.log('❌ No orders to store');
       return { success: false, error: 'Empty response' };
     }
 
@@ -698,7 +698,7 @@ export const storeServerOrders = async (ordersResponse: any[]) => {
       );
     }
 
-    console.log(`✅ Stored ${latestOrders.length} latest server orders`);
+  //  console.log(`✅ Stored ${latestOrders.length} latest server orders`);
     return { success: true, count: latestOrders.length };
   } catch (error) {
     console.error('❌ Error storing server orders:', error);
@@ -711,7 +711,7 @@ export const getLatestServerOrders = async (employeeId: number = 0) => {
     const whereClause = '1=1 ORDER BY date_add DESC LIMIT 5';
     const latestOrders = await queryData('server_orders', whereClause);
 
-    console.log('🧾 Latest 5 server orders:', latestOrders);
+  //  console.log('🧾 Latest 5 server orders:', latestOrders);
 
     // return the array directly
     return latestOrders || [];
@@ -722,13 +722,13 @@ export const getLatestServerOrders = async (employeeId: number = 0) => {
 };
 
 export const cacheInitializer = async (agentId: any) => {
-  console.log("🧠 Starting cache initialization for agent:", agentId);
+//  console.log("🧠 Starting cache initialization for agent:", agentId);
 
   try {
     // 1️⃣ Fetch Customers
     const customersRes = await getClientsForAgent(agentId);
     const customers = customersRes || [];
-    console.log(`📦 Got ${customers.length} customers`);
+  //  console.log(`📦 Got ${customers.length} customers`);
 
     // 2️⃣ Insert customers
     for (const c of customers) {
@@ -750,7 +750,7 @@ export const cacheInitializer = async (agentId: any) => {
       // 3️⃣ Fetch addresses for this customer
       const addrRes = await clientAddressGet(c.id_customer);
       const addresses = addrRes?.data?.addresses || [];
-      console.log(`🏠 Customer ${c.id_customer} → ${addresses.length} addresses`);
+    //  console.log(`🏠 Customer ${c.id_customer} → ${addresses.length} addresses`);
 
       for (const a of addresses) {
         const addrData = {
@@ -798,12 +798,12 @@ export const cacheInitializer = async (agentId: any) => {
         delay: carrier.delay,
       };
       await insertIfNotExists('carriers', carrierData, 'id');
-      console.log("🚚 Courier cached:", carrier.name);
+    //  console.log("🚚 Courier cached:", carrier.name);
 
       // 5️⃣ Get deliveries for this courier
       const delivRes = await getDeliveries(carrier.id);
       const deliveries = delivRes?.data?.deliveries || [];
-      console.log(`📦 Found ${deliveries.length} deliveries for carrier ${carrier.id}`);
+    //  console.log(`📦 Found ${deliveries.length} deliveries for carrier ${carrier.id}`);
 
       for (const d of deliveries) {
         const deliveryData = {
@@ -818,7 +818,7 @@ export const cacheInitializer = async (agentId: any) => {
       console.warn("⚠️ No courier data found for ID 27");
     }
 
-    console.log("✅ Cache initialized successfully!");
+  //  console.log("✅ Cache initialized successfully!");
     return { success: true };
   } catch (error) {
     console.error("💀 Cache initialization failed:", error);
@@ -930,7 +930,7 @@ export const saveCategoryTree = async (data: any[]) => {
         [cat.id, cat.name]
       );
     }
-    console.log('✅ Categories saved.');
+  //  console.log('✅ Categories saved.');
   } catch (error) {
     console.log('❌ Categories save error:', error);
   }
@@ -943,7 +943,7 @@ export const saveCategoryTree = async (data: any[]) => {
         [sub.id, sub.name, sub.category_id]
       );
     }
-    console.log('✅ Subcategories saved.');
+  //  console.log('✅ Subcategories saved.');
   } catch (error) {
     console.log('❌ Subcategories save error:', error);
   }
@@ -967,7 +967,7 @@ export const saveCategoryTree = async (data: any[]) => {
         Object.values(p)
       );
     }
-    console.log('✅ Products saved.');
+  //  console.log('✅ Products saved.');
   } catch (error) {
     console.log('❌ Products save error:', error);
   }

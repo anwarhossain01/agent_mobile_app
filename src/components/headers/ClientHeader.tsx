@@ -66,8 +66,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                 filters.city || null,
                 filters.ordinale || null,
                 filters.cap || null
-            );
-
+            );            
             dispatch(setClients(data));
         } catch (e) {
             console.log('search err', e);

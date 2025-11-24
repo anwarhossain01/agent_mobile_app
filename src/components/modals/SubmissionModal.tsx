@@ -46,6 +46,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
           //  handleCreateOrder();
           //handleCacheOrder();
           handleOrderCreationByNetwork();
+        console.log("ORDER TOTALS.....", calculateOrderTotals());
         }
     }, [showSubmissionModal]);
 

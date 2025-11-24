@@ -23,7 +23,6 @@ import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCou
 import SubmissionModal from '../components/modals/SubmissionModal';
 import { RootState } from '../store';
 import NetInfo from '@react-native-community/netinfo';
-import { Color } from 'react-native/types_generated/Libraries/Animated/AnimatedExports';
 
 const CartScreen = () => {
   const cart = useSelector(selectCartItems);

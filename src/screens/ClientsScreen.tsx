@@ -83,7 +83,7 @@ export default function ClientsScreen() {
 
       for (let i = 0; i < rows.length; i++) {
         const item = rows.item(i);
-        console.log("item", item);
+   //     console.log("item", item);
         
         // city
         if (item.city) {

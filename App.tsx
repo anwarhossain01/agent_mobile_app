@@ -78,6 +78,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import SplashScreen from './src/screens/SplashScreen';
 import ProductDetailPage from './src/screens/ProductDetailsPage';
 import FloatingCartButton from './src/components/FloatingCartButton';
+import DettagliScreen from './src/screens/DettagliScreen';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -263,7 +264,7 @@ function MainTabs({ navigation }: { navigation: any }) {
           name="Settings"
           component={SettingsScreen}
           options={{
-            tabBarLabel: 'Statistiche',
+            tabBarLabel: 'Logout',
             // tabBarIcon: ({ color, size }) => (
             //   <Ionicons name="settings-outline" color={color} size={size} />
             // ),
@@ -350,6 +351,7 @@ function RootNavigator() {
         <>
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="ProductDetails" component={ProductDetailPage} /> 
+          <Stack.Screen name="Dettagli" component={DettagliScreen} options={{ headerShown: true ,  headerTintColor: '#000'}} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

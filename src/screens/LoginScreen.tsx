@@ -64,7 +64,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.form}>
-        <Text style={styles.title}>Employee Login</Text>
+        <Text style={styles.title}>Login</Text>
         <TextInput
           placeholder="Email"
           placeholderTextColor={lighterTextColor}

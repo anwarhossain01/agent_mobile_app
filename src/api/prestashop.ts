@@ -134,6 +134,16 @@ export const getallCustomerss = async () => {
   }
 };
 
+export const getSingleCustomer = async (id: number | string) => {
+  try {
+    const res = await api.get(`/customers/${id}?output_format=JSON&display=full&ws_key=${API_KEY}`);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    console.error('❌ Customers API error:', error.response?.status, error.response?.data || error.message);
+    return { success: false, error: error.response?.data?.error || error.message };
+  }
+};
+
 export const getOrdersFromServer = async (employeeId: any) => {
 
   try {
@@ -309,6 +319,26 @@ export const getCachedClientAddresses = async (client_id: string | number) => {
   return cachedClientAddresses(client_id, apiCall);
 };
 
+export const getAddressesForCustomer = async (customerId: string | number) => {
+  try {
+    // PrestaShop expects: ?filter[id_customer]=17078
+    const res = await api.get(
+      `/addresses?filter[id_customer]=${customerId}&display=full&output_format=JSON&ws_key=${API_KEY}`
+    );
+    // Return array of addresses (or empty)
+    return {
+      success: true,
+      data: Array.isArray(res.data?.addresses) ? res.data.addresses : [],
+    };
+  } catch (error: any) {
+    console.warn(`⚠️ Failed to load addresses for customer ${customerId}:`, error.message);
+    return {
+      success: false,
+      data: [],
+      error: error.response?.data?.error?.message || error.message,
+    };
+  }
+};
 export const createNewAddress = async (
   customer_id: string | number | null,
   alias: string,

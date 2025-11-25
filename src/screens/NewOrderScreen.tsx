@@ -229,7 +229,8 @@ const NewOrderScreen = ({ route }) => {
             Alert.alert('Prodotto non disponibile in magazzino');
             return;
         }
-
+        console.log(stockData);
+        
         if (stockData?.depends_on_stock === "1") {
             const availableStock = parseInt(stockData.quantity) || 0;
 

@@ -32,7 +32,7 @@ export default function ClientsScreen() {
 
         data = await getCachedClientsForAgentFrontPage(employeeId || 0);
         await classifyCustomers(dispatch);
-      //   console.log("Clients res", data);
+        console.log("Clients res", data);
 
         if (data.length === 0) {
           setNoData(true);
@@ -243,7 +243,7 @@ export default function ClientsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.detailsButton]}
-                onPress={() => Alert.alert('in development')}
+                onPress={() => navigation.navigate('Dettagli', { customer: item.id_customer })}
               >
                 <Text style={styles.buttonText}>DETTAGLI</Text>
               </TouchableOpacity>

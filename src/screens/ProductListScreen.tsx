@@ -204,11 +204,18 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
               }}
               value={searchText}
               onChangeText={setSearchText}
-              placeholder="Search product..."
+              placeholder=" Cerca prodotto..."
               placeholderTextColor="#999"
               returnKeyType="search"
-              onSubmitEditing={handleSearchSubmit} // <-- ANDROID KEYBOARD SUBMIT
+              onSubmitEditing={handleSearchSubmit} 
             />
+
+            {/* SEARCH ICON */}
+            <TouchableOpacity onPress={handleSearchSubmit}
+              style={{ marginLeft: 10 }}
+            >
+              <Ionicons name="search" size={24} color="#000" />
+            </TouchableOpacity>
 
             {/* CLOSE SEARCH */}
             <TouchableOpacity

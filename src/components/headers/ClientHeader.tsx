@@ -163,6 +163,15 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         performSearch(text, selectedFilterValues);
     }
 
+    const showOptionsPanel = () => {
+        setShowOptions(!showOptions);
+
+        if (showOptions) {
+            setSearchText('');
+            performSearch('', {});
+        }  
+    }
+
     return (
         <>
             <View
@@ -181,7 +190,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                                 <Ionicons name="search" size={22} color="black" />
                             </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => setShowOptions(!showOptions)} style={styles.iconButton}>
+                            <TouchableOpacity onPress={showOptionsPanel} style={styles.iconButton}>
                                 <Ionicons name="ellipsis-vertical" size={22} color="black" />
                             </TouchableOpacity>
                         </View>
@@ -192,7 +201,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                 {searchMode && (
                     <View style={styles.searchRow}>
                         <TouchableOpacity
-                            onPress={() => {
+                            onPress={() => {                                
                                 setSearchMode(false);
                                 performSearch('', {});
                                 setSearchText('');

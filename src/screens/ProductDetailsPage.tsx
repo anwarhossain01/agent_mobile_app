@@ -45,8 +45,6 @@ export default function ProductDetailPage() {
     }
   };
 
-
-
   const fetchProductImage = (productId: number, imageId: number): string =>
     `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;
 

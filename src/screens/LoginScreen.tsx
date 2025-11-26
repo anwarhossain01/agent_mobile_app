@@ -12,8 +12,8 @@
 //   Alert.alert('Login failed');
 // }
 
-import React, { useState } from 'react';
-import { View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Modal, View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
@@ -27,9 +27,54 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [setupModalVisible, setSetupModalVisible] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const is_saved = useSelector(selectIsCategoryTreeSaved);
   const dispatch = useDispatch();
   const navigation = useNavigation();
+
+  useEffect(() => {
+    let interval = null;
+    if (setupModalVisible) {
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => clearInterval(interval);
+  }, [setupModalVisible]);
+
+  // const onLogin = async () => {
+  //   if (email.length === 0 || password.length === 0) {
+  //     Alert.alert('Please enter email and password');
+  //     return;
+  //   }
+  //   setError(false);
+  //   setLoading(true);
+  //   const res = await loginEmployee(email, password);
+
+  //   if (res.success) {
+  //     await storeAgentFromJson(res);
+  //     await cacheInitializer(res.employee?.id); // this functions stores a lot of data so takes a lot of time
+  //     if (!is_saved) {
+  //       const categoriesTree = await getCategoriesSubsAndProds();
+  //       if (categoriesTree.success) {
+  //         await saveCategoryTree(categoriesTree.data); // same for this one, we need this data
+  //         dispatch(setIsTreeSaved(true));
+  //       }
+  //     }
+  //     dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
+  //   } else {
+  //     setError(true);
+  //     setLoading(false);
+  //   }
+  // };
+  const formatTime = (seconds: any) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
 
   const onLogin = async () => {
     if (email.length === 0 || password.length === 0) {
@@ -38,20 +83,34 @@ export default function LoginScreen() {
     }
     setError(false);
     setLoading(true);
+
     const res = await loginEmployee(email, password);
 
     if (res.success) {
       await storeAgentFromJson(res);
-      await cacheInitializer(res.employee?.id);
-      if (!is_saved) {
-        const categoriesTree = await getCategoriesSubsAndProds();
-        if (categoriesTree.success) {
-          await saveCategoryTree(categoriesTree.data);
-          dispatch(setIsTreeSaved(true));
-        }
-      }
 
-      dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
+      // Show modal BEFORE heavy work starts
+      setSetupModalVisible(true);
+
+      try {
+        await cacheInitializer(res.employee?.id);
+
+        if (!is_saved) {
+          const categoriesTree = await getCategoriesSubsAndProds();
+          if (categoriesTree.success) {
+            await saveCategoryTree(categoriesTree.data);
+            dispatch(setIsTreeSaved(true));
+          }
+        }
+
+        dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
+      } catch (err) {
+        console.error('Setup failed:', err);
+        Alert.alert('Setup Error', 'Failed to initialize app data. Please try again.');
+      } finally {
+        setSetupModalVisible(false);
+        setLoading(false);
+      }
     } else {
       setError(true);
       setLoading(false);
@@ -88,6 +147,27 @@ export default function LoginScreen() {
         )}
 
       </View>
+
+      {/* Setup Progress Modal */}
+      <Modal
+        transparent
+        animationType="fade"
+        visible={setupModalVisible}
+        onRequestClose={() => { }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ActivityIndicator size="large" color={theme} />
+            <Text style={styles.modalTitle}>Setting Up Your Account</Text>
+            <Text style={styles.modalMessage}>
+              Attendi mentre prepariamo i tuoi dati per l'uso offline...
+            </Text>
+            <Text style={styles.timerText}>
+              Elapsed time: {formatTime(elapsedSeconds)}
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -140,5 +220,37 @@ const styles = StyleSheet.create({
   errorTxt: {
     color: 'red',
     fontSize: 14,
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: darkBg,
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: textColor,
+    marginVertical: 16,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: lighterTextColor,
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  timerText: {
+    fontSize: 14,
+    color: theme,
+    marginTop: 8,
+    fontWeight: '500',
+  },
 });

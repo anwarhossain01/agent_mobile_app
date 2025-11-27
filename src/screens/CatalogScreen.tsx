@@ -5,13 +5,15 @@ import { RootState } from '../store';
 import { setProducts } from '../store/slices/productsSlice';
 import { getActiveCategories, getCategoriesSubsAndProds, getProducts } from '../api/prestashop';
 import { dark, darkBg, darkerBg, darkestBg, lightdark, textColor } from '../../colors';
-import { selectIsCategoryTreeSaved, setIsTreeSaved } from '../store/slices/categoryTreeSlice';
+import { selectIsCategoryTreeSaved, selectSavedAt, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 import { saveCategoryTree } from '../sync/cached';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryData } from '../database/db';
 import { useNavigation } from '@react-navigation/native';
+import NetInfo from '@react-native-community/netinfo';
+import { selectIsSyncing, setSyncing } from '../store/slices/databaseStatusSlice';
 
-export default function CatalogScreen({route }: { route: any }) {
+export default function CatalogScreen({ route }: { route: any }) {
   const [categories, setCategories] = useState<any[]>([]);
   const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
   const [subcategories, setSubcategories] = useState<any[]>([]);
@@ -22,41 +24,113 @@ export default function CatalogScreen({route }: { route: any }) {
   const [searchText, setSearchText] = useState('');
 
   const is_saved = useSelector(selectIsCategoryTreeSaved);
+  const is_syncing = useSelector(selectIsSyncing);
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  
+  let saved_at = useSelector(selectSavedAt);
+
   useEffect(() => {
     const load = async () => {
       try {
-        let categoriesTreeData = [];
+        const netInfo = await NetInfo.fetch();
 
-     //   if (is_saved) {
-          // ✅ Load from SQLite
-        //  console.log('📦 Loading categories from local SQLite...');
-          categoriesTreeData = await queryData('category_tree_categories', '1=1');
-          //console.log(categoriesTreeData);
+        //  1. Load from local DB (always try — even if stale, show something fast)
+        const localCategories = await queryData('category_tree_categories', '1=1');
+        setCategories(localCategories);
+        setFilteredCategories(localCategories);
 
-          setCategories(categoriesTreeData);
-          setFilteredCategories(categoriesTreeData);
-        // } else {
-        //   // 🌐 Fetch from server
-        //   console.log('🌍 Fetching categories from server...');
-        //   const categoriesTree = await getCategoriesSubsAndProds();
+        //  2. Decide whether to refresh from server: only based on time
+        const now = Date.now();
+        const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
-        //   if (categoriesTree.success) {
-        //     await saveCategoryTree(categoriesTree.data);
-        //     dispatch(setIsTreeSaved(true));
-        //     setCategories(categoriesTree.data);
-        //     setFilteredCategories(categoriesTree.data);
-        //   }
-        // }
+        let lastSavedTime = 0; // defaults to "never" → expired
+        
+        if (saved_at) {
+          const parsed = new Date(saved_at).getTime();
+          if (!isNaN(parsed)) {
+            lastSavedTime = parsed;
+          }
+        }
+
+        const isStale = (now - lastSavedTime) > THREE_HOURS_MS;
+
+        // 🌐 Only refresh if stale AND online
+        if (netInfo.isConnected && isStale && !is_syncing) {
+          console.log(
+            saved_at
+              ? ` Category tree last saved at ${saved_at} — refreshing (age: ${Math.round((now - lastSavedTime) / 60000)} min)`
+              : ' No saved timestamp — fetching category tree from server'
+          );
+          try {
+            const categoriesTree = await getCategoriesSubsAndProds();
+
+          if (categoriesTree.success) {
+            dispatch(setSyncing(true));
+            await saveCategoryTree(categoriesTree.data);
+
+            //  Update cache timestamp — this is the key for next check
+            const newSavedAt = new Date().toISOString();
+            saved_at = newSavedAt;
+            dispatch(setSavedAt(newSavedAt));
+
+            // Update UI with fresh data
+            setCategories(categoriesTree.data);
+            setFilteredCategories(categoriesTree.data);
+          } else {
+            console.warn('⚠️ Server returned success=false for category tree');
+          }
+          } catch (error) {
+            console.log('❌ Category tree load error:', error);
+            
+          } finally {
+            dispatch(setSyncing(false));
+          }
+        } else if (!netInfo.isConnected && isStale) {
+          console.log(' Offline & category tree stale — using local cache');
+        }
       } catch (e) {
-        console.log('❌ products load err:', e);
+        console.error('❌ Category tree load error:', e);
       }
     };
 
     load();
-  }, []);
+  }, [ dispatch, is_syncing]); 
+
+  const formatTime = (isoString: string | null): string => {
+    if (!isoString) return 'Mai';
+    const d = new Date(isoString);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // e.g., "14:32"
+    }
+    return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' }); // e.g., "27/11"
+  };
+
+   const syncCategoryTree = async () => {
+    try {
+      dispatch(setSyncing(true));
+      const categoriesTree = await getCategoriesSubsAndProds();
+      if (categoriesTree.success) {
+        await saveCategoryTree(categoriesTree.data);
+        const newSavedAt = new Date().toISOString();
+        dispatch(setSavedAt(newSavedAt));
+        setCategories(categoriesTree.data);
+        setFilteredCategories(categoriesTree.data);
+      } else {
+        console.warn('⚠️ Server returned success=false for category tree');
+      }
+    } catch (error) {
+      console.error('❌ Sync failed:', error);
+    } finally {
+      dispatch(setSyncing(false));
+    }
+  };
+
+  const handleSyncNow = () => {
+    if (!is_syncing) {
+      syncCategoryTree();
+    }
+  };
 
   const handleCategoryPress = async (category: any) => {
     setSelectedCategory(category);
@@ -138,7 +212,7 @@ export default function CatalogScreen({route }: { route: any }) {
         screen: 'CatalogTab',
         params: {
           screen: 'ProductList',
-          params:{
+          params: {
             subcategoryId: item.id,
             subcategoryName: item.name,
           }
@@ -156,6 +230,24 @@ export default function CatalogScreen({route }: { route: any }) {
 
   return (
     <View style={styles.container}>
+       {/*  Sync Info Bar — only when NOT syncing */}
+      {!is_syncing && (
+        <View style={styles.syncInfoBar}>
+          <TouchableOpacity
+            onPress={handleSyncNow}
+            style={styles.syncButton}
+            disabled={is_syncing}
+          >
+            <Ionicons name="sync" size={18} color="#007AFF" />
+            <Text style={styles.syncButtonText}>Aggiorna ora</Text>
+          </TouchableOpacity>
+          <Text style={styles.syncTimeText}>
+            Ultimo: {formatTime(saved_at)}
+          </Text>
+        </View>
+      )}
+
+
       {/* Header */}
       <View style={styles.header}>
         {selectedCategory && (
@@ -167,7 +259,7 @@ export default function CatalogScreen({route }: { route: any }) {
         {!searchMode ? (
           <>
             <Text style={styles.title}>
-              {selectedCategory ? 'Cerca categoria' : 'Cerca categoria'} 
+              {selectedCategory ? 'Cerca categoria' : 'Cerca categoria'}
             </Text>
             <TouchableOpacity
               onPress={() => setSearchMode(true)}
@@ -288,5 +380,30 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 16,
     marginTop: 20,
+  },
+
+  syncInfoBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: darkerBg,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  syncButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  syncTimeText: {
+    color: '#888',
+    fontSize: 13,
   },
 });

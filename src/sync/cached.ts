@@ -740,68 +740,68 @@ export const cacheInitializer = async (agentId: any) => {
   //  console.log("🧠 Starting cache initialization for agent:", agentId);
 
   try {
-    // 1️⃣ Fetch Customers
-    const customersRes = await getClientsForAgent(agentId);
-    const customers = customersRes || [];
-    //  console.log(`📦 Got ${customers.length} customers`);
+    // // 1 Fetch Customers
+    // const customersRes = await getClientsForAgent(agentId);
+    // const customers = customersRes || [];
+    // //  console.log(`📦 Got ${customers.length} customers`);
 
-    // 2️⃣ Insert customers
-    for (const c of customers) {
-      const customerData = {
-        id_customer: c.id_customer,
-        firstname: c.firstname,
-        lastname: c.lastname,
-        email: c.email,
-        codice_cmnr: c.codice_cmnr || '',
-        company: c.company || '',
-        numero_ordinale: c.numero_ordinale || '',
-        postcode: c.postcode || '',
-        address1: c.address1 || '',
-        city: c.city || '',
-      };
+    // // 2 Insert customers
+    // for (const c of customers) {
+    //   const customerData = {
+    //     id_customer: c.id_customer,
+    //     firstname: c.firstname,
+    //     lastname: c.lastname,
+    //     email: c.email,
+    //     codice_cmnr: c.codice_cmnr || '',
+    //     company: c.company || '',
+    //     numero_ordinale: c.numero_ordinale || '',
+    //     postcode: c.postcode || '',
+    //     address1: c.address1 || '',
+    //     city: c.city || '',
+    //   };
 
-      await insertIfNotExists('customers', customerData, 'id_customer');
+    //   await insertIfNotExists('customers', customerData, 'id_customer');
 
-      // 3️⃣ Fetch addresses for this customer
-      const addrRes = await clientAddressGet(c.id_customer);
-      const addresses = addrRes?.data?.addresses || [];
-      //  console.log(`🏠 Customer ${c.id_customer} → ${addresses.length} addresses`);
+    //   // 3 Fetch addresses for this customer
+    //   const addrRes = await clientAddressGet(c.id_customer);
+    //   const addresses = addrRes?.data?.addresses || [];
+    //   //  console.log(`🏠 Customer ${c.id_customer} → ${addresses.length} addresses`);
 
-      for (const a of addresses) {
-        const addrData = {
-          id: a.id,
-          id_customer: a.id_customer,
-          id_manufacturer: a.id_manufacturer,
-          id_supplier: a.id_supplier,
-          id_warehouse: a.id_warehouse,
-          id_country: a.id_country,
-          id_state: a.id_state,
-          alias: a.alias,
-          company: a.company,
-          lastname: a.lastname,
-          firstname: a.firstname,
-          vat_number: a.vat_number,
-          address1: a.address1,
-          address2: a.address2,
-          postcode: a.postcode,
-          city: a.city,
-          other: a.other,
-          phone: a.phone,
-          phone_mobile: a.phone_mobile,
-          dni: a.dni,
-          deleted: a.deleted,
-          date_add: a.date_add,
-          date_upd: a.date_upd,
-          numero_esercizio: a.numero_esercizio,
-          codice_cmnr: a.codice_cmnr,
-          numero_ordinale: a.numero_ordinale,
-        };
+    //   for (const a of addresses) {
+    //     const addrData = {
+    //       id: a.id,
+    //       id_customer: a.id_customer,
+    //       id_manufacturer: a.id_manufacturer,
+    //       id_supplier: a.id_supplier,
+    //       id_warehouse: a.id_warehouse,
+    //       id_country: a.id_country,
+    //       id_state: a.id_state,
+    //       alias: a.alias,
+    //       company: a.company,
+    //       lastname: a.lastname,
+    //       firstname: a.firstname,
+    //       vat_number: a.vat_number,
+    //       address1: a.address1,
+    //       address2: a.address2,
+    //       postcode: a.postcode,
+    //       city: a.city,
+    //       other: a.other,
+    //       phone: a.phone,
+    //       phone_mobile: a.phone_mobile,
+    //       dni: a.dni,
+    //       deleted: a.deleted,
+    //       date_add: a.date_add,
+    //       date_upd: a.date_upd,
+    //       numero_esercizio: a.numero_esercizio,
+    //       codice_cmnr: a.codice_cmnr,
+    //       numero_ordinale: a.numero_ordinale,
+    //     };
 
-        await insertIfNotExists('addresses', addrData, 'id');
-      }
-    }
+    //     await insertIfNotExists('addresses', addrData, 'id');
+    //   }
+    // }
 
-    // 4️⃣ Get courier info (always id 27)
+    // 4 Get courier info (always id 27)
     const courierRes = await getCouriers(27);
     const carrier = courierRes?.data?.carriers?.[0];
     if (carrier) {
@@ -813,9 +813,9 @@ export const cacheInitializer = async (agentId: any) => {
         delay: carrier.delay,
       };
       await insertIfNotExists('carriers', carrierData, 'id');
-      //  console.log("🚚 Courier cached:", carrier.name);
+      //  console.log(" Courier cached:", carrier.name);
 
-      // 5️⃣ Get deliveries for this courier
+      // 5 Get deliveries for this courier
       const delivRes = await getDeliveries(carrier.id);
       const deliveries = delivRes?.data?.deliveries || [];
       //  console.log(`📦 Found ${deliveries.length} deliveries for carrier ${carrier.id}`);
@@ -833,7 +833,6 @@ export const cacheInitializer = async (agentId: any) => {
       console.warn("⚠️ No courier data found for ID 27");
     }
 
-    //  console.log("✅ Cache initialized successfully!");
     return { success: true };
   } catch (error) {
     console.error("💀 Cache initialization failed:", error);
@@ -945,7 +944,7 @@ export const saveCategoryTree = async (data: any[]) => {
         [cat.id, cat.name]
       );
     }
-    //  console.log('✅ Categories saved.');
+      console.log('✅ Categories saved.');
   } catch (error) {
     console.log('❌ Categories save error:', error);
   }
@@ -958,7 +957,7 @@ export const saveCategoryTree = async (data: any[]) => {
         [sub.id, sub.name, sub.category_id]
       );
     }
-    //  console.log('✅ Subcategories saved.');
+     console.log('✅ Subcategories saved.');
   } catch (error) {
     console.log('❌ Subcategories save error:', error);
   }
@@ -982,7 +981,7 @@ export const saveCategoryTree = async (data: any[]) => {
         Object.values(p)
       );
     }
-    //  console.log('✅ Products saved.');
+      console.log('✅ Products saved.');
   } catch (error) {
     console.log('❌ Products save error:', error);
   }
@@ -1053,4 +1052,54 @@ export const verifyProductStock = async (product: any) => {
     console.log("Stock check failed:", err);
     return { success: false, reason: "Errore durante la verifica dello stock" };
   }
+};
+
+export const clearDatabase = async () => {
+  const db = await getDBConnection();
+
+  return new Promise<void>((resolve, reject) => {
+    db.transaction(
+      (tx) => {
+        // Disable FKs at transaction level
+        tx.executeSql('PRAGMA foreign_keys = OFF;');
+        
+        const tables = [
+          'cart_items',
+          'carts',
+          'orders',
+          'server_orders',
+          'deliveries',
+          'addresses',
+          'customers',
+          'product_stock',
+          'category_tree_products',
+          'category_tree_subcategories',
+          'category_tree_categories',
+          'products',
+          'carriers',
+          'agent',
+        ];
+
+        // Run all DELETEs
+        for (const table of tables) {
+          tx.executeSql(`DELETE FROM \`${table}\`;`);
+
+          // Reset autoincrement for tables with INTEGER PRIMARY KEY AUTOINCREMENT
+          if (['carts', 'cart_items', 'agent', 'product_stock'].includes(table)) {
+            tx.executeSql(`DELETE FROM sqlite_sequence WHERE name = ?;`, [table]);
+          }
+        }
+
+        tx.executeSql('PRAGMA foreign_keys = ON;');
+      },
+      (error) => {
+        console.error('❌ Transaction failed during DB clear:', error);
+        reject(error);
+      },
+      () => {
+     //   console.log(' Database cleared successfully');
+        resolve();
+      }
+    );
+  });
 };

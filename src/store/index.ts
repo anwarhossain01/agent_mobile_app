@@ -8,6 +8,8 @@ import ordersReducer from './slices/ordersSlice';
 import cartReducer from './slices/cartSlice';
 import customerClassificationReducer from './slices/customerClassificationSlice';
 import categoryTreeReducer from './slices/categoryTreeSlice';
+import databaseStatusReducer from './slices/databaseStatusSlice';
+
 const rootReducer = combineReducers({
   auth: authReducer,
   clients: clientsReducer,
@@ -16,12 +18,13 @@ const rootReducer = combineReducers({
   cart: cartReducer,
   customerClassification: customerClassificationReducer,
   categoryTree: categoryTreeReducer,
+  databaseStatus: databaseStatusReducer,
 });
 
 const persistConfig = {
   key: 'root',
   storage: AsyncStorage,
-  whitelist: ['auth'],
+  whitelist: ['auth', 'categoryTree'],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

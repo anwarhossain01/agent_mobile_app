@@ -20,7 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { getCategoriesSubsAndProds, getClientsForAgent, loginEmployee } from '../api/prestashop';
 import { cacheInitializer, saveCategoryTree, storeAgentFromJson } from '../sync/cached';
-import { selectIsCategoryTreeSaved, setIsTreeSaved } from '../store/slices/categoryTreeSlice';
+import { selectIsCategoryTreeSaved, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -93,15 +93,17 @@ export default function LoginScreen() {
       setSetupModalVisible(true);
 
       try {
-        await cacheInitializer(res.employee?.id);
 
         if (!is_saved) {
           const categoriesTree = await getCategoriesSubsAndProds();
           if (categoriesTree.success) {
             await saveCategoryTree(categoriesTree.data);
             dispatch(setIsTreeSaved(true));
+            dispatch(setSavedAt(new Date().toISOString()));
           }
         }
+
+        await cacheInitializer(res.employee?.id);
 
         dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
       } catch (err) {

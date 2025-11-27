@@ -25,6 +25,7 @@ const authSlice = createSlice({
       state.token = null;
       state.employeeId = null;
       state.isLoggedIn = false;
+      // hey don't forget to empty database
     },
   },
 });

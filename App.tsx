@@ -59,7 +59,7 @@ import ClientsScreen from './src/screens/ClientsScreen';
 import CatalogScreen from './src/screens/CatalogScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import IndirizziScreen from './src/screens/IndirizziScreen';
 import ClientsMenuModal from './src/components/modals/ClientsMenuModal';
@@ -79,6 +79,7 @@ import SplashScreen from './src/screens/SplashScreen';
 import ProductDetailPage from './src/screens/ProductDetailsPage';
 import FloatingCartButton from './src/components/FloatingCartButton';
 import DettagliScreen from './src/screens/DettagliScreen';
+import { selectIsSyncing } from './src/store/slices/databaseStatusSlice';
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -359,9 +360,8 @@ function RootNavigator() {
     </Stack.Navigator>
   );
 }
-
-// App wrapper
-export default function App() {
+function AppContent() {
+  const isSyncing = useSelector(selectIsSyncing);
   const navTheme = {
     ...DefaultTheme,
     colors: {
@@ -372,24 +372,65 @@ export default function App() {
       border: '#333',
     },
   };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: dark }}>
+      {isSyncing && (
+        <View style={styles.syncBar}>
+          <ActivityIndicator size="small" color="#000" />
+          <Text style={styles.syncText}>Syncing… Loading may be slow</Text>
+        </View>
+      )}
+      <NavigationContainer theme={navTheme}>
+        <RootNavigator />
+        <FloatingCartButton />
+      </NavigationContainer>
+    </SafeAreaView>
+  );
+}
+
+// App wrapper
+export default function App() {
   return (
     <Provider store={store}>
       <PersistGate
         loading={
-          <View style={{ justifyContent: 'center' }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#007AFF" />
             <Text>Loading...</Text>
           </View>
         }
         persistor={persistor}
       >
-        <SafeAreaView style={{ flex: 1 }}>
-          <NavigationContainer theme={navTheme}>
-            <RootNavigator />
-            <FloatingCartButton />
-          </NavigationContainer>
-        </SafeAreaView>
+        <AppContent />
       </PersistGate>
     </Provider>
   );
 }
 
+const styles = StyleSheet.create({
+  syncBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFA500', // amber/orange — attention-grabbing but not alarming
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999,
+    elevation: 5, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  syncText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+});

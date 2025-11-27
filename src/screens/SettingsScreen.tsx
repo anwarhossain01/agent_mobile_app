@@ -1,12 +1,21 @@
-import React from 'react';
-import { View, Text, Button, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Button, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
-import { textColor } from '../../colors';
-// import { LineChart } from 'react-native-chart-kit';
+import { lightdark, textColor, theme } from '../../colors';
+import { getDBConnection } from '../database/db';
+import { clearDatabase } from '../sync/cached';
 
 export default function SettingsScreen() {
   const dispatch = useDispatch();
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogout() {
+    setLoading(true);
+    await clearDatabase();
+    dispatch(logout())
+    setLoading(false);
+  }
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <Text style={{ fontSize: 18, marginBottom: 8, color: textColor }}>Logout</Text>
@@ -21,9 +30,10 @@ export default function SettingsScreen() {
           alignItems: 'center',
           justifyContent: 'center',
         }}
-        onPress={() => dispatch(logout())}
+        disabled={loading}
+        onPress={handleLogout }
       >
-        <Text style={{ color: 'white', fontWeight: 800 }}>Logout</Text>
+        {loading ? <ActivityIndicator color={lightdark} /> : <Text style={{ color: 'white', fontWeight: 800 }}>Logout</Text>}
       </TouchableOpacity>
     </View>
   );

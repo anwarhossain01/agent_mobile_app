@@ -61,3 +61,39 @@ export const queryData = async (tableName: string, whereClause = '', params: any
     throw error;
   }
 };
+
+export const queryDataWithPagination = async (
+  tableName: string,
+  whereClause: string = '1=1',
+  params: any[] = [],
+  limit: number = 50,
+  offset: number = 0
+): Promise<any[]> => {
+  const db = await getDBConnection();
+  const sql = `
+    SELECT * FROM ${tableName}
+    WHERE ${whereClause}
+    LIMIT ? OFFSET ?
+  `;
+
+  return new Promise((resolve, reject) => {
+    db.transaction((tx) => {
+      tx.executeSql(
+        sql,
+        [...params, limit, offset],
+        (_, result) => {
+          const rows = [];
+          for (let i = 0; i < result.rows.length; i++) {
+            rows.push(result.rows.item(i));
+          }
+          resolve(rows);
+        },
+        (_, error) => {
+          console.error('❌ queryDataWithPagination failed:', error);
+          reject(error);
+          return false;
+        }
+      );
+    });
+  });
+};

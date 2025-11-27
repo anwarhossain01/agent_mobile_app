@@ -21,7 +21,7 @@ const categoryTreeSlice = createSlice({
   initialState,
   reducers: {
     setIsTreeSaved(state, action: PayloadAction<boolean>) {
-      state.is_saved = action.payload;
+      state.is_saved = action.payload; 
     },
     setSavedAt(state, action: PayloadAction<string>) {
       state.saved_at = action.payload;

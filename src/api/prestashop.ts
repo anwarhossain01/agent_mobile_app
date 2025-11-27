@@ -41,16 +41,26 @@ export const loginEmployee = async (email: string, password: string) => {
 
 };
 
-export const getClientsForAgent = async (agentId: number | string) => {
-  // Example: fetch customers and filter by an 'id_assigned_agent' custom field in your PrestaShop DB.
-  //  const res = await api.get('/customers?display=full');
-  const res = await api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
-    { employee_id: agentId },
+export const getClientsForAgent = async (agentId: number | string, limit: number = 100, page: number = 1) => {
+
+  const res = await api.post(`/employeeapi/agentscustomer?limit=${limit}&page=${page}&t=${generateRandomNumber(10)}`,
+    { employee_id: agentId  },
     { baseURL: API_LOGIN_URL }
   );
   console.log("getClientsForAgent res", res.data);
   
-  return res.data.customers || [];
+  return res.data || [];
+};
+
+export const getClientsForAgentAll = async (agentId: number | string, ) => {
+
+  const res = await api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
+    { employee_id: agentId  },
+    { baseURL: API_LOGIN_URL }
+  );
+  console.log("getClientsForAgent res", res.data); 
+  
+  return res.data || [];
 };
 
 export const getCachedClientsForAgent = async (agentId: number | string, search: string | number | null = '') => {
@@ -96,7 +106,6 @@ export const getCachedClientsForAgentFrontPage = async (
     return { success: false, error: error.response?.data?.error || error.message };
   }
 };
-
 
 export const getProducts = async (category_id: number | string | null = null) => {
   let filters = [];

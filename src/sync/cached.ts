@@ -1,6 +1,9 @@
 import { checkAllProductStock, checkProductStock, clientAddressGet, getCachedProductStock, getClientsForAgent, getCouriers, getDeliveries } from "../api/prestashop";
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
 import NetInfo from "@react-native-community/netinfo";
+import { store } from "../store";
+import { selectCurrentCustomerLength, selectLastCustomerPageSynced, setCustomerSyncStatus, setSyncing, setSyncStatusText } from "../store/slices/databaseStatusSlice";
+const PAGE_SIZE = 100;
 
 export const cachedDataForCarriers = async (
   tableName: string,
@@ -440,7 +443,7 @@ export const cachedDataForAgentFrontPage = async (
     //   console.log(`📦 Found ${localData.length} record(s) in local DB`);
     return localData;
     // }
-
+    // we might need to call the api, so we are gonna keep this code just in case
     console.log(`🌐 Not found locally, calling API...`);
     const res = await apiCall();
     const apiCustomers = res.data?.customers || [];
@@ -740,7 +743,9 @@ export const cacheInitializer = async (agentId: any) => {
   //  console.log("🧠 Starting cache initialization for agent:", agentId);
 
   try {
-    // // 1 Fetch Customers
+
+    // disaster starts from here, take a look
+    // // 1 Fetch Customers = lotta customer, blow up phone. jk
     // const customersRes = await getClientsForAgent(agentId);
     // const customers = customersRes || [];
     // //  console.log(`📦 Got ${customers.length} customers`);
@@ -802,6 +807,7 @@ export const cacheInitializer = async (agentId: any) => {
     // }
 
     // 4 Get courier info (always id 27)
+    // this needs to go at its own function, this is not related to the customer so I think we should move it to a separate function
     const courierRes = await getCouriers(27);
     const carrier = courierRes?.data?.carriers?.[0];
     if (carrier) {
@@ -937,6 +943,8 @@ export const saveCategoryTree = async (data: any[]) => {
   }
 
   // Step 2: Categories transaction
+  store.dispatch(setSyncStatusText('Fetching List '));
+
   try {
     for (const cat of categories) {
       await db.executeSql(
@@ -944,7 +952,8 @@ export const saveCategoryTree = async (data: any[]) => {
         [cat.id, cat.name]
       );
     }
-      console.log('✅ Categories saved.');
+     // console.log('✅ Categories saved.');
+      store.dispatch(setSyncStatusText('✅ Categories saved.'));
   } catch (error) {
     console.log('❌ Categories save error:', error);
   }
@@ -957,14 +966,18 @@ export const saveCategoryTree = async (data: any[]) => {
         [sub.id, sub.name, sub.category_id]
       );
     }
-     console.log('✅ Subcategories saved.');
+    store.dispatch(setSyncStatusText('✅ Subcategories saved.'));
+    // console.log('✅ Subcategories saved.');
   } catch (error) {
     console.log('❌ Subcategories save error:', error);
   }
 
   // Step 4: Products
   try {
+    let productCount = 0;
     for (const p of products) {
+      productCount++;
+      store.dispatch(setSyncStatusText(`Saving Product ${productCount}`));
       await db.executeSql(
         `INSERT OR REPLACE INTO category_tree_products (
         id_product, subcategory_id, id_supplier, id_manufacturer, id_category_default, id_shop_default, id_tax_rules_group,
@@ -981,7 +994,8 @@ export const saveCategoryTree = async (data: any[]) => {
         Object.values(p)
       );
     }
-      console.log('✅ Products saved.');
+     // console.log('✅ Products saved.');
+      store.dispatch(setSyncStatusText('✅ Products saved.'));
   } catch (error) {
     console.log('❌ Products save error:', error);
   }
@@ -1102,4 +1116,227 @@ export const clearDatabase = async () => {
       }
     );
   });
+};
+
+export const syncCustomersIncrementally = async (agentId: number | string) => {
+  store.dispatch(setSyncStatusText('Sincronizzazione clienti in corso...'));
+  store.dispatch(setSyncing(true));
+
+  try {
+    // Start from the *next* page
+    let currentPage = selectLastCustomerPageSynced(store.getState()) + 1;
+    let totalSynced = selectCurrentCustomerLength(store.getState());
+    let batchInserted = 0;
+    let actualLastCustomerId = 0;
+    while (true) {
+
+      // Fetch page
+      const customersRes = await getClientsForAgent(agentId, PAGE_SIZE, currentPage);
+      const customers = Array.isArray(customersRes.customers) ? customersRes.customers : [];
+
+      if (customers.length === 0) {
+        console.log(`✅ No more customers at page ${currentPage} — sync complete.`);
+        break;
+      }
+       store.dispatch(setSyncStatusText(
+        `Pagina ${currentPage} (${totalSynced}/${customersRes.total_customers} clienti sincronizzati)`
+      ));
+
+      // Process batch
+      for (const c of customers) {
+        try {
+          // Insert customer
+          const customerData = {
+            id_customer: c.id_customer,
+            firstname: (c.firstname || '').trim(),
+            lastname: (c.lastname || '').trim(),
+            email: c.email || '',
+            codice_cmnr: c.codice_cmnr || '',
+            company: c.company || '',
+            numero_ordinale: c.numero_ordinale || '',
+            postcode: c.postcode || '',
+            address1: c.address1 || '',
+            city: c.city || '',
+          };
+
+          await insertIfNotExists('customers', customerData, 'id_customer');
+          batchInserted++;
+          actualLastCustomerId = customerData.id_customer;
+
+          // Insert addresses (best-effort)
+          try {
+            const addrRes = await clientAddressGet(c.id_customer);
+            const addresses = addrRes?.data?.addresses || [];
+            for (const a of addresses) {
+              const addrData = {
+                id: a.id,
+                id_customer: a.id_customer,
+                id_manufacturer: a.id_manufacturer || 0,
+                id_supplier: a.id_supplier || 0,
+                id_warehouse: a.id_warehouse || 0,
+                id_country: a.id_country || 0,
+                id_state: a.id_state || 0,
+                alias: a.alias || '',
+                company: a.company || '',
+                lastname: a.lastname || '',
+                firstname: a.firstname || '',
+                vat_number: a.vat_number || '',
+                address1: a.address1 || '',
+                address2: a.address2 || '',
+                postcode: a.postcode || '',
+                city: a.city || '',
+                other: a.other || '',
+                phone: a.phone || '',
+                phone_mobile: a.phone_mobile || '',
+                dni: a.dni || '',
+                deleted: a.deleted || '0',
+                date_add: a.date_add || '',
+                date_upd: a.date_upd || '',
+                numero_esercizio: a.numero_esercizio || '',
+                codice_cmnr: a.codice_cmnr || '',
+                numero_ordinale: a.numero_ordinale || '',
+              };
+              await insertIfNotExists('addresses', addrData, 'id');
+            }
+          } catch (addrErr) {
+            console.warn(`⚠️ Skipping addresses for customer ${c.id_customer}:`, addrErr.message);
+          }
+        } catch (custErr) {
+          console.warn(`❌ Failed to sync customer ${c.id_customer}:`, custErr.message);
+        }
+      }
+
+      // Update global state
+      totalSynced += batchInserted;
+      store.dispatch(setCustomerSyncStatus({
+        current_customer_length: totalSynced,
+        last_customer_id: actualLastCustomerId ,
+        last_customer_page_synced: currentPage,
+        // Note: we no longer set total pages
+      }));
+
+      console.log(`✅ Page ${currentPage}: ${batchInserted} customers synced`);
+      currentPage++;
+      batchInserted = 0;
+    }
+
+    store.dispatch(setSyncStatusText(
+      `✅ Clienti sincronizzati: ${totalSynced} salvati`
+    ));
+  } catch (error) {
+    console.error('❌ Customer sync failed:', error);
+    store.dispatch(setSyncStatusText(`⚠️ Errore sincronizzazione: ${error.message}`));
+    throw error;
+  } finally {
+    store.dispatch(setSyncing(false));
+  }
+};
+
+export const syncCourierData = async () => {
+  store.dispatch(setSyncStatusText('Sincronizzazione corrieri in corso...'));
+  store.dispatch(setSyncing(true));
+
+  try {
+    const courierRes = await getCouriers(27);
+    const carrier = courierRes?.data?.carriers?.[0];
+    
+    if (!carrier) {
+      throw new Error('No courier data for ID 27');
+    }
+
+    const carrierData = {
+      id: carrier.id,
+      name: carrier.name,
+      active: parseInt(carrier.active),
+      is_free: parseInt(carrier.is_free),
+      delay: carrier.delay,
+    };
+
+    await insertIfNotExists('carriers', carrierData, 'id');
+
+    const delivRes = await getDeliveries(carrier.id);
+    const deliveries = delivRes?.data?.deliveries || [];
+
+    for (const d of deliveries) {
+      const deliveryData = {
+        id: d.id,
+        id_carrier: d.id_carrier,
+        id_zone: d.id_zone,
+        price: parseFloat(d.price),
+      };
+      await insertIfNotExists('deliveries', deliveryData, 'id');
+    }
+
+    store.dispatch(setSyncStatusText('✅ Corrieri sincronizzati'));
+  } catch (error) {
+    console.error('❌ Courier sync failed:', error);
+    store.dispatch(setSyncStatusText(`⚠️ Errore corrieri: ${error.message}`));
+    throw error;
+  } finally {
+    store.dispatch(setSyncing(false));
+  }
+};
+export const upsertCustomer = async (customer: any) => {
+  // 1 Upsert customer using insertIfNotExists
+  const customerData = {
+    id_customer: customer.id_customer,
+    firstname: (customer.firstname || '').trim(),
+    lastname: (customer.lastname || '').trim(),
+    email: customer.email || '',
+    codice_cmnr: customer.codice_cmnr || '',
+    company: customer.company || '',
+    numero_ordinale: customer.numero_ordinale || '',
+    postcode: customer.postcode || '',
+    address1: customer.address1 || '',
+    city: customer.city || '',
+  };
+
+  
+  await insertIfNotExists('customers', customerData, 'id_customer');
+
+  // 2 Fetch & insert addresses
+  try {
+    const addrRes = await clientAddressGet(customer.id_customer);
+    const addresses = addrRes?.data?.addresses || [];
+
+    for (const a of addresses) {
+      const addrData = {
+        id: a.id,
+        id_customer: a.id_customer,
+        id_manufacturer: a.id_manufacturer || 0,
+        id_supplier: a.id_supplier || 0,
+        id_warehouse: a.id_warehouse || 0,
+        id_country: a.id_country || 0,
+        id_state: a.id_state || 0,
+        alias: a.alias || '',
+        company: a.company || '',
+        lastname: a.lastname || '',
+        firstname: a.firstname || '',
+        vat_number: a.vat_number || '',
+        address1: a.address1 || '',
+        address2: a.address2 || '',
+        postcode: a.postcode || '',
+        city: a.city || '',
+        other: a.other || '',
+        phone: a.phone || '',
+        phone_mobile: a.phone_mobile || '',
+        dni: a.dni || '',
+        deleted: a.deleted || '0',
+        date_add: a.date_add || '',
+        date_upd: a.date_upd || '',
+        numero_esercizio: a.numero_esercizio || '',
+        codice_cmnr: a.codice_cmnr || '',
+        numero_ordinale: a.numero_ordinale || '',
+      };
+
+      //  Use your existing universal function
+      await insertIfNotExists('addresses', addrData, 'id');
+    }
+
+    if (addresses.length > 0) {
+      console.log(` ...Saved ${addresses.length} address(es) for customer ${customer.id_customer}`);
+    }
+  } catch (addrErr) {
+    console.warn(`⚠️ Skipping addresses for customer ${customer.id_customer}:`, addrErr.message);
+  }
 };

@@ -19,8 +19,9 @@ import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { getCategoriesSubsAndProds, getClientsForAgent, loginEmployee } from '../api/prestashop';
-import { cacheInitializer, saveCategoryTree, storeAgentFromJson } from '../sync/cached';
+import { cacheInitializer, saveCategoryTree, storeAgentFromJson, syncCourierData, syncCustomersIncrementally } from '../sync/cached';
 import { selectIsCategoryTreeSaved, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
+import { selectIsSyncing, selectSyncStatusText, setSyncing } from '../store/slices/databaseStatusSlice';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -32,6 +33,7 @@ export default function LoginScreen() {
   const is_saved = useSelector(selectIsCategoryTreeSaved);
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const is_syncing = useSelector(selectIsSyncing);
 
   useEffect(() => {
     let interval = null;
@@ -44,6 +46,13 @@ export default function LoginScreen() {
     }
     return () => clearInterval(interval);
   }, [setupModalVisible]);
+
+  useEffect(() => {
+    if (is_syncing) {
+      setElapsedSeconds(0);
+      dispatch(setSyncing(false));
+    }
+  }, [is_syncing]);
 
   // const onLogin = async () => {
   //   if (email.length === 0 || password.length === 0) {
@@ -91,7 +100,6 @@ export default function LoginScreen() {
 
       // Show modal BEFORE heavy work starts
       setSetupModalVisible(true);
-
       try {
 
         if (!is_saved) {
@@ -102,8 +110,9 @@ export default function LoginScreen() {
             dispatch(setSavedAt(new Date().toISOString()));
           }
         }
-
-        await cacheInitializer(res.employee?.id);
+        await syncCourierData();
+        await syncCustomersIncrementally(res.employee?.id);
+      //  await cacheInitializer(res.employee?.id); // initializes all the data, the huge as function
 
         dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
       } catch (err) {
@@ -163,6 +172,9 @@ export default function LoginScreen() {
             <Text style={styles.modalTitle}>Setting Up Your Account</Text>
             <Text style={styles.modalMessage}>
               Attendi mentre prepariamo i tuoi dati per l'uso offline...
+            </Text>
+            <Text style={[styles.modalMessage, { fontWeight: '500', color: textColor }]}>
+              {useSelector(selectSyncStatusText)}
             </Text>
             <Text style={styles.timerText}>
               Elapsed time: {formatTime(elapsedSeconds)}

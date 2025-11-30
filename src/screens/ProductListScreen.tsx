@@ -9,8 +9,9 @@ import { setProducts } from '../store/slices/productsSlice';
 import { useNavigation } from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { verifyProductStock } from '../sync/cached';
+import { getProductsCached, verifyProductStock } from '../sync/cached';
 import { addItem } from '../store/slices/cartSlice';
+import NetInfo from '@react-native-community/netinfo';
 
 const ProductListScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { subcategoryId, subcategoryName } = route.params || {};
@@ -31,7 +32,14 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     const load = async () => {
       setError(false);
       try {
-        const data = await getProducts(subcategoryId || null);
+        let netInfo = await NetInfo.fetch();
+        let data = [];
+        let isOnline = netInfo.isConnected && netInfo.isInternetReachable !== false;
+        if (!isOnline) {
+          data = await getProductsCached(subcategoryId || null);
+        }else{
+           data = await getProducts(subcategoryId || null);
+        }
         dispatch(setProducts(data));
       } catch (e) {
         console.log('products load err', e);

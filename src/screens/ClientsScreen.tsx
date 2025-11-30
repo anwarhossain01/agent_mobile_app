@@ -1,23 +1,40 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet, Alert, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, Button, TouchableOpacity, StyleSheet, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setClients } from '../store/slices/clientsSlice';
 import { getCachedClientsForAgent, getCachedClientsForAgentFrontPage, getClientsForAgent } from '../api/prestashop';
 import { useNavigation } from '@react-navigation/native';
-import { darkBg, textColor, theme, darkerBg } from '../../colors'; // Imported darkerBg
+import { darkBg, textColor, theme, darkerBg, lighterTextColor, lighterTheme, lightdark } from '../../colors'; // Imported darkerBg
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { getDBConnection, queryData, queryDataWithPagination } from '../database/db';
 import { selectIsClassified, setCity, setClassified, setNumeroOrdinal, setPostcode } from '../store/slices/customerClassificationSlice';
 import { setClientId } from '../store/slices/cartSlice';
-import { upsertCustomer } from '../sync/cached';
-import { selectLastCustomerSyncDate, setLastCutomerSyncDate } from '../store/slices/databaseStatusSlice';
+import { syncCustomersIncrementally, upsertCustomer } from '../sync/cached';
+import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, setLastCutomerSyncDate, setSyncStatusText } from '../store/slices/databaseStatusSlice';
+import { isSyncStale } from '../sync/dateSync';
 
+const formatInlineDate = (dateStr: string | null): string => {
+  if (!dateStr) return 'Mai';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Invalid date';
+
+  const day = String(d.getDate()).padStart(2, '0');
+  const monthNames = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+  const month = monthNames[d.getMonth()];
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+
+  return `${day} ${month} ${year}, ${hours}:${minutes}`;
+};
 
 export default function ClientsScreen() {
   const dispatch = useDispatch();
+  const isSyncing = useSelector(selectIsSyncing);
+  const syncStatusText = useSelector(selectSyncStatusText);
   const clients = useSelector((s: RootState) => s.clients.items);
   const auth = useSelector((s: RootState) => s.auth);
   const is_classified = useSelector(selectIsClassified);
@@ -26,17 +43,12 @@ export default function ClientsScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
   let localindex = 0;
-
   const employeeId = auth.employeeId;
   const navigation = useNavigation();
   const PAGE_SIZE = 15;
-
-  // Inside ClientsScreen, after hooks
   const lastSyncDate = useSelector(selectLastCustomerSyncDate);
-  const [syncStatus, setSyncStatus] = useState<string>(''); // 'up-to-date' | 'new-available' | ''
-  const [localCount, setLocalCount] = useState(0);
-  const [remoteCount, setRemoteCount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -44,6 +56,24 @@ export default function ClientsScreen() {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleSync = async () => {
+    if(!employeeId) return;
+    if (isSyncing) return;
+    dispatch(setSyncStatusText('Starting'));
+    setModalVisible(true);
+    try {
+      await syncCustomersIncrementally(employeeId);
+      const nowIso = new Date().toISOString(); 
+      dispatch(setLastCutomerSyncDate(nowIso));
+    } catch (error) {
+      console.error('Sync failed in UI layer:', error);
+    } finally {
+      setModalVisible(false);
+    }
+  };
+
+  const syncDisabled = !isSyncStale(lastSyncDate, 3)  && !isSyncing; // disable if synced < 3h ago
 
   const loadInitialData = useCallback(async () => {
     if (isConnected === null) return; // Wait for connectivity check
@@ -58,9 +88,13 @@ export default function ClientsScreen() {
         data = apiResponse.customers || [];
 
         // Upsert customers & addresses
-        for (const c of data) {
-          await upsertCustomer(c);
-        }
+        // keep this code just in case
+        // you want to update customers in sqlite
+        // simply uncomment
+        //
+        // for (const c of data) {
+        //   await upsertCustomer(c);
+        // }
       } else {
         //  Offline: load from DB
         data = await queryDataWithPagination('customers', '1=1', [], PAGE_SIZE, 0);
@@ -79,19 +113,6 @@ export default function ClientsScreen() {
         setCurrentPage(1);
       }
 
-      //  Set sync status using cached API response (no extra call!)
-      if (apiResponse && employeeId) {
-        const local = await queryData('customers');
-        const localCnt = local.length;
-        const remoteCnt = apiResponse.total_customers || 0;
-        setLocalCount(localCnt);
-        setRemoteCount(remoteCnt);
-        setSyncStatus(remoteCnt > localCnt ? 'new-available' : 'up-to-date');
-      } else if (!isConnected) {
-        // Offline — assume unknown sync status (disable sync)
-        setSyncStatus('');
-      }
-
     } catch (e) {
       console.error('clients load err', e);
       setNoData(true);
@@ -103,68 +124,7 @@ export default function ClientsScreen() {
   useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
-  // useEffect(() => {
-  //   const loadInitialPage = async () => {
-  //     try {
-  //       const netInfo = await NetInfo.fetch();
-  //       let data: any[] = [];
 
-  //       if (netInfo.isConnected && employeeId) {
-  //         // 🌐 Online: fetch from API (page 1)
-  //         console.log('🌐 Loading page 1 from server...');
-  //         data = await getClientsForAgent(employeeId, PAGE_SIZE, 1);
-  //         console.log(data);
-
-  //         data = data.customers || [];
-
-  //         // Upsert all into local DB (so offline works next time)
-  //         for (const c of data) {
-  //           await upsertCustomer(c);
-  //         }
-  //       } else {
-  //         // Offline: load from local DB
-  //         console.log(' Offline — loading page 1 from cache...');
-  //         data = await queryDataWithPagination('customers', '1=1', [], PAGE_SIZE, 0);
-  //       }
-
-  //       await classifyCustomers(dispatch);
-
-  //       if (data.length === 0) {
-  //         setNoData(true);
-  //       } else {
-  //         setNoData(false);
-  //         dispatch(setClients(data));
-  //         setHasMore(data.length >= PAGE_SIZE);
-  //         setCurrentPage(1);
-  //       }
-  //     } catch (e) {
-  //       console.error('clients load err', e);
-  //     }
-  //   };
-
-  //   loadInitialPage();
-  // }, [dispatch, employeeId]);
-  // useEffect(() => {
-  //   const load = async () => {
-  //     try {
-  //       let state = await NetInfo.fetch();
-  //       let data = null;
-  //       data = await getClientsForAgent(employeeId || 0, PAGE_SIZE, 1);
-  //      // data = await getCachedClientsForAgentFrontPage(employeeId || 0);
-  //       await classifyCustomers(dispatch);
-  //       console.log("Clients res", data);
-
-  //       if (data.length === 0) {
-  //         setNoData(true);
-  //       }
-
-  //       dispatch(setClients(data));
-  //     } catch (e) {
-  //       console.log('clients load err', e);
-  //     }
-  //   };
-  //   load();
-  // }, [dispatch, employeeId]);
 
 
   const ClientOrderNavigate = (client_id: string) => {
@@ -178,15 +138,7 @@ export default function ClientsScreen() {
         }
       }
     });
-    // (navigation as any).replace('Main', {
-    //   screen: 'OrdersTab',
-    //   params: {
-    //     screen: 'Orders',
-    //     params: {
-    //       employee_id: client_id,
-    //     }
-    //   }
-    // });
+
   }
 
   const classifyCustomers = async (dispatch: any) => {
@@ -255,66 +207,46 @@ export default function ClientsScreen() {
       )}
 
       {/* Sync Header */}
-      {/* {isConnected !== false && (
-        <View style={styles.syncHeader}>
-          <TouchableOpacity
-            style={[styles.syncButton, (!isConnected || syncStatus !== 'new-available') && styles.syncButtonDisabled]}
-            onPress={async () => {
-              if (!employeeId || !isConnected) return;
 
-              try {
-                const res = await getClientsForAgent(employeeId, 50, 1);
-                const newCustomers = res.customers || [];
-
-                if (newCustomers.length === 0) {
-                  setSyncStatus('up-to-date');
-                  return;
-                }
-
-                for (const c of newCustomers) {
-                  await upsertCustomer(c);
-                }
-
-                const now = new Date().toISOString();
-                dispatch(setLastCutomerSyncDate(now));
-                await loadInitialData();
-
-                Alert.alert('✅ Sincronizzato', `${newCustomers.length} nuovi clienti aggiunti.`);
-              } catch (err) {
-                console.error('Sync failed:', err);
-                Alert.alert('❌ Errore', 'Impossibile sincronizzare i clienti.');
-              }
-            }}
-            disabled={!isConnected || syncStatus !== 'new-available'}
-          >
-            <Ionicons
-              name={syncStatus === 'new-available' ? 'sync' : 'checkmark-circle'}
-              size={18}
-              color={syncStatus === 'new-available' && isConnected ? '#fff' : '#888'}
-            />
-            <Text style={[
+     {!isSyncing && (
+      <View style={styles.syncInfoBar}>
+        <TouchableOpacity
+          onPress={handleSync}
+          style={styles.syncButton}
+          disabled={syncDisabled}
+        >
+          <Ionicons
+            name={isSyncing ? "sync" : "sync"}
+            size={18}
+            color={syncDisabled ? '#888' : '#007AFF'}
+          />
+          <Text
+            style={[
               styles.syncButtonText,
-              (!isConnected || syncStatus !== 'new-available') && { color: '#888' }
-            ]}>
-              {syncStatus === 'new-available' ? 'Sincronizza Nuovi' :
-                isConnected ? 'Aggiornato' : 'Offline'}
-            </Text>
-          </TouchableOpacity>
+              syncDisabled && { color: '#888' },
+            ]}
+          >
+            {syncDisabled ? 'Aggiornato di recente' : 'Aggiorna ora'}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.syncTimeText}>
+          Ultimo: {formatInlineDate(lastSyncDate)}
+        </Text>
+      </View>
+    )}
 
-          {lastSyncDate ? (
-            <Text style={styles.syncTime}>
-              Ultimo: {new Date(lastSyncDate).toLocaleDateString()}{' '}
-              {new Date(lastSyncDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
-          ) : (
-            <Text style={styles.syncTime}></Text>
-          )}
-
-          {syncStatus === 'new-available' && (
-            <Text style={styles.newBadge}>🆕 {remoteCount - localCount} nuovi</Text>
-          )}
+      {/* Modal */}
+      <Modal transparent visible={modalVisible} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="sync-outline" size={48} color={theme} />
+            <Text style={styles.modalTitle}>Aggiornamento clienti</Text>
+            <ActivityIndicator size="large" color={theme} style={styles.spinner} />
+            <Text style={styles.statusText}>{syncStatusText}</Text>
+            <Text style={styles.hintText}>Non interrompere la sincronizzazione</Text>
+          </View>
         </View>
-      )} */}
+      </Modal>
 
       {noData ? (
         <View style={{ display: 'flex', flex: 1, padding: 2, alignItems: 'center' }}>
@@ -507,20 +439,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 4,
   },
-  syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  syncButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
-  },
   syncTime: {
     fontSize: 12,
     color: '#888',
@@ -560,7 +478,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  syncButtonDisabled: {
-    backgroundColor: '#555',
-  },
+syncInfoBar: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  backgroundColor: darkerBg, // "#b9b9b9ff"
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+  borderRadius: 6,
+  marginBottom: 12,
+},
+syncButton: {
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+syncButtonText: {
+  color: '#007AFF', // your `theme`
+  fontSize: 14,
+  fontWeight: '600',
+  marginLeft: 4,
+},
+syncTimeText: {
+  color: '#888', // matches SyncTab
+  fontSize: 13,
+},
+
+// --- Modal (optional: keep minimal; or reuse if you have global modal) ---
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+modalContent: {
+  width: '80%',
+  backgroundColor: '#fff',
+  borderRadius: 16,
+  padding: 20,
+  alignItems: 'center',
+},
+modalTitle: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: textColor,
+  marginTop: 12,
+  marginBottom: 16,
+},
+spinner: {
+  marginVertical: 16,
+},
+statusText: {
+  fontSize: 14,
+  textAlign: 'center',
+  color: textColor,
+  marginHorizontal: 20,
+},
+hintText: {
+  fontSize: 13,
+  color: '#888',
+  marginTop: 8,
+},
 });

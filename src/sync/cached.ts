@@ -615,9 +615,8 @@ export const cachedProductStock = async (
 export const initializeAllProductStock = async () => {
   const tableName = 'product_stock';
   try {
-    //  console.log('🚀 Starting full product stock initialization...');
 
-    // 1️⃣ Call the API
+    // 1 Call the API
     const res = await checkAllProductStock();
 
     if (!res.success || !res.data?.stock_availables) {
@@ -628,10 +627,10 @@ export const initializeAllProductStock = async () => {
     const stockList = res.data.stock_availables;
     let insertedCount = 0;
 
-    // 2️⃣ Loop through all stock items
+    // 2 Loop through all stock items
     for (const stockItem of stockList) {
       if (!stockItem?.id_product) continue; // sanity check
-
+      store.dispatch(setSyncStatusText('Stocking product ' + stockItem.id_product));
       const stockData = {
         id_product: stockItem.id_product,
         id_product_attribute: stockItem.id_product_attribute,
@@ -640,12 +639,12 @@ export const initializeAllProductStock = async () => {
         out_of_stock: stockItem.out_of_stock,
       };
 
-      // 3️⃣ Save only if not exists
+      // 3 Save only if not exists
       const inserted = await insertIfNotExists(tableName, stockData, 'id_product');
       if (inserted) insertedCount++;
     }
 
-    //  console.log(`💾 Stock initialization complete — ${insertedCount} new records saved.`);
+    //  console.log(` Stock initialization complete — ${insertedCount} new records saved.`);
     return { success: true, insertedCount };
   } catch (error: any) {
     console.error('❌ initializeAllProductStock error:', error);
@@ -1338,5 +1337,106 @@ export const upsertCustomer = async (customer: any) => {
     }
   } catch (addrErr) {
     console.warn(`⚠️ Skipping addresses for customer ${customer.id_customer}:`, addrErr.message);
+  }
+};
+
+export const getProductsCached = async (category_id: number | string | null = null) => {
+  try {
+    let whereClause = '';
+    let params: any[] = [];
+
+    if (category_id != null) {
+      whereClause = 'id_category_default = ?';
+      params = [Number(category_id)];
+    }
+
+    const rows = await queryData('category_tree_products', whereClause, params);
+    console.log('📦 SQLite: Loaded', rows.length, 'products');
+
+    return rows.map(row => {
+
+      return {
+        // Identifiers
+        id: row.id_product,
+        id_product: row.id_product,
+        id_category_default: row.id_category_default,
+        reference: row.reference || '',
+        ean13: row.ean13 || '',
+        isbn: row.isbn || '',
+        upc: row.upc || '',
+
+        // Naming & SEO
+        name: row.name || '',
+        link_rewrite: row.link_rewrite || '',
+        meta_title: row.meta_title || '',
+        meta_description: row.meta_description || '',
+        meta_keywords: row.meta_keywords || '',
+
+        // Pricing
+        price: String(row.price != null ? row.price : '0'), // API returns string
+        wholesale_price: String(row.wholesale_price || '0'),
+        unit_price: String(row.unit_price || '0'),
+        unit_price_ratio: row.unit_price_ratio || 0,
+        ecotax: String(row.ecotax || '0'),
+
+        // Stock & Availability
+        quantity: row.quantity || 0,
+        minimal_quantity: row.minimal_quantity || 1,
+        low_stock_threshold: row.low_stock_threshold || null,
+        low_stock_alert: row.low_stock_alert || 0,
+        out_of_stock: row.out_of_stock || 0, // 0=deny orders, 1=allow, 2=deactivate
+        available_for_order: String(row.available_for_order || '1'), // API: "0" or "1"
+        available_date: row.available_date || '',
+        active: String(row.active || '1'), // PrestaShop uses "0"/"1"
+
+        // Descriptions
+        description_short: row.description_short || '',
+        description: row.description || '',
+        condition: row.condition || 'new', // 'new', 'used', 'refurbished'
+
+        // Manufacturer/Supplier
+        id_manufacturer: row.id_manufacturer || 0,
+        id_supplier: row.id_supplier || 0,
+        manufacturer_name: row.manufacturer_name || '',
+        supplier_name: row.supplier_name || '',
+
+        // Visibility & Shop
+        visibility: row.visibility || 'both', // 'both', 'catalog', 'search', 'none'
+        show_price: String(row.show_price || '1'),
+        indexed: String(row.indexed || '1'),
+
+        // Images (placeholder — extend later if image sync is ready)
+        id_default_image: row.id_default_image || 0, // ⚠️ note: not in your schema! see below
+        images: [], // ← will be empty unless you sync `image` table separately
+
+        // Flags
+        on_sale: String(row.on_sale || '0'),
+        online_only: String(row.online_only || '0'),
+        customizable: String(row.customizable || '0'),
+        uploadable_files: String(row.uploadable_files || '0'),
+        text_fields: row.text_fields || 0,
+
+        // Tax
+        id_tax_rules_group: row.id_tax_rules_group || 0,
+        tax_name: row.tax_name || '',
+        rate: row.rate != null ? String(row.rate) : '0',
+
+        // Dates
+        date_add: row.date_add || '',
+        date_upd: row.date_upd || '',
+
+        // Other (safe defaults)
+        width: row.width || 0,
+        height: row.height || 0,
+        depth: row.depth || 0,
+        weight: row.weight || 0,
+        location: row.location || '',
+        pack_stock_type: row.pack_stock_type || 0,
+        product_type: row.product_type || 'simple',
+      };
+    });
+  } catch (error) {
+    console.error('❌ getProductsCached failed:', error);
+    return [];
   }
 };

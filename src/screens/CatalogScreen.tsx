@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setProducts } from '../store/slices/productsSlice';
 import { getActiveCategories, getCategoriesSubsAndProds, getProducts } from '../api/prestashop';
-import { dark, darkBg, darkerBg, darkestBg, lightdark, textColor } from '../../colors';
+import { dark, darkBg, darkerBg, darkestBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { selectIsCategoryTreeSaved, selectSavedAt, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
-import { saveCategoryTree } from '../sync/cached';
+import { initializeAllProductStock, saveCategoryTree } from '../sync/cached';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryData } from '../database/db';
 import { useNavigation } from '@react-navigation/native';
 import NetInfo from '@react-native-community/netinfo';
-import { selectIsSyncing, setSyncing } from '../store/slices/databaseStatusSlice';
+import { selectIsSyncing, selectSyncStatusText, setSyncing } from '../store/slices/databaseStatusSlice';
 
 export default function CatalogScreen({ route }: { route: any }) {
   const [categories, setCategories] = useState<any[]>([]);
@@ -19,12 +19,13 @@ export default function CatalogScreen({ route }: { route: any }) {
   const [subcategories, setSubcategories] = useState<any[]>([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
-
+  const [showModal, setShowModal] = useState(false);
   const [searchMode, setSearchMode] = useState(false);
   const [searchText, setSearchText] = useState('');
 
   const is_saved = useSelector(selectIsCategoryTreeSaved);
   const is_syncing = useSelector(selectIsSyncing);
+  const syncStatusText = useSelector(selectSyncStatusText);
   const dispatch = useDispatch();
   const navigation = useNavigation();
   let saved_at = useSelector(selectSavedAt);
@@ -44,7 +45,7 @@ export default function CatalogScreen({ route }: { route: any }) {
         const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
 
         let lastSavedTime = 0; // defaults to "never" → expired
-        
+
         if (saved_at) {
           const parsed = new Date(saved_at).getTime();
           if (!isNaN(parsed)) {
@@ -64,26 +65,28 @@ export default function CatalogScreen({ route }: { route: any }) {
           try {
             const categoriesTree = await getCategoriesSubsAndProds();
 
-          if (categoriesTree.success) {
-            dispatch(setSyncing(true));
-            await saveCategoryTree(categoriesTree.data);
+            if (categoriesTree.success) {
+              dispatch(setSyncing(true));
+              setShowModal(true);
+              await saveCategoryTree(categoriesTree.data);
 
-            //  Update cache timestamp — this is the key for next check
-            const newSavedAt = new Date().toISOString();
-            saved_at = newSavedAt;
-            dispatch(setSavedAt(newSavedAt));
+              //  Update cache timestamp — this is the key for next check
+              const newSavedAt = new Date().toISOString();
+              saved_at = newSavedAt;
+              dispatch(setSavedAt(newSavedAt));
 
-            // Update UI with fresh data
-            setCategories(categoriesTree.data);
-            setFilteredCategories(categoriesTree.data);
-          } else {
-            console.warn('⚠️ Server returned success=false for category tree');
-          }
+              // Update UI with fresh data
+              setCategories(categoriesTree.data);
+              setFilteredCategories(categoriesTree.data);
+            } else {
+              console.warn('⚠️ Server returned success=false for category tree');
+            }
           } catch (error) {
             console.log('❌ Category tree load error:', error);
-            
+
           } finally {
             dispatch(setSyncing(false));
+            setShowModal(false);
           }
         } else if (!netInfo.isConnected && isStale) {
           console.log(' Offline & category tree stale — using local cache');
@@ -94,7 +97,7 @@ export default function CatalogScreen({ route }: { route: any }) {
     };
 
     load();
-  }, [ dispatch, is_syncing]); 
+  }, [dispatch, is_syncing]);
 
   const formatTime = (isoString: string | null): string => {
     if (!isoString) return 'Mai';
@@ -106,12 +109,14 @@ export default function CatalogScreen({ route }: { route: any }) {
     return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' }); // e.g., "27/11"
   };
 
-   const syncCategoryTree = async () => {
+  const syncCategoryTree = async () => {
     try {
       dispatch(setSyncing(true));
+      setShowModal(true);
       const categoriesTree = await getCategoriesSubsAndProds();
       if (categoriesTree.success) {
         await saveCategoryTree(categoriesTree.data);
+        await initializeAllProductStock();
         const newSavedAt = new Date().toISOString();
         dispatch(setSavedAt(newSavedAt));
         setCategories(categoriesTree.data);
@@ -123,6 +128,7 @@ export default function CatalogScreen({ route }: { route: any }) {
       console.error('❌ Sync failed:', error);
     } finally {
       dispatch(setSyncing(false));
+      setShowModal(false);
     }
   };
 
@@ -230,7 +236,7 @@ export default function CatalogScreen({ route }: { route: any }) {
 
   return (
     <View style={styles.container}>
-       {/*  Sync Info Bar — only when NOT syncing */}
+      {/*  Sync Info Bar — only when NOT syncing */}
       {!is_syncing && (
         <View style={styles.syncInfoBar}>
           <TouchableOpacity
@@ -316,6 +322,24 @@ export default function CatalogScreen({ route }: { route: any }) {
       ) : (
         <Text style={styles.noDataText}>Nessun dato disponibile</Text>
       )}
+
+      {/* Sync Progress Modal — shown only during sync */}
+      <Modal
+        transparent
+        visible={showModal}
+        animationType="fade"
+        onRequestClose={() => { }} // disable close during sync
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Ionicons name="sync-outline" size={40} color={theme} />
+            <Text style={styles.modalTitle}>Aggiornamento catalogo</Text>
+            <ActivityIndicator size="large" color={theme} style={styles.spinner} />
+            <Text style={styles.statusText}>{syncStatusText}</Text>
+            <Text style={styles.hintText}>Non chiudere l’app</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -405,5 +429,48 @@ const styles = StyleSheet.create({
   syncTimeText: {
     color: '#888',
     fontSize: 13,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    // Optional shadow (iOS)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    // Android elevation
+    elevation: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: textColor,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  spinner: {
+    marginVertical: 16,
+  },
+  statusText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: textColor,
+    lineHeight: 20,
+    marginHorizontal: 16,
+  },
+  hintText: {
+    fontSize: 13,
+    color: lighterTextColor, 
+    fontStyle: 'italic',
+    marginTop: 8,
   },
 });

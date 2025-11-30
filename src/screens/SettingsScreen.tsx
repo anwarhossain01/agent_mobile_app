@@ -5,8 +5,9 @@ import { logout } from '../store/slices/authSlice';
 import { lightdark, textColor, theme } from '../../colors';
 import { getDBConnection } from '../database/db';
 import { clearDatabase } from '../sync/cached';
-import { setCustomerSyncStatus, setSyncStatusText } from '../store/slices/databaseStatusSlice';
+import { setCustomerSyncStatus, setLastCutomerSyncDate, setSyncStatusText } from '../store/slices/databaseStatusSlice';
 import { setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const dispatch = useDispatch();
@@ -16,9 +17,11 @@ export default function SettingsScreen() {
     setLoading(true);
     await clearDatabase();
     dispatch(setCustomerSyncStatus({ current_customer_length: 0, last_customer_id: 0, last_customer_page_synced: 0 }));
+    dispatch(setLastCutomerSyncDate(''));
     dispatch(setSyncStatusText(''));
     dispatch(setIsTreeSaved(false));
     dispatch(setSavedAt(''));
+    await AsyncStorage.clear();
     dispatch(logout())
     setLoading(false);
   }

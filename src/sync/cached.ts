@@ -426,7 +426,7 @@ export const cachedDataForAgentFrontPage = async (
 
     if (numero_ordinale && numero_ordinale.toString().trim() !== '') {
       whereClauses.push(`numero_ordinale LIKE ?`);
-      params.push(`%${numero_ordinale.toString().trim()}%`);
+      params.push(`${numero_ordinale.toString().trim()}`);
     }
 
     if (cap && cap.toString().trim() !== '') {
@@ -1439,4 +1439,67 @@ export const getProductsCached = async (category_id: number | string | null = nu
     console.error('❌ getProductsCached failed:', error);
     return [];
   }
+};
+
+/**
+ * Get unique cities (non-empty)
+ */
+export const getCities = async (): Promise<string[]> => {
+  const rows = await queryData(
+    'customers',
+    'city IS NOT NULL AND city != ""',
+    []
+  );
+  const cities = Array.from(new Set(rows.map(r => r.city.trim()))).filter(Boolean);
+  return cities.sort();
+};
+
+/**
+ * Get unique postcodes (CAP)
+ */
+export const getPostcodes = async (): Promise<string[]> => {
+  const rows = await queryData(
+    'customers',
+    'postcode IS NOT NULL AND postcode != ""',
+    []
+  );
+  const postcodes = Array.from(new Set(rows.map(r => r.postcode.trim()))).filter(Boolean);
+  return postcodes.sort();
+};
+
+/**
+ * Get all numero_ordinale for a given city
+ */
+export const getOrdinaliByCity = async (city: string): Promise<string[]> => {
+  const rows = await queryData(
+    'customers',
+    'city = ? AND numero_ordinale IS NOT NULL AND numero_ordinale != ""',
+    [city]
+  );
+  const ordinale = Array.from(new Set(rows.map(r => r.numero_ordinale.trim()))).filter(Boolean);
+  return ordinale.sort();
+};
+
+/**
+ * Get all numero_ordinale for a given postcode
+ */
+export const getOrdinaliByPostcode = async (postcode: string): Promise<string[]> => {
+  const rows = await queryData(
+    'customers',
+    'postcode = ? AND numero_ordinale IS NOT NULL AND numero_ordinale != ""',
+    [postcode]
+  );
+  const ordinale = Array.from(new Set(rows.map(r => r.numero_ordinale.trim()))).filter(Boolean);
+  return ordinale.sort();
+};
+
+/**
+ * Get customers by numero_ordinale (1 or more — handle duplicates)
+ */
+export const getCustomersByOrdinale = async (ordinale: string): Promise<any[]> => {
+  return await queryData(
+    'customers',
+    'numero_ordinale = ?',
+    [ordinale]
+  );
 };

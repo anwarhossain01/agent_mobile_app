@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { getDBConnection, queryData, queryDataWithPagination } from '../database/db';
-import { selectIsClassified, setCity, setClassified, setNumeroOrdinal, setPostcode } from '../store/slices/customerClassificationSlice';
+import {  selectIsClassified, selectStopLoad, setCity, setClassified, setNumeroOrdinal, setPostcode } from '../store/slices/customerClassificationSlice';
 import { setClientId } from '../store/slices/cartSlice';
 import { syncCustomersIncrementally, upsertCustomer } from '../sync/cached';
 import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, setLastCutomerSyncDate, setSyncStatusText } from '../store/slices/databaseStatusSlice';
@@ -33,6 +33,7 @@ const formatInlineDate = (dateStr: string | null): string => {
 
 export default function ClientsScreen() {
   const dispatch = useDispatch();
+
   const isSyncing = useSelector(selectIsSyncing);
   const syncStatusText = useSelector(selectSyncStatusText);
   const clients = useSelector((s: RootState) => s.clients.items);
@@ -49,6 +50,7 @@ export default function ClientsScreen() {
   const navigation = useNavigation();
   const PAGE_SIZE = 15;
   const lastSyncDate = useSelector(selectLastCustomerSyncDate);
+  const stopLoad = useSelector(selectStopLoad);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -58,13 +60,13 @@ export default function ClientsScreen() {
   }, []);
 
   const handleSync = async () => {
-    if(!employeeId) return;
+    if (!employeeId) return;
     if (isSyncing) return;
     dispatch(setSyncStatusText('Starting'));
     setModalVisible(true);
     try {
       await syncCustomersIncrementally(employeeId);
-      const nowIso = new Date().toISOString(); 
+      const nowIso = new Date().toISOString();
       dispatch(setLastCutomerSyncDate(nowIso));
     } catch (error) {
       console.error('Sync failed in UI layer:', error);
@@ -73,7 +75,7 @@ export default function ClientsScreen() {
     }
   };
 
-  const syncDisabled = !isSyncStale(lastSyncDate, 3)  && !isSyncing; // disable if synced < 3h ago
+  const syncDisabled = !isSyncStale(lastSyncDate, 3) && !isSyncing; // disable if synced < 3h ago
 
   const loadInitialData = useCallback(async () => {
     if (isConnected === null) return; // Wait for connectivity check
@@ -208,32 +210,32 @@ export default function ClientsScreen() {
 
       {/* Sync Header */}
 
-     {!isSyncing && (
-      <View style={styles.syncInfoBar}>
-        <TouchableOpacity
-          onPress={handleSync}
-          style={styles.syncButton}
-          disabled={syncDisabled}
-        >
-          <Ionicons
-            name={isSyncing ? "sync" : "sync"}
-            size={18}
-            color={syncDisabled ? '#888' : '#007AFF'}
-          />
-          <Text
-            style={[
-              styles.syncButtonText,
-              syncDisabled && { color: '#888' },
-            ]}
+      {!isSyncing && (
+        <View style={styles.syncInfoBar}>
+          <TouchableOpacity
+            onPress={handleSync}
+            style={styles.syncButton}
+            disabled={syncDisabled}
           >
-            {syncDisabled ? 'Aggiornato di recente' : 'Aggiorna ora'}
+            <Ionicons
+              name={isSyncing ? "sync" : "sync"}
+              size={18}
+              color={syncDisabled ? '#888' : '#007AFF'}
+            />
+            <Text
+              style={[
+                styles.syncButtonText,
+                syncDisabled && { color: '#888' },
+              ]}
+            >
+              {syncDisabled ? 'Aggiornato di recente' : 'Aggiorna ora'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.syncTimeText}>
+            Ultimo: {formatInlineDate(lastSyncDate)}
           </Text>
-        </TouchableOpacity>
-        <Text style={styles.syncTimeText}>
-          Ultimo: {formatInlineDate(lastSyncDate)}
-        </Text>
-      </View>
-    )}
+        </View>
+      )}
 
       {/* Modal */}
       <Modal transparent visible={modalVisible} animationType="fade">
@@ -307,6 +309,7 @@ export default function ClientsScreen() {
         onEndReached={() => {
           const loadMore = async () => {
             if (!hasMore || currentPage <= 0) return;
+            if(stopLoad) return;
 
             const nextPage = currentPage + 1;
             const offset = (nextPage - 1) * PAGE_SIZE;
@@ -478,64 +481,64 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-syncInfoBar: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  backgroundColor: darkerBg, // "#b9b9b9ff"
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-  borderRadius: 6,
-  marginBottom: 12,
-},
-syncButton: {
-  flexDirection: 'row',
-  alignItems: 'center',
-},
-syncButtonText: {
-  color: '#007AFF', // your `theme`
-  fontSize: 14,
-  fontWeight: '600',
-  marginLeft: 4,
-},
-syncTimeText: {
-  color: '#888', // matches SyncTab
-  fontSize: 13,
-},
+  syncInfoBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: darkerBg, // "#b9b9b9ff"
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  syncButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  syncButtonText: {
+    color: '#007AFF', // your `theme`
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  syncTimeText: {
+    color: '#888', // matches SyncTab
+    fontSize: 13,
+  },
 
-// --- Modal (optional: keep minimal; or reuse if you have global modal) ---
-modalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-modalContent: {
-  width: '80%',
-  backgroundColor: '#fff',
-  borderRadius: 16,
-  padding: 20,
-  alignItems: 'center',
-},
-modalTitle: {
-  fontSize: 18,
-  fontWeight: '600',
-  color: textColor,
-  marginTop: 12,
-  marginBottom: 16,
-},
-spinner: {
-  marginVertical: 16,
-},
-statusText: {
-  fontSize: 14,
-  textAlign: 'center',
-  color: textColor,
-  marginHorizontal: 20,
-},
-hintText: {
-  fontSize: 13,
-  color: '#888',
-  marginTop: 8,
-},
+  // --- Modal (optional: keep minimal; or reuse if you have global modal) ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: textColor,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  spinner: {
+    marginVertical: 16,
+  },
+  statusText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: textColor,
+    marginHorizontal: 20,
+  },
+  hintText: {
+    fontSize: 13,
+    color: '#888',
+    marginTop: 8,
+  },
 });

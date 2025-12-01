@@ -17,17 +17,19 @@ import { RootState } from '../../store';
 import { dark, lightdark } from '../../../colors';
 import { setClients } from '../../store/slices/clientsSlice';
 import { getCachedClientsForAgentFrontPage } from '../../api/prestashop';
-
+import { getOrdinaliByCity, getOrdinaliByPostcode } from '../../sync/cached';
+import { setStopLoad } from '../../store/slices/customerClassificationSlice';
 
 export const ClientHeader = ({ navigation }: { navigation: any }) => {
     const [searchMode, setSearchMode] = useState(false);
+    const [isSeachViaCity, setIsSeachViaCity] = useState(false);
+    const [isSearchViaPostcode, setIsSearchViaPostcode] = useState(false);
     const [searchText, setSearchText] = useState('');
     const [showOptions, setShowOptions] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [modalTitle, setModalTitle] = useState('');
     const [listData, setListData] = useState<[string, number][]>([]);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
 
     const [selectedFilters, setSelectedFilters] = useState<{
         city?: number | null;
@@ -55,11 +57,18 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
     const classification = useSelector((s: RootState) => s.customerClassification);
 
+    const handleSelectSearchMode = () =>{
+        setSearchMode(!searchMode);
+        dispatch(setStopLoad(true));
+    }
+
     const performSearch = debounce( async (
         query: string = searchText.trim(),
         filters = selectedFilterValues
     ) => {
         try {
+            console.log("SEARCHING WITH FILTERS: ", filters);
+            
             const data = await getCachedClientsForAgentFrontPage(
                 employeeId || 0,
                 query || '',
@@ -104,49 +113,101 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         setModalVisible(true);
     };
 
-    const applySelection = async () => {
-        if (selectedIndex === null) {
-            setModalVisible(false);
-            return;
+    const handleModalItemPress = async (index: number) => {
+    const item = listData[index];
+    if (!item) return;
+
+    const text = item[0];
+
+    // If we are showing cities, selecting one should load its ordinali
+    if (modalTitle === 'Città') {
+        try {
+            setSelectedIndex(index);
+            const ords = await getOrdinaliByCity(text); // returns string[]
+            setSelectedFilterValues(s => ({ ...s, city: text, cap: null }));
+            setListData(ords.map(v => [v, 0]));
+            setModalTitle('Ordinale');
+            setIsSeachViaCity(true); // searching ordinale through city
+            setSelectedIndex(null);
+        } catch (e) {
+            console.log('failed loading ordinali for city', e);
         }
+        return;
+    }
+
+    if (modalTitle === 'CAP') {
+        try {
+            setSelectedIndex(index);
+            const ords = await getOrdinaliByPostcode(text);
+            setSelectedFilterValues(s => ({ ...s, cap: text, city: null }));
+            setListData(ords.map(v => [v, 0]));
+            setModalTitle('Ordinale');
+            setIsSearchViaPostcode(true); // searching ordinale through postcode
+            setSelectedIndex(null);
+        } catch (e) {
+            console.log('failed loading ordinali for cap', e);
+        }
+        return;
+    }
+
+    if(modalTitle === 'Ordinale') {
+        setSelectedIndex(index);
+        setSelectedFilterValues(s => ({ ...s, ordinale: text }));
+        return;
+    }
+
+    // Default: selecting an item (ordinale or normal list) just selects it
+    setSelectedIndex(index);
+};
+
+    const applySelection = async () => {
+         if (selectedIndex === null) {
+             setModalVisible(false);
+             return;
+         }
 
         const selectedItem = listData[selectedIndex];
         if (!selectedItem) {
             setModalVisible(false);
-            return;
-        }
-        const selectedText = selectedItem[0];
+         return;
+         }
+          const selectedText = selectedItem[0];
 
-        let updatedFilters = { ...selectedFilterValues };
-        console.log("selectedText", selectedText);
+         let updatedFilters = { ...selectedFilterValues };
+    //      console.log("selectedText", selectedText);
         
-        if (modalTitle === 'Città') {
-            setSelectedFilters((s) => ({ ...s, city: selectedIndex }));
-            updatedFilters.city = selectedText;
-        } else if (modalTitle === 'CAP') {
-            setSelectedFilters((s) => ({ ...s, cap: selectedIndex }));
-            updatedFilters.cap = selectedText;
-        } else if (modalTitle === 'Ordinale') {
-            setSelectedFilters((s) => ({ ...s, ordinale: selectedIndex }));
+        // if (modalTitle === 'Città') {
+        //     setSelectedFilters((s) => ({ ...s, city: selectedIndex }));
+        //     updatedFilters.city = selectedText;
+        // } else if (modalTitle === 'CAP') {
+        //     setSelectedFilters((s) => ({ ...s, cap: selectedIndex }));
+        //     updatedFilters.cap = selectedText;
+        if (!isSeachViaCity && !isSearchViaPostcode) {
+            setSelectedFilters((s) => ({ ...s, city: null, ordinale: null }));
             updatedFilters.ordinale = selectedText;
+            updatedFilters.city = null;
+            updatedFilters.cap = null;
         }
 
         setSelectedFilterValues(updatedFilters);
         setModalVisible(false);
-
-        await performSearch(searchText.trim(), updatedFilters);
+        setIsSeachViaCity(false);
+        setIsSearchViaPostcode(false);
+        await performSearch(searchText.trim(), selectedFilterValues);
     };
 
     const cancelSelection = async () => {
         let updatedFilters = { ...selectedFilterValues };
 
-        if (modalTitle === 'Città') {
-            setSelectedFilters((s) => ({ ...s, city: null }));
+        if (isSeachViaCity) {
+            setSelectedFilters((s) => ({ ...s, city: null, ordinale: null }));
             updatedFilters.city = null;
-        } else if (modalTitle === 'CAP') {
-            setSelectedFilters((s) => ({ ...s, cap: null }));
+            updatedFilters.ordinale = null;
+        } else if (isSearchViaPostcode) {
+            setSelectedFilters((s) => ({ ...s, cap: null, ordinale: null }));
             updatedFilters.cap = null;
-        } else if (modalTitle === 'Ordinale') {
+            updatedFilters.ordinale = null;
+        } else if (!isSeachViaCity && !isSearchViaPostcode) {
             setSelectedFilters((s) => ({ ...s, ordinale: null }));
             updatedFilters.ordinale = null;
         }
@@ -154,6 +215,8 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         setSelectedFilterValues(updatedFilters);
         setSelectedIndex(null);
         setModalVisible(false);
+        setIsSeachViaCity(false);
+        setIsSearchViaPostcode(false);
 
         await performSearch(searchText.trim(), updatedFilters);
     };
@@ -165,10 +228,11 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
     const showOptionsPanel = () => {
         setShowOptions(!showOptions);
-
+        dispatch(setStopLoad(true));
         if (showOptions) {
             setSearchText('');
             performSearch('', {});
+            dispatch(setStopLoad(false));
         }  
     }
 
@@ -186,7 +250,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                         <Text style={styles.title}>Clienti</Text>
 
                         <View style={styles.iconRow}>
-                            <TouchableOpacity onPress={() => setSearchMode(true)} style={styles.iconButton}>
+                            <TouchableOpacity onPress={handleSelectSearchMode} style={styles.iconButton}>
                                 <Ionicons name="search" size={22} color="black" />
                             </TouchableOpacity>
 
@@ -205,6 +269,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                                 setSearchMode(false);
                                 performSearch('', {});
                                 setSearchText('');
+                                dispatch(setStopLoad(false));
                             }}
                             style={styles.backButton}
                         >
@@ -268,7 +333,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                                 const isSelected = selectedIndex === index;
                                 return (
                                     <TouchableOpacity
-                                        onPress={() => setSelectedIndex(index)}
+                                        onPress={() => handleModalItemPress(index)}
                                         style={[
                                             styles.modalItemRow,
                                             isSelected && styles.modalItemSelected,
@@ -280,8 +345,10 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                                                 isSelected && styles.modalItemTextSelected,
                                             ]}
                                         >
-                                            {item[0]} ({item[1]})
+                                            {item[0]} 
                                         </Text>
+                                        {modalTitle !== 'Ordinale' &&  <Ionicons name="chevron-forward" size={18} color="#000" />}
+                                       
                                     </TouchableOpacity>
                                 );
                             }}
@@ -354,6 +421,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
         borderRadius: 6,
+        flexDirection: 'row',
     },
     modalItemText: { fontSize: 14, color: 'black' },
     modalItemCount: { fontSize: 14, color: '#666' },

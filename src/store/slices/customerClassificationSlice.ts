@@ -1,8 +1,10 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
+
 type namedTuple = [string, number];
 
 type CustomerClassificationState = {
     is_classified?: boolean | null;
+    stop_load: boolean;
     postcode?: Array<namedTuple> | null;
     numero_ordinale?: Array<namedTuple> | null;
     city?: Array<namedTuple> | null;
@@ -10,6 +12,7 @@ type CustomerClassificationState = {
 
 const initialState: CustomerClassificationState = {
     is_classified: false,
+    stop_load: false,
     postcode: [],
     numero_ordinale: [],
     city: [],
@@ -19,6 +22,9 @@ const customerClassificationSlice = createSlice({
     name: 'customerClassificationSlice',
     initialState,
     reducers: {
+        setStopLoad(state, action: PayloadAction<boolean>) {
+            state.stop_load = action.payload;
+        },
         setClassified(state, action: PayloadAction<boolean | null>) {
             state.is_classified = action.payload;
         },
@@ -39,14 +45,14 @@ const customerClassificationSlice = createSlice({
 
 export const {
     setClassified,
+    setStopLoad,
     setPostcode,
     setNumeroOrdinal,
     setCity,
     clearState } = customerClassificationSlice.actions;
 
 export const selectCustomerClasses = (state: CustomerClassificationState) => state;
-export const selectCity = (state: CustomerClassificationState) => state.city;
-export const selectPostcode = (state: CustomerClassificationState) => state.postcode;
-export const selectNumeroOrdinal = (state: CustomerClassificationState) => state.numero_ordinale;
 export const selectIsClassified = (state: CustomerClassificationState) => state.is_classified;
+export const selectStopLoad = (state: CustomerClassificationState) => state.stop_load;
+
 export default customerClassificationSlice.reducer;

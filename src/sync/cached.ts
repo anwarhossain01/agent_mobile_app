@@ -479,12 +479,12 @@ export const cachedDataForProducts = async (
   tableName: string,
   apiCall: () => Promise<any>,
   search: string,
-  idColumn: string = 'id'
+  idColumn: string = 'id_product'
 ) => {
   try {
     //  console.log(` Cached API call for ${tableName}...`);
 
-    // 1️⃣ Try local DB
+    // 1 Try local DB
     const localData = await queryData(tableName, `name LIKE ?`, [`%${search}%`]);
 
     if (localData.length > 0) {
@@ -492,12 +492,12 @@ export const cachedDataForProducts = async (
       return { success: true, data: { products: localData }, fromCache: true };
     }
 
-    // 2️⃣ Not found locally → call API
+    // 2 Not found locally → call API
     // console.log(`🌐 Products not found locally, calling API...`);
     const res = await apiCall();
     const apiProducts = res.data?.products || [];
 
-    // 3️⃣ Save all product data to SQLite
+    // 3 Save all product data to SQLite
     if (apiProducts.length > 0) {
       for (const p of apiProducts) {
         const productData = {
@@ -1340,15 +1340,27 @@ export const upsertCustomer = async (customer: any) => {
   }
 };
 
-export const getProductsCached = async (category_id: number | string | null = null) => {
+export const getProductsCached = async (
+  category_id: number | string | null = null,
+  search: string = "",
+) => {
   try {
     let whereClause = '';
     let params: any[] = [];
 
+    const conditions: string[] = [];
+
     if (category_id != null) {
-      whereClause = 'id_category_default = ?';
-      params = [Number(category_id)];
+      conditions.push('id_category_default = ?');
+      params.push(Number(category_id));
     }
+
+    if (search.trim() !== '') {
+      conditions.push('name LIKE ?');
+      params.push(`%${search.trim()}%`);
+    }
+
+    whereClause = conditions.join(' AND ');
 
     const rows = await queryData('category_tree_products', whereClause, params);
     console.log('📦 SQLite: Loaded', rows.length, 'products');

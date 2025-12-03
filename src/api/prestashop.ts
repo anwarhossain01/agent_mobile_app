@@ -276,7 +276,7 @@ export const getCachedProducts = async (search: string) => {
       )}]%&display=[id,name,id_default_image,price,minimal_quantity,id_category_default]&output_format=JSON&ws_key=${API_KEY}`
     );
 
-  return cachedDataForProducts('products', apiCall, search);
+  return cachedDataForProducts('category_tree_products', apiCall, search);
 };
 
 export const checkProductStock = async (product_id: string | number) => {

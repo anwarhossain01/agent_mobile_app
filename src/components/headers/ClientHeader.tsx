@@ -128,6 +128,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
             setListData(ords.map(v => [v, 0]));
             setModalTitle('Ordinale');
             setIsSeachViaCity(true); // searching ordinale through city
+            setIsSearchViaPostcode(false);
             setSelectedIndex(null);
         } catch (e) {
             console.log('failed loading ordinali for city', e);
@@ -143,6 +144,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
             setListData(ords.map(v => [v, 0]));
             setModalTitle('Ordinale');
             setIsSearchViaPostcode(true); // searching ordinale through postcode
+            setIsSeachViaCity(false);
             setSelectedIndex(null);
         } catch (e) {
             console.log('failed loading ordinali for cap', e);
@@ -183,17 +185,20 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         //     setSelectedFilters((s) => ({ ...s, cap: selectedIndex }));
         //     updatedFilters.cap = selectedText;
         if (!isSeachViaCity && !isSearchViaPostcode) {
-            setSelectedFilters((s) => ({ ...s, city: null, ordinale: null }));
+          //  console.log("Only ordinale search initiated");
+            
+            setSelectedFilters((s) => ({ ...s, city: null, cap: null }));
             updatedFilters.ordinale = selectedText;
             updatedFilters.city = null;
             updatedFilters.cap = null;
+            
         }
 
-        setSelectedFilterValues(updatedFilters);
+        setSelectedFilterValues(updatedFilters);        
         setModalVisible(false);
         setIsSeachViaCity(false);
         setIsSearchViaPostcode(false);
-        await performSearch(searchText.trim(), selectedFilterValues);
+        await performSearch(searchText.trim(), updatedFilters);
     };
 
     const cancelSelection = async () => {

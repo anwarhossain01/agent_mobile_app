@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../store';
 import NetInfo from '@react-native-community/netinfo';
 import { dark, darkBg, textColor } from '../../colors';
+import { getProductsCached } from '../sync/cached';
 
 const NewOrderScreen = ({ route }) => {
     const [query, setQuery] = useState('');
@@ -190,16 +191,16 @@ const NewOrderScreen = ({ route }) => {
         //  if(state.isConnected){
         //     res = await getProductSearchResult(searchText);
         //  } else {
-        res = await getCachedProducts(searchText);
+        res = await getProductsCached(null, searchText);
        //  }
-        // console.log("prods", res.data);
+        // console.log("prods", res);
 
         setProductLoading(false);
 
         //   const prod_stock =  await checkProductStock(res.data.products[0].id);
         //   console.log('Product stock result', prod_stock.data);
 
-        if (res.success && res.data?.products) setProductResults(res.data.products);
+        if (res) setProductResults(res);
         else setProductResults([]);
     };
 
@@ -218,10 +219,13 @@ const NewOrderScreen = ({ route }) => {
         let stockRes = null;
         let state = await NetInfo.fetch();
         if (state.isConnected) {
-            stockRes = await checkProductStock(item.id);
+            stockRes = await checkProductStock(item.id_product);
         } else {
-            stockRes = await getCachedProductStock(item.id);
+            stockRes = await getCachedProductStock(item.id_product);
         }
+
+     //   console.log("stockRes", stockRes, item);
+        
 
         const stockData = stockRes.data?.stock_availables?.[0];
 
@@ -229,7 +233,7 @@ const NewOrderScreen = ({ route }) => {
             Alert.alert('Prodotto non disponibile in magazzino');
             return;
         }
-        console.log(stockData);
+//        console.log(stockData);
         
         if (stockData?.depends_on_stock === "1") {
             const availableStock = parseInt(stockData.quantity) || 0;
@@ -450,7 +454,7 @@ const NewOrderScreen = ({ route }) => {
                 <View style={styles.dropdown}>
                     <FlatList
                         data={productResults}
-                        keyExtractor={(item) => (item.id).toString()}
+                        keyExtractor={(item) => (item.id_product).toString()}
                         renderItem={({ item }) => (
                             <TouchableOpacity onPress={() => handleSelectProduct(item)} style={styles.dropdownItem}>
                                 <Text style={styles.dropdownText}>

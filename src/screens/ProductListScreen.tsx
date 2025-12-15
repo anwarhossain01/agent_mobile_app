@@ -40,6 +40,8 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         }else{
            data = await getProducts(subcategoryId || null);
         }
+        console.log('product data', data);
+        
         dispatch(setProducts(data));
       } catch (e) {
         console.log('products load err', e);
@@ -75,7 +77,7 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         ToastAndroid.show(result.reason, ToastAndroid.SHORT);
         return;
       }
-
+      
       dispatch(addItem(result.data));
       setAdded(prev => ({ ...prev, [item.id]: true }));
 
@@ -106,7 +108,6 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
   );
 
   const handleProductClick = (item: any) => {
-    console.log('item', item);
 
     navigation.navigate('ProductDetails', { product: item });
   };
@@ -141,10 +142,10 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
           </TouchableOpacity>
 
           <ProductInformation label="Price" value={item.price} prefix="€" />
-          <ProductInformation
+         <ProductInformation
             label="Category IDs"
-            value={item.associations?.categories?.map((c: any) => c.id).join(', ')}
-          />
+            value={item.id_category_default}//{item.associations?.categories?.map((c: any) => c.id).join(', ')}
+          /> 
         </View>
 
         {/* Floating Add-to-Cart button (bottom-right corner of card) */}

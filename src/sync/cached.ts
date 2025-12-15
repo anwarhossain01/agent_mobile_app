@@ -1046,6 +1046,7 @@ export const verifyProductStock = async (product: any) => {
           price: parseFloat(product.price || 0),
           name: product.name,
           product_id: product.id,
+          accisa: product.accisa || 0
         },
       };
     }
@@ -1059,6 +1060,7 @@ export const verifyProductStock = async (product: any) => {
         price: parseFloat(product.price || 0),
         name: product.name,
         product_id: product.id,
+        accisa: product.accisa || 0
       },
     };
   } catch (err) {
@@ -1418,7 +1420,7 @@ export const getProductsCached = async (
         indexed: String(row.indexed || '1'),
 
         // Images (placeholder — extend later if image sync is ready)
-        id_default_image: row.id_default_image || 0, // ⚠️ note: not in your schema! see below
+        id_default_image: row.id_default_image || 0, 
         images: [], // ← will be empty unless you sync `image` table separately
 
         // Flags
@@ -1432,6 +1434,7 @@ export const getProductsCached = async (
         id_tax_rules_group: row.id_tax_rules_group || 0,
         tax_name: row.tax_name || '',
         rate: row.rate != null ? String(row.rate) : '0',
+        accisa: row.accisa != null ? parseFloat(row.accisa) : 0,
 
         // Dates
         date_add: row.date_add || '',

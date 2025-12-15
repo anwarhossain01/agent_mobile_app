@@ -140,6 +140,11 @@ const NewOrderScreen = ({ route }) => {
     //     dispatch(setCartId({ id_cart: cart.id }));
     // };
 
+     const calculateTax = ( price : number) =>{
+    const TAX_RATE = 0.22;     
+    return ( price + (price * TAX_RATE));
+  }
+
     // ===== Debounce =====
     const debounce = (func: (...args: any[]) => void, delay = 600) => {
         let timer: ReturnType<typeof setTimeout>;
@@ -192,6 +197,7 @@ const NewOrderScreen = ({ route }) => {
         //     res = await getProductSearchResult(searchText);
         //  } else {
         res = await getProductsCached(null, searchText);
+        
        //  }
         // console.log("prods", res);
 
@@ -246,12 +252,15 @@ const NewOrderScreen = ({ route }) => {
             const price = parseFloat(item.price || 0);
             const quantity = parseInt(item.minimal_quantity) || 0;
 
+           // console.log("item, ", item);
+            
             dispatch(addItem({
                 product_id: item.id,
                 name: item.name,
                 quantity: quantity,
                 max_quantity: availableStock,
                 price: price,
+                accisa: parseFloat(item.accisa || 0)
             }));
             setQuantityInputs(prev => {
                 const newInputs = { ...prev };
@@ -272,13 +281,18 @@ const NewOrderScreen = ({ route }) => {
                 quantity: quantity,
                 max_quantity: stockData.quantity != 0 ? stockData.quantity : null,
                 price: parseFloat(item.price || 0),
+                accisa: parseFloat(item.accisa || 0)
             }));
+
+          //  console.log("Item, ", item.accisa);
+            
             setQuantityInputs(prev => {
                 const newInputs = { ...prev };
                 newInputs[item.id] = String(quantity);
                 return newInputs;
             });
         }
+        
     };
 
     const handleQuantityChange = (product_id: string | number, newQty: string, max_quantity: number | null) => {
@@ -489,8 +503,8 @@ const NewOrderScreen = ({ route }) => {
                                     onChangeText={(val) => handleQuantityChange(item.product_id, val, item.max_quantity)}
 
                                 />
-                                <Text style={styles.cartText}>€{item.price.toFixed(2)}</Text>
-                                <Text style={styles.cartText}>€{item.total.toFixed(2)}</Text>
+                                <Text style={styles.cartText}>€{calculateTax(item.price).toFixed(2)}</Text>
+                                <Text style={styles.cartText}>€{calculateTax(item.total).toFixed(2)}</Text>
                                 <TouchableOpacity onPress={() => handleRemoveProduct(item.product_id)}>
                                     <Ionicons name="close-circle" size={22} color="#f44" />
                                 </TouchableOpacity>
@@ -500,7 +514,7 @@ const NewOrderScreen = ({ route }) => {
                         {/* Total Row */}
                         <View style={styles.totalRow}>
                             <Text style={styles.totalText}>Totale:</Text>
-                            <Text style={styles.totalValue}>€{grandTotal.toFixed(2)}</Text>
+                            <Text style={styles.totalValue}>€{calculateTax(grandTotal).toFixed(2)}</Text>
                         </View>
                     </View>
                 )}

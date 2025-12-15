@@ -7,6 +7,7 @@ interface CartItem {
   max_quantity: number | null;
   price: number;
   total: number;
+  accisa: number;
 }
 
 interface CartState {
@@ -67,13 +68,13 @@ const cartSlice = createSlice({
     
     // Add item to cart
     addItem: (state, action: PayloadAction<Omit<CartItem, 'total'>>) => {
-      const { product_id, quantity, max_quantity, price, name } = action.payload;
+      const { product_id, quantity, max_quantity, price, name , accisa} = action.payload;
       const existingItem = state.items.find(item => item.product_id === product_id);
       
       if (existingItem) {
         // Update existing item
         existingItem.quantity += quantity;
-        existingItem.total = existingItem.quantity * existingItem.price;
+        existingItem.total = existingItem.quantity * (existingItem.price);
       } else {
         // Add new item
         state.items.push({
@@ -82,12 +83,13 @@ const cartSlice = createSlice({
           quantity,
           max_quantity,
           price,
-          total: quantity * price,
+          total: quantity * (price ),
+          accisa: accisa
         });
       }
       
       // Recalculate total price
-      state.totalPrice = state.items.reduce((total, item) => total + item.total, 0);
+      state.totalPrice = state.items.reduce((total, item) => total + (item.total ), 0);
     },
     
     // Update item quantity
@@ -97,10 +99,10 @@ const cartSlice = createSlice({
       
       if (item) {
         item.quantity = quantity;
-        item.total = item.quantity * item.price;
+        item.total = item.quantity * (item.price);
         
         // Recalculate total price
-        state.totalPrice = state.items.reduce((total, item) => total + item.total, 0);
+        state.totalPrice = state.items.reduce((total, item) => total + (item.total), 0);
       }
     },
     
@@ -110,7 +112,7 @@ const cartSlice = createSlice({
       state.items = state.items.filter(item => item.product_id !== product_id);
       
       // Recalculate total price
-      state.totalPrice = state.items.reduce((total, item) => total + item.total, 0);
+      state.totalPrice = state.items.reduce((total, item) => total + (item.total), 0);
     },
     
     // Clear entire cart

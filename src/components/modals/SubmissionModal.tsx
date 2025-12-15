@@ -43,10 +43,10 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
     useEffect(() => {
         if (showSubmissionModal) {
-          //  handleCreateOrder();
-          //handleCacheOrder();
-          handleOrderCreationByNetwork();
-        //console.log("ORDER TOTALS.....", calculateOrderTotals());
+            //  handleCreateOrder();
+            //handleCacheOrder();
+            handleOrderCreationByNetwork();
+            //console.log("ORDER TOTALS.....", calculateOrderTotals());
         }
     }, [showSubmissionModal]);
 
@@ -57,7 +57,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
         // Product totals
         const total_products = totalProducts; // Without tax
         const product_tax = total_products * TAX_RATE;
-        const total_products_wt = total_products + product_tax; // With tax
+        const total_products_wt = (total_products + product_tax) + allAccisaAdder(); // With tax
 
         // Shipping (assuming shipping is tax-free or tax included)
         const total_shipping_tax_excl = shippingPriceExc;
@@ -78,8 +78,16 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
         };
     };
 
+    const allAccisaAdder = () => {
+        let adder = 0;
+        for (let i = 0; i < cart.length; i++) {
+            adder += cart[i].accisa * cart[i].quantity;
+        }
+        return adder
+    }
+
     async function handleCacheOrder() {
-        
+
         if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
             setError('Missing required information: client, addresses, or carrier');
             console.log(client_id, delivery_address_id, invoice_address_id, carrier_id);
@@ -118,7 +126,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
                 if (cartRes.success && cartRes.data?.cart?.id) {
                     console.log("cartRes after insertion", cartRes);
-                    
+
                     currentCartId = cartRes.data.cart.id.toString();
                     dispatch(setCartId(currentCartId));
                     setStatus('Cart cached locally!');
@@ -128,11 +136,11 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             } else {
                 setStatus('Using existing local cart...');
             }
-            
+
             // 2 Calculate order totals
             setStatus('Calculating order totals...');
             const totals = calculateOrderTotals();
-            
+
             // 3 Cache the order
             setStatus('Caching order locally...');
 
@@ -298,10 +306,10 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
     const handleOrderCreationByNetwork = async () => {
         let state = await NetInfo.fetch();
-        if(state.isConnected){
+        if (state.isConnected) {
             await handleCreateOrder();
         }
-        else{
+        else {
             await handleCacheOrder();
         }
     }

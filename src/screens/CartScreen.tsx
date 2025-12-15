@@ -124,6 +124,14 @@ const CartScreen = () => {
     fetchClientById();
   }, [client_id, addresses.length]);
 
+  const allAccisaAdder = () =>{
+    let adder = 0;
+    for (let i = 0; i < cart.length; i++) {
+      adder += cart[i].accisa * cart[i].quantity;
+    }
+    return adder
+  }
+
   const handleSelectDeliveryAddress = (address: any) => {
     dispatch(setDeliveryAddressId(address.id.toString()));
     setShowDeliveryDropdown(false);
@@ -159,13 +167,18 @@ const CartScreen = () => {
 
   // Calculate total with shipping
   const calculateTotalWithShipping = () => {
-    if (freeDelivery) return grandTotal;
-    const TAX_RATE = 0.22; 
+    if (freeDelivery) return calculateTax(grandTotal);
+    const TAX_RATE = 0.22;
     const paidDelivery = deliveries.find((d: any) => parseFloat(d.price) > 0);
     let shippingPrice = paidDelivery ? parseFloat(paidDelivery.price) : 0;
-    shippingPrice += ( shippingPrice * TAX_RATE);    
-    return grandTotal + shippingPrice;
+    shippingPrice += (shippingPrice * TAX_RATE);
+    return calculateTax(grandTotal) + shippingPrice;
   };
+
+  const calculateTax = (price: number) => {
+    const TAX_RATE = 0.22;
+    return (price + (price * TAX_RATE));
+  }
 
   const handleCreateAddress = async () => {
     if (!client_id) {
@@ -237,12 +250,17 @@ const CartScreen = () => {
     <View style={styles.cartItem}>
       <View style={styles.itemHeader}>
         <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.itemTotal}>€{item.total.toFixed(2)}</Text>
+        <Text style={styles.itemTotal}>€{(calculateTax(item.total) + parseFloat(item.accisa * item.quantity)).toFixed(2)}</Text>
       </View>
       <View style={styles.itemDetails}>
         <Text style={styles.detailText}>Quantità: {item.quantity}</Text>
-        <Text style={styles.detailText}>Prezzo: €{item.price.toFixed(2)}</Text>
+        <Text style={styles.detailText}>Prezzo (Tasse incluse): €{calculateTax(item.price).toFixed(2)}</Text>
       </View>
+      {item.accisa != 0 &&
+        <View style={[styles.itemDetails, { flexDirection: 'row-reverse' }]}>
+          <Text style={styles.detailText}>Accisa: €{parseFloat(item.accisa).toFixed(2)}</Text>
+        </View>
+      }
     </View>
   );
 
@@ -306,7 +324,7 @@ const CartScreen = () => {
             } else {
               deliveryRes = await getCachedDeliveries(carrierData.id);
             }
-         //   console.log('deliveryRes', deliveryRes);
+            //   console.log('deliveryRes', deliveryRes);
 
             if (deliveryRes.success && deliveryRes.data?.deliveries) {
               setDeliveries(deliveryRes.data.deliveries);
@@ -320,7 +338,7 @@ const CartScreen = () => {
       };
 
       const checkDeliveryApplicable = async () => {
-        if(grandTotal > 200){
+        if (grandTotal > 200) {
           setFreeDelivery(true);
         }
       }
@@ -659,10 +677,9 @@ const CartScreen = () => {
               keyExtractor={(item) => item.product_id.toString()}
               scrollEnabled={false}
             />
-
             <View style={styles.grandTotal}>
-              <Text style={styles.grandTotalText}>Totale Ordine:</Text>
-              <Text style={styles.grandTotalAmount}>€{calculateTotalWithShipping().toFixed(2)}</Text>
+              <Text style={styles.grandTotalText}>Totale Ordine (inc tasse):</Text>
+              <Text style={styles.grandTotalAmount}>€{(calculateTotalWithShipping() + allAccisaAdder()) .toFixed(2)}</Text>
             </View>
           </>
         )}
@@ -1055,7 +1072,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     backgroundColor: darkerBg,
     borderBottomColor: '#c7c7c7ff',
-    
+
   },
   shippingOptionText: {
     color: textColor,

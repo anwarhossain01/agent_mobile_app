@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, FlatList, Image, TouchableOpacity, ToastAndroid, TextInput } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, FlatList, Image, TouchableOpacity, ToastAndroid, TextInput, Keyboard } from 'react-native';
 import { dark, darkBg, darkerTheme, textColor, theme } from '../../colors';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
@@ -9,9 +9,108 @@ import { setProducts } from '../store/slices/productsSlice';
 import { useNavigation } from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { getProductsCached, verifyProductStock } from '../sync/cached';
+import { getCategoryOrSubCategoryName, getProductsCached, verifyProductStock } from '../sync/cached';
 import { addItem } from '../store/slices/cartSlice';
 import NetInfo from '@react-native-community/netinfo';
+// --- Move this OUTSIDE ProductListScreen ---
+import { memo } from 'react';
+
+const fetchProductImage = (productId: number, imageId: number): string =>
+  `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;
+
+const ProductInformation = (props: { label: string; value: string; prefix?: string }) => (
+  <View style={{ flexDirection: 'row' }}>
+    <Text style={{ color: textColor, fontSize: 15 }}>{props.label} </Text>
+    <Text style={{ color: textColor, fontSize: 15, fontWeight: 'bold' }}>
+      {props.value} {props.prefix}
+    </Text>
+  </View>
+);
+
+const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingItems, textColor, darkerTheme }: {
+  item: any;
+  onProductClick: (item: any) => void;
+  onAddToCart: (item: any) => void;
+  added: Record<number, boolean>;
+  loadingItems: Record<number, boolean>;
+  textColor: string;
+  darkerTheme: string;
+}) => {
+  const [categoryName, setCategoryName] = useState<string>('...');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCategoryName = async () => {
+      if (item?.id_category_default == null) {
+        isMounted && setCategoryName('None');
+        return;
+      }
+
+      try {
+        const result = await getCategoryOrSubCategoryName(item.id_category_default);
+        if (isMounted) {
+          setCategoryName(result.length > 0 ? result[0].name || 'Unnamed' : 'None');
+        }
+      } catch (error) {
+        console.error('Category load error:', error);
+        if (isMounted) setCategoryName('Error');
+      }
+    };
+
+    loadCategoryName();
+
+    return () => { isMounted = false; };
+  }, [item.id_category_default]); // Only re-run if category ID changes
+
+  return (
+    <View style={styles.productsBox}>
+      <Image
+        style={styles.productImage}
+        source={{ uri: fetchProductImage(item.id, item.id_default_image) }}
+      />
+      <View style={{ flex: 1, marginLeft: 16 }}>
+        <TouchableOpacity onPress={() => onProductClick(item)}>
+          <Text
+            style={{
+              color: textColor,
+              fontSize: 16,
+              fontWeight: 'bold',
+              marginBottom: 10,
+              textDecorationLine: 'underline',
+            }}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {item.name || 'No name'}
+          </Text>
+        </TouchableOpacity>
+
+        <ProductInformation label="Price" value={parseFloat(item.price).toFixed(2)} prefix="€" />
+        <ProductInformation label="Category" value={categoryName} />
+      </View>
+
+      <TouchableOpacity
+        onPress={() => onAddToCart(item)}
+        style={[
+          styles.addToCartButton,
+          { backgroundColor: added[item.id] ? 'green' : darkerTheme },
+        ]}
+        disabled={loadingItems[item.id]}
+      >
+        {loadingItems[item.id] ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <FontAwesome
+            name={added[item.id] ? 'check' : 'cart-plus'}
+            size={22}
+            color="#fff"
+          />
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 const ProductListScreen = ({ route, navigation }: { route: any; navigation: any }) => {
   const { subcategoryId, subcategoryName } = route.params || {};
@@ -37,11 +136,11 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         let isOnline = netInfo.isConnected && netInfo.isInternetReachable !== false;
         if (!isOnline) {
           data = await getProductsCached(subcategoryId || null);
-        }else{
-           data = await getProducts(subcategoryId || null);
+        } else {
+          data = await getProducts(subcategoryId || null);
         }
-        console.log('product data', data);
-        
+        //  console.log('product data', data);
+
         dispatch(setProducts(data));
       } catch (e) {
         console.log('products load err', e);
@@ -51,19 +150,23 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     load();
   }, [dispatch, subcategoryId]);
 
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = async () => {
     const text = searchText.trim().toLowerCase();
 
     if (!text) {
       setFilteredProducts(products);
       return;
     }
+    //console.log("Current products, ", products);
 
-    const result = products.filter((p) =>
-      p.name?.toLowerCase().includes(text)
-    );
+    // const result = products.filter((p) =>
+    //   p.name?.toLowerCase().includes(text)
+    // );
+    let results = await getProductsCached(null, text);
+    //console.log("search results. ", results);
 
-    setFilteredProducts(result);
+    setFilteredProducts(results);
+    Keyboard.dismiss();
   };
 
   const handleAddToCart = async (item: any) => {
@@ -77,7 +180,7 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         ToastAndroid.show(result.reason, ToastAndroid.SHORT);
         return;
       }
-      
+
       dispatch(addItem(result.data));
       setAdded(prev => ({ ...prev, [item.id]: true }));
 
@@ -95,81 +198,92 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     }
   };
 
-  const fetchProductImage = (productId: number, imageId: number): string =>
-    `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;
-
-  const ProductInformation = (props: { label: string; value: string; prefix?: string }) => (
-    <View style={{ flexDirection: 'row' }}>
-      <Text style={{ color: textColor, fontSize: 15 }}>{props.label}: </Text>
-      <Text style={{ color: textColor, fontSize: 15, fontWeight: 'bold' }}>
-        {props.value} {props.prefix}
-      </Text>
-    </View>
-  );
 
   const handleProductClick = (item: any) => {
 
     navigation.navigate('ProductDetails', { product: item });
   };
 
-  const ProductsList = (item: any) => {
-    if (item) item = item.item;
-    return (
-      <View style={styles.productsBox}>
-        {/* Product Image */}
-        <Image
-          style={styles.productImage}
-          source={{ uri: fetchProductImage(item.id, item.id_default_image) }}
-        />
+  // const ProductsList = ({ item: rawItem }: { item: any }) => {
+  //   const item = rawItem.item ? rawItem.item : rawItem;
 
-        {/* Product Info */}
-        <View style={{ flex: 1, marginLeft: 16 }}>
+  //   const [categoryName, setCategoryName] = useState<string>('Loading...');
 
-          <TouchableOpacity onPress={() => handleProductClick(item)}>
-            <Text
-              style={{
-                color: textColor,
-                fontSize: 16,
-                fontWeight: 'bold',
-                marginBottom: 10,
-                textDecorationLine: 'underline',
-              }}
-              numberOfLines={2}
-              ellipsizeMode="tail"
-            >
-              {item.name || 'No name'}
-            </Text>
-          </TouchableOpacity>
+  //   useEffect(() => {
+  //     const loadCategoryName = async () => {
+  //       try {
+  //         const result = await getCategoryOrSubCategoryName(item.id_category_default);
+  //         if (result.length > 0) {
+  //           setCategoryName(result[0].name || 'Unnamed');
+  //         } else {
+  //           setCategoryName('');
+  //         }
+  //       } catch (error) {
+  //         console.error('Failed to load category name:', error);
+  //         setCategoryName('Error');
+  //       }
+  //     };
 
-          <ProductInformation label="Price" value={item.price} prefix="€" />
-         <ProductInformation
-            label="Category IDs"
-            value={item.id_category_default}//{item.associations?.categories?.map((c: any) => c.id).join(', ')}
-          /> 
-        </View>
+  //     if (item?.id_category_default != null) {
+  //       loadCategoryName();
+  //     } else {
+  //       setCategoryName('None');
+  //     }
+  //   }, [item.id_category_default]);
 
-        {/* Floating Add-to-Cart button (bottom-right corner of card) */}
-        <TouchableOpacity
-          onPress={() => handleAddToCart(item)}
-          style={[
-            styles.addToCartButton,
-            { backgroundColor: added[item.id] ? 'green' : darkerTheme },
-          ]}
-          disabled={loadingItems[item.id]} // disable while loading
-        >
-          {loadingItems[item.id] ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <FontAwesome
-              name={added[item.id] ? 'check' : 'cart-plus'}
-              size={22}
-              color="#fff"
-            />
-          )}
-        </TouchableOpacity>
-      </View>
-    );
-  };
+  //   return (
+  //     <View style={styles.productsBox}>
+  //       {/* Product Image */}
+  //       <Image
+  //         style={styles.productImage}
+  //         source={{ uri: fetchProductImage(item.id, item.id_default_image) }}
+  //       />
+
+  //       {/* Product Info */}
+  //       <View style={{ flex: 1, marginLeft: 16 }}>
+  //            {/* Clicking this button loads the category names again ! */}
+  //         <TouchableOpacity onPress={() => handleProductClick(item)}> 
+  //           <Text
+  //             style={{
+  //               color: textColor,
+  //               fontSize: 16,
+  //               fontWeight: 'bold',
+  //               marginBottom: 10,
+  //               textDecorationLine: 'underline',
+  //             }}
+  //             numberOfLines={2}
+  //             ellipsizeMode="tail"
+  //           >
+  //             {item.name || 'No name'}
+  //           </Text>
+  //         </TouchableOpacity>
+
+  //         <ProductInformation label="Price: " value={parseFloat(item.price).toFixed(2)} prefix="€" />
+  //         <ProductInformation label="" value={categoryName} />
+  //       </View>
+
+  //       {/* Floating Add-to-Cart button */}
+  //       <TouchableOpacity
+  //         onPress={() => handleAddToCart(item)}
+  //         style={[
+  //           styles.addToCartButton,
+  //           { backgroundColor: added[item.id] ? 'green' : darkerTheme },
+  //         ]}
+  //         disabled={loadingItems[item.id]}
+  //       >
+  //         {loadingItems[item.id] ? (
+  //           <ActivityIndicator size="small" color="#fff" />
+  //         ) : (
+  //           <FontAwesome
+  //             name={added[item.id] ? 'check' : 'cart-plus'}
+  //             size={22}
+  //             color="#fff"
+  //           />
+  //         )}
+  //       </TouchableOpacity>
+  //     </View>
+  //   );
+  // };
 
   return (
 
@@ -216,7 +330,7 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
               placeholder=" Cerca prodotto..."
               placeholderTextColor="#999"
               returnKeyType="search"
-              onSubmitEditing={handleSearchSubmit} 
+              onSubmitEditing={handleSearchSubmit}
             />
 
             {/* SEARCH ICON */}
@@ -259,7 +373,17 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
       <FlatList
         data={filteredProducts}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => <ProductsList item={item} />}
+        renderItem={({ item }) => (
+          <ProductsList
+            item={item}
+            onProductClick={handleProductClick}
+            onAddToCart={handleAddToCart}
+            added={added}
+            loadingItems={loadingItems}
+            textColor={textColor}
+            darkerTheme={darkerTheme}
+          />
+        )}
       />
     </View>
   );

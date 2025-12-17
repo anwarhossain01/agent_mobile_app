@@ -866,6 +866,7 @@ export const saveCategoryTree = async (data: any[]) => {
           id_supplier: p.id_supplier,
           id_manufacturer: p.id_manufacturer,
           id_category_default: p.id_category_default,
+          id_default_image: p.id_default_image,
           id_shop_default: p.id_shop_default,
           id_tax_rules_group: p.id_tax_rules_group,
           on_sale: p.on_sale,
@@ -979,7 +980,7 @@ export const saveCategoryTree = async (data: any[]) => {
       store.dispatch(setSyncStatusText(`Saving Product ${productCount}`));
       await db.executeSql(
         `INSERT OR REPLACE INTO category_tree_products (
-        id_product, subcategory_id, id_supplier, id_manufacturer, id_category_default, id_shop_default, id_tax_rules_group,
+        id_product, subcategory_id, id_supplier, id_manufacturer, id_category_default, id_default_image, id_shop_default, id_tax_rules_group,
         on_sale, online_only, ean13, isbn, upc, mpn, ecotax, quantity, minimal_quantity, low_stock_threshold, low_stock_alert,
         price, wholesale_price, unity, unit_price, unit_price_ratio, additional_shipping_cost,
         reference, supplier_reference, location, width, height, depth, weight, out_of_stock, additional_delivery_times,
@@ -989,7 +990,7 @@ export const saveCategoryTree = async (data: any[]) => {
         advanced_stock_management, pack_stock_type, state, product_type, accisa, id_shop, id_lang, link_rewrite,
         description, description_short, meta_description, meta_keywords, meta_title, name, available_now,
         available_later, delivery_in_stock, delivery_out_stock, manufacturer_name, supplier_name, rate, tax_name
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         Object.values(p)
       );
     }
@@ -1516,5 +1517,26 @@ export const getCustomersByOrdinale = async (ordinale: string): Promise<any[]> =
     'customers',
     'numero_ordinale = ?',
     [ordinale]
+  );
+};
+
+export const getCategoryOrSubCategoryName = async (category_id: number) => {
+  // First try categories table
+  const categories = await queryData(
+    'category_tree_categories',
+    'id = ?',
+    [category_id]
+  );
+  
+  // If found in categories, return immediately
+  if (categories.length > 0) {
+    return categories;
+  }
+  
+  // Otherwise try subcategories table
+  return await queryData(
+    'category_tree_subcategories',
+    'id = ?',
+    [category_id]
   );
 };

@@ -57,25 +57,25 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
     const classification = useSelector((s: RootState) => s.customerClassification);
 
-    const handleSelectSearchMode = () =>{
+    const handleSelectSearchMode = () => {
         setSearchMode(!searchMode);
         dispatch(setStopLoad(true));
     }
 
-    const performSearch = debounce( async (
+    const performSearch = debounce(async (
         query: string = searchText.trim(),
         filters = selectedFilterValues
     ) => {
         try {
-            console.log("SEARCHING WITH FILTERS: ", filters);
-            
+            //   console.log("SEARCHING WITH FILTERS: ", filters);
+
             const data = await getCachedClientsForAgentFrontPage(
                 employeeId || 0,
                 query || '',
                 filters.city || null,
                 filters.ordinale || null,
                 filters.cap || null
-            );            
+            );
             dispatch(setClients(data));
         } catch (e) {
             console.log('search err', e);
@@ -100,7 +100,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                 );
                 break;
             case 'CAP':
-                data = classification.postcode || [];                
+                data = classification.postcode || [];
                 setSelectedIndex(
                     typeof selectedFilters.cap === 'number' ? selectedFilters.cap : null
                 );
@@ -114,70 +114,70 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
     };
 
     const handleModalItemPress = async (index: number) => {
-    const item = listData[index];
-    if (!item) return;
+        const item = listData[index];
+        if (!item) return;
 
-    const text = item[0];
+        const text = item[0];
 
-    // If we are showing cities, selecting one should load its ordinali
-    if (modalTitle === 'Città') {
-        try {
-            setSelectedIndex(index);
-            const ords = await getOrdinaliByCity(text); // returns string[]
-            setSelectedFilterValues(s => ({ ...s, city: text, cap: null }));
-            setListData(ords.map(v => [v, 0]));
-            setModalTitle('Ordinale');
-            setIsSeachViaCity(true); // searching ordinale through city
-            setIsSearchViaPostcode(false);
-            setSelectedIndex(null);
-        } catch (e) {
-            console.log('failed loading ordinali for city', e);
+        // If we are showing cities, selecting one should load its ordinali
+        if (modalTitle === 'Città') {
+            try {
+                setSelectedIndex(index);
+                const ords = await getOrdinaliByCity(text); // returns string[]
+                setSelectedFilterValues(s => ({ ...s, city: text, cap: null }));
+                setListData(ords.map(v => [v, 0]));
+                setModalTitle('Ordinale');
+                setIsSeachViaCity(true); // searching ordinale through city
+                setIsSearchViaPostcode(false);
+                setSelectedIndex(null);
+            } catch (e) {
+                console.log('failed loading ordinali for city', e);
+            }
+            return;
         }
-        return;
-    }
 
-    if (modalTitle === 'CAP') {
-        try {
-            setSelectedIndex(index);
-            const ords = await getOrdinaliByPostcode(text);
-            setSelectedFilterValues(s => ({ ...s, cap: text, city: null }));
-            setListData(ords.map(v => [v, 0]));
-            setModalTitle('Ordinale');
-            setIsSearchViaPostcode(true); // searching ordinale through postcode
-            setIsSeachViaCity(false);
-            setSelectedIndex(null);
-        } catch (e) {
-            console.log('failed loading ordinali for cap', e);
+        if (modalTitle === 'CAP') {
+            try {
+                setSelectedIndex(index);
+                const ords = await getOrdinaliByPostcode(text);
+                setSelectedFilterValues(s => ({ ...s, cap: text, city: null }));
+                setListData(ords.map(v => [v, 0]));
+                setModalTitle('Ordinale');
+                setIsSearchViaPostcode(true); // searching ordinale through postcode
+                setIsSeachViaCity(false);
+                setSelectedIndex(null);
+            } catch (e) {
+                console.log('failed loading ordinali for cap', e);
+            }
+            return;
         }
-        return;
-    }
 
-    if(modalTitle === 'Ordinale') {
+        if (modalTitle === 'Ordinale') {
+            setSelectedIndex(index);
+            setSelectedFilterValues(s => ({ ...s, ordinale: text }));
+            return;
+        }
+
+        // Default: selecting an item (ordinale or normal list) just selects it
         setSelectedIndex(index);
-        setSelectedFilterValues(s => ({ ...s, ordinale: text }));
-        return;
-    }
-
-    // Default: selecting an item (ordinale or normal list) just selects it
-    setSelectedIndex(index);
-};
+    };
 
     const applySelection = async () => {
-         if (selectedIndex === null) {
-             setModalVisible(false);
-             return;
-         }
+        if (selectedIndex === null) {
+            setModalVisible(false);
+            return;
+        }
 
         const selectedItem = listData[selectedIndex];
         if (!selectedItem) {
             setModalVisible(false);
-         return;
-         }
-          const selectedText = selectedItem[0];
+            return;
+        }
+        const selectedText = selectedItem[0];
 
-         let updatedFilters = { ...selectedFilterValues };
-    //      console.log("selectedText", selectedText);
-        
+        let updatedFilters = { ...selectedFilterValues };
+        //      console.log("selectedText", selectedText);
+
         // if (modalTitle === 'Città') {
         //     setSelectedFilters((s) => ({ ...s, city: selectedIndex }));
         //     updatedFilters.city = selectedText;
@@ -185,16 +185,16 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
         //     setSelectedFilters((s) => ({ ...s, cap: selectedIndex }));
         //     updatedFilters.cap = selectedText;
         if (!isSeachViaCity && !isSearchViaPostcode) {
-          //  console.log("Only ordinale search initiated");
-            
+            //  console.log("Only ordinale search initiated");
+
             setSelectedFilters((s) => ({ ...s, city: null, cap: null }));
             updatedFilters.ordinale = selectedText;
             updatedFilters.city = null;
             updatedFilters.cap = null;
-            
+
         }
 
-        setSelectedFilterValues(updatedFilters);        
+        setSelectedFilterValues(updatedFilters);
         setModalVisible(false);
         setIsSeachViaCity(false);
         setIsSearchViaPostcode(false);
@@ -233,12 +233,19 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
     const showOptionsPanel = () => {
         setShowOptions(!showOptions);
-        dispatch(setStopLoad(true));
+       
         if (showOptions) {
+            console.log('closing options panel');
             setSearchText('');
             performSearch('', {});
             dispatch(setStopLoad(false));
-        }  
+        }else{
+            console.log('showing options panel');
+            setSelectedIndex(null);
+            setIsSeachViaCity(false);
+            setIsSearchViaPostcode(false);
+            dispatch(setStopLoad(true));
+        }
     }
 
     return (
@@ -270,7 +277,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                 {searchMode && (
                     <View style={styles.searchRow}>
                         <TouchableOpacity
-                            onPress={() => {                                
+                            onPress={() => {
                                 setSearchMode(false);
                                 performSearch('', {});
                                 setSearchText('');
@@ -326,7 +333,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
 
             {/* Modal for classification lists */}
-            <Modal visible={modalVisible} transparent animationType="fade">
+            <Modal visible={modalVisible} transparent animationType="fade" >
                 <View style={styles.modalBackdrop}>
                     <View style={styles.modalContainer}>
                         <Text style={styles.modalTitle}>{modalTitle}</Text>
@@ -350,14 +357,15 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                                                 isSelected && styles.modalItemTextSelected,
                                             ]}
                                         >
-                                            {item[0]} 
+                                            {item[0]}
                                         </Text>
-                                        {modalTitle !== 'Ordinale' &&  <Ionicons name="chevron-forward" size={18} color="#000" />}
-                                       
+                                        {modalTitle !== 'Ordinale' && <Ionicons name="chevron-forward" size={18} color="#000" />}
+
                                     </TouchableOpacity>
                                 );
                             }}
                         />
+
 
                         {/* 👇 Action buttons */}
                         <View style={styles.modalButtonsRow}>
@@ -366,7 +374,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                             </TouchableOpacity>
 
                             <TouchableOpacity onPress={applySelection}>
-                                <Text style={styles.modalButtonText}>Impostare</Text>
+                                <Text style={styles.modalButtonText}>Seleziona</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -418,6 +426,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 8,
         padding: 20,
+        height: '80%',
     },
     modalTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
     modalItemRow: {

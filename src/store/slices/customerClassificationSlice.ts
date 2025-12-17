@@ -22,7 +22,7 @@ const customerClassificationSlice = createSlice({
     name: 'customerClassificationSlice',
     initialState,
     reducers: {
-        setStopLoad(state, action: PayloadAction<boolean>) {
+        setStopLoad(state, action: PayloadAction<boolean>) {            
             state.stop_load = action.payload;
         },
         setClassified(state, action: PayloadAction<boolean | null>) {

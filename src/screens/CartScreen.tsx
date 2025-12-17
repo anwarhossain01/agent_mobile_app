@@ -25,6 +25,7 @@ import { RootState } from '../store';
 import NetInfo from '@react-native-community/netinfo';
 
 const CartScreen = () => {
+  const TAX_RATE_MULTIPLIER = 1.22;
   const cart = useSelector(selectCartItems);
   const grandTotal = useSelector(selectTotalPrice);
   const client_id = useSelector(selectClientId);
@@ -124,13 +125,15 @@ const CartScreen = () => {
     fetchClientById();
   }, [client_id, addresses.length]);
 
-  const allAccisaAdder = () =>{
-    let adder = 0;
-    for (let i = 0; i < cart.length; i++) {
-      adder += cart[i].accisa * cart[i].quantity;
-    }
-    return adder
+ const allAccisaAdder = () => {
+  let adder = 0;
+  for (let i = 0; i < cart.length; i++) {
+    const accisaWithTax = cart[i].accisa * TAX_RATE_MULTIPLIER;
+    const flooredAccisa = Math.floor(accisaWithTax * 100) / 100; // floor to nearest cent
+    adder += flooredAccisa * cart[i].quantity;
   }
+  return adder;
+};
 
   const handleSelectDeliveryAddress = (address: any) => {
     dispatch(setDeliveryAddressId(address.id.toString()));
@@ -246,23 +249,27 @@ const CartScreen = () => {
     return country ? country.name : 'Seleziona paese';
   };
 
-  const renderCartItem = ({ item }: { item: any }) => (
-    <View style={styles.cartItem}>
-      <View style={styles.itemHeader}>
-        <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.itemTotal}>€{(calculateTax(item.total) + parseFloat(item.accisa * item.quantity)).toFixed(2)}</Text>
-      </View>
-      <View style={styles.itemDetails}>
-        <Text style={styles.detailText}>Quantità: {item.quantity}</Text>
-        <Text style={styles.detailText}>Prezzo (Tasse incluse): €{calculateTax(item.price).toFixed(2)}</Text>
-      </View>
-      {item.accisa != 0 &&
-        <View style={[styles.itemDetails, { flexDirection: 'row-reverse' }]}>
-          <Text style={styles.detailText}>Accisa: €{parseFloat(item.accisa).toFixed(2)}</Text>
+  const renderCartItem = ({ item }: { item: any }) => {
+    const amount = item.accisa * TAX_RATE_MULTIPLIER;
+    const floored = Math.floor(amount * 100) / 100;
+    return (
+      <View style={styles.cartItem}>
+        <View style={styles.itemHeader}>
+          <Text style={styles.productName}>{item.name}</Text>
+          <Text style={styles.itemTotal}>€{(calculateTax(item.total) + (floored * item.quantity)).toFixed(2)}</Text>
         </View>
-      }
-    </View>
-  );
+        <View style={styles.itemDetails}>
+          <Text style={styles.detailText}>Quantità: {item.quantity}</Text>
+          <Text style={styles.detailText}>Prezzo (IVA incl): €{calculateTax(item.price).toFixed(2)}</Text>
+        </View>
+        {item.accisa != 0 &&
+          <View style={[styles.itemDetails, { flexDirection: 'row-reverse' }]}>
+            <Text style={styles.detailText}>Accisa (IVA incl): €{floored.toFixed(2)}</Text>
+          </View>
+        }
+      </View>
+    )
+  };
 
   const renderAddressItem = (address: any) => (
     <TouchableOpacity
@@ -358,7 +365,7 @@ const CartScreen = () => {
         const basePrice = parseFloat(paidDelivery.price);
 
         // Calculate the price with a 22% increase (i.e., multiply by 1.22)
-        const priceWithIncrease = basePrice * 1.22;
+        const priceWithIncrease = basePrice * TAX_RATE_MULTIPLIER;
         dispatch(setshippingPrice({ shipping_price_inc_tax: priceWithIncrease, shipping_price_exc_tax: basePrice }));
         // Return the new price
         return priceWithIncrease;
@@ -677,21 +684,22 @@ const CartScreen = () => {
               keyExtractor={(item) => item.product_id.toString()}
               scrollEnabled={false}
             />
+            <ShippingInformation
+              freeDelivery={freeDelivery}
+              setFreeDelivery={setFreeDelivery}
+              deliveries={deliveries}
+              setDeliveries={setDeliveries}
+              dispatch={dispatch}
+              setCourier={setCourier}
+            />
             <View style={styles.grandTotal}>
-              <Text style={styles.grandTotalText}>Totale Ordine (inc tasse):</Text>
-              <Text style={styles.grandTotalAmount}>€{(calculateTotalWithShipping() + allAccisaAdder()) .toFixed(2)}</Text>
+              <Text style={styles.grandTotalText}>Totale Ordine (IVA incl):</Text>
+              <Text style={styles.grandTotalAmount}>€{(calculateTotalWithShipping() + allAccisaAdder()).toFixed(2)}</Text>
             </View>
           </>
         )}
 
-        <ShippingInformation
-          freeDelivery={freeDelivery}
-          setFreeDelivery={setFreeDelivery}
-          deliveries={deliveries}
-          setDeliveries={setDeliveries}
-          dispatch={dispatch}
-          setCourier={setCourier}
-        />
+
         <SubmissionModal
           showSubmissionModal={showSubmissionModal}
           setShowSubmissionModal={setShowSubmissionModal}
@@ -969,7 +977,8 @@ const oldStyles = {
     backgroundColor: darkBg,
     padding: 16,
     borderRadius: 8,
-    marginTop: 16,
+    marginTop: 12,
+    marginBottom: 20,
   },
   grandTotalText: {
     color: textColor,
@@ -1082,8 +1091,8 @@ const styles = StyleSheet.create({
     backgroundColor: darkBg,
     padding: 16,
     borderRadius: 10,
-    marginBottom: 20,
-    marginTop: 20,
+    marginBottom: 6,
+    marginTop: 6,
   },
   shippingTitle: {
     color: 'rgba(0, 110, 165, 1)',

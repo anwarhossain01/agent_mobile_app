@@ -229,7 +229,7 @@ export default function CatalogScreen({ route }: { route: any }) {
     return (
       <TouchableOpacity style={styles.subRow} onPress={goToProducts}>
         <Text style={styles.subRowText}>{item.name}</Text>
-        <Ionicons name="chevron-forward" size={16} color={darkestBg} />
+        <Ionicons name="chevron-forward" size={18} color="#000" />
       </TouchableOpacity>
     );
   };
@@ -391,6 +391,7 @@ const styles = StyleSheet.create({
   },
   subRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingVertical: 10,
     paddingLeft: 16,
     borderBottomWidth: 1,

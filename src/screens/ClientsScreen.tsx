@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import NetInfo from '@react-native-community/netinfo';
 import { getDBConnection, queryData, queryDataWithPagination } from '../database/db';
-import {  selectIsClassified, selectStopLoad, setCity, setClassified, setNumeroOrdinal, setPostcode } from '../store/slices/customerClassificationSlice';
+import { selectCustomerClasses, selectIsClassified, selectStopLoad, setCity, setClassified, setNumeroOrdinal, setPostcode } from '../store/slices/customerClassificationSlice';
 import { setClientId } from '../store/slices/cartSlice';
 import { syncCustomersIncrementally, upsertCustomer } from '../sync/cached';
 import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, setLastCutomerSyncDate, setSyncStatusText } from '../store/slices/databaseStatusSlice';
@@ -50,7 +50,7 @@ export default function ClientsScreen() {
   const navigation = useNavigation();
   const PAGE_SIZE = 15;
   const lastSyncDate = useSelector(selectLastCustomerSyncDate);
-  const stopLoad = useSelector(selectStopLoad);
+  const stopLoad = useSelector(selectCustomerClasses).customerClassification.stop_load;
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -308,8 +308,9 @@ export default function ClientsScreen() {
         )}
         onEndReached={() => {
           const loadMore = async () => {
+            console.log('load more status, ', stopLoad);
             if (!hasMore || currentPage <= 0) return;
-            if(stopLoad) return;
+            if (stopLoad) return;
 
             const nextPage = currentPage + 1;
             const offset = (nextPage - 1) * PAGE_SIZE;
@@ -343,7 +344,11 @@ export default function ClientsScreen() {
           loadMore();
         }}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={hasMore ? <ActivityIndicator style={{ marginVertical: 16 }} /> : null}
+        ListFooterComponent={
+          hasMore && !stopLoad ? (
+            <ActivityIndicator style={{ marginVertical: 16 }} />
+          ) : null
+        }
       />
       {/*  <Button
         title="Manual Sync (demo)"

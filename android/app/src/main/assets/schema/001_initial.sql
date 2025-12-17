@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS category_tree_products (
     id_supplier INTEGER,
     id_manufacturer INTEGER,
     id_category_default INTEGER,
+    id_default_image INTEGER DEFAULT NULL,
     id_shop_default INTEGER,
     id_tax_rules_group INTEGER,
     on_sale INTEGER,

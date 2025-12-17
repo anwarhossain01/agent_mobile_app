@@ -98,10 +98,10 @@ export default function CatalogueMenuModal({
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />
+                {/* <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} /> */}
 
                 {/* Buoni sconto option */}
-                <TouchableOpacity
+                {/* <TouchableOpacity
                     style={{
                         flexDirection: 'row',
                         alignItems: 'center',
@@ -119,7 +119,7 @@ export default function CatalogueMenuModal({
                         style={{ marginRight: 12 }}
                     />
                     <Text style={{ fontSize: 18, color: textColor }}>Buoni sconto</Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
             </View>
         </Modal>
     );

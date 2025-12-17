@@ -5,7 +5,7 @@ type ClientsState = {
 };
 
 const initialState: ClientsState = {
-  items: [],
+  items: []
 };
 
 const clientsSlice = createSlice({

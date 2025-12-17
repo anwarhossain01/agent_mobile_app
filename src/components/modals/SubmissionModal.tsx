@@ -22,6 +22,7 @@ import { createCartCache, createOrderCache } from '../../sync/cached';
 import NetInfo from '@react-native-community/netinfo';
 
 const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) => {
+    const TAX_RATE_MULTIPLIER = 1.22;
     const [status, setStatus] = useState<string>('Preparing order...');
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -81,10 +82,12 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     const allAccisaAdder = () => {
         let adder = 0;
         for (let i = 0; i < cart.length; i++) {
-            adder += cart[i].accisa * cart[i].quantity;
+            const accisaWithTax = cart[i].accisa * TAX_RATE_MULTIPLIER;
+            const flooredAccisa = Math.floor(accisaWithTax * 100) / 100; // floor to nearest cent
+            adder += flooredAccisa * cart[i].quantity;
         }
-        return adder
-    }
+        return adder;
+    };
 
     async function handleCacheOrder() {
 

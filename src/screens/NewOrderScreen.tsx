@@ -534,7 +534,7 @@ const NewOrderScreen = ({ route }) => {
                             marginTop: 55
                         }}>
                             <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-                                Next ▶
+                                Avanti ▶
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -552,7 +552,7 @@ const NewOrderScreen = ({ route }) => {
                         }}
                     >
                         <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-                            Next ▶
+                            Avanti ▶
                         </Text>
                     </TouchableOpacity>
                 )}

@@ -45,7 +45,7 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
       if (item?.id_category_default == null) {
         isMounted && setCategoryName('None');
         return;
-      }else if (item?.id_category_default == 2) {
+      } else if (item?.id_category_default == 2) {
         isMounted && setCategoryName('Home');
         return;
       }
@@ -89,7 +89,7 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
           </Text>
         </TouchableOpacity>
 
-        <ProductInformation label="Price: " value={parseFloat(item.price).toFixed(2)} prefix="€" />
+        <ProductInformation label="Prezzo: " value={parseFloat(item.price).toFixed(2)} prefix="€" />
         <ProductInformation label="" value={categoryName} />
       </View>
 
@@ -372,7 +372,9 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
 
 
       {error && <Text style={{ color: 'red', marginBottom: 8 }}>Server error, please try again later</Text>}
-
+      {filteredProducts && filteredProducts.length === 0 && (
+        <Text style={{ color: textColor, marginBottom: 8 }}>Nessun prodotto trovato</Text>
+      )}
       <FlatList
         data={filteredProducts}
         keyExtractor={(item) => String(item.id)}

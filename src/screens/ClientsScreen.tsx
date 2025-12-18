@@ -158,37 +158,32 @@ export default function ClientsScreen() {
 
       for (let i = 0; i < rows.length; i++) {
         const item = rows.item(i);
-        //     console.log("item", item);
 
-        // city
         if (item.city) {
           cityMap[item.city] = (cityMap[item.city] || 0) + 1;
         }
-
-        // postcode (cap)
         if (item.postcode) {
           codiceMap[item.postcode] = (codiceMap[item.postcode] || 0) + 1;
         }
-
-        // numero_ordinale
         if (item.numero_ordinale) {
           ordinaleMap[item.numero_ordinale] =
             (ordinaleMap[item.numero_ordinale] || 0) + 1;
         }
       }
 
-      // convert to tuples
-      const cityArray: [string, number][] = Object.entries(cityMap);
-      const codiceArray: [string, number][] = Object.entries(codiceMap);
-      const ordinaleArray: [string, number][] = Object.entries(ordinaleMap);
+      const sortedCityKeys = Object.keys(cityMap).sort((a, b) => a.localeCompare(b));
+      const sortedCodiceKeys = Object.keys(codiceMap).sort((a, b) => a.localeCompare(b));
+      const sortedOrdinaleKeys = Object.keys(ordinaleMap).sort((a, b) => a.localeCompare(b));
+
+      const cityArray: [string, number][] = sortedCityKeys.map(key => [key, cityMap[key]]);
+      const codiceArray: [string, number][] = sortedCodiceKeys.map(key => [key, codiceMap[key]]);
+      const ordinaleArray: [string, number][] = sortedOrdinaleKeys.map(key => [key, ordinaleMap[key]]);
 
       // dispatch results to Redux
       dispatch(setCity(cityArray));
-      dispatch(setPostcode(codiceArray)); // this is actually postcode
+      dispatch(setPostcode(codiceArray)); // postcode
       dispatch(setNumeroOrdinal(ordinaleArray));
       dispatch(setClassified(true));
-
-      //  console.log('✅ Customer classification completed successfully');
     } catch (err) {
       console.log('❌ classifyCustomers() error:', err);
     }

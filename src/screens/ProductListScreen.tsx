@@ -20,7 +20,7 @@ const fetchProductImage = (productId: number, imageId: number): string =>
 
 const ProductInformation = (props: { label: string; value: string; prefix?: string }) => (
   <View style={{ flexDirection: 'row' }}>
-    <Text style={{ color: textColor, fontSize: 15 }}>{props.label} </Text>
+    <Text style={{ color: textColor, fontSize: 15 }}>{props.label}</Text>
     <Text style={{ color: textColor, fontSize: 15, fontWeight: 'bold' }}>
       {props.value} {props.prefix}
     </Text>
@@ -44,6 +44,9 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
     const loadCategoryName = async () => {
       if (item?.id_category_default == null) {
         isMounted && setCategoryName('None');
+        return;
+      }else if (item?.id_category_default == 2) {
+        isMounted && setCategoryName('Home');
         return;
       }
 
@@ -86,8 +89,8 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
           </Text>
         </TouchableOpacity>
 
-        <ProductInformation label="Price" value={parseFloat(item.price).toFixed(2)} prefix="€" />
-        <ProductInformation label="Category" value={categoryName} />
+        <ProductInformation label="Price: " value={parseFloat(item.price).toFixed(2)} prefix="€" />
+        <ProductInformation label="" value={categoryName} />
       </View>
 
       <TouchableOpacity

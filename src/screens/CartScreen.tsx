@@ -704,7 +704,7 @@ const CartScreen = () => {
           showSubmissionModal={showSubmissionModal}
           setShowSubmissionModal={setShowSubmissionModal}
         />
-        <Button title="Submit" color={'#0af'} onPress={handleSubmit} />
+        <Button title="ORDINA" color={'#0af'} onPress={handleSubmit} />
 
         <View style={{ marginTop: 20 }} />
 

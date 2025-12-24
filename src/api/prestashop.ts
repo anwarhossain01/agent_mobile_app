@@ -112,7 +112,6 @@ export const getProducts = async (category_id: number | string | null = null) =>
   if (category_id) filters.push(`filter[id_category_default]=[${category_id}]`);
   const res = await api.get(`/products?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}&ws_key=${API_KEY}&${filters.join('&')}`);
 //  const res = await api.get('/products?output_format=JSON&filter[id_category_default]=60&display=full&limit=50');
-  //console.log('API products sample:', JSON.stringify(res.data.products[0], null, 2));
   return res.data.products || [];
 };
 

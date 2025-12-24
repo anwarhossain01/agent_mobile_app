@@ -38,6 +38,7 @@ export default function CatalogScreen({ route }: { route: any }) {
   useEffect(() => {
     const load = async () => {
       try {
+       // dispatch(setSyncing(false));
         const netInfo = await NetInfo.fetch();
 
         //  1. Load from local DB (always try — even if stale, show something fast)
@@ -47,7 +48,7 @@ export default function CatalogScreen({ route }: { route: any }) {
 
         //  2. Decide whether to refresh from server: only based on time
         const now = Date.now();
-        const THREE_HOURS_MS = 3 * 60 * 60 * 1000;
+        const FIXED_HOURS_MS = 25 * 60 * 60 * 1000; // 25 hours
 
         let lastSavedTime = 0; // defaults to "never" → expired
 
@@ -58,7 +59,7 @@ export default function CatalogScreen({ route }: { route: any }) {
           }
         }
 
-        const isStale = (now - lastSavedTime) > THREE_HOURS_MS;
+        const isStale = (now - lastSavedTime) > FIXED_HOURS_MS;
 
         // 🌐 Only refresh if stale AND online
         if (netInfo.isConnected && isStale && !is_syncing) {
@@ -144,10 +145,6 @@ export default function CatalogScreen({ route }: { route: any }) {
   };
 
   const handleCategoryPress = async (category: any) => {
-    setSelectedCategory(category);
-    setSearchMode(false);
-    setSearchText('');
-
     try {
       // fetch subcategories from SQLite using category_id
       const subs = await queryData(
@@ -155,6 +152,24 @@ export default function CatalogScreen({ route }: { route: any }) {
         'category_id = ?',
         [category.id]
       );
+
+      // if (subs.length == 0) {
+      //   (navigation as any).navigate('Main', {
+      //     screen: 'CatalogTab',
+      //     params: {
+      //       screen: 'ProductList',
+      //       params: {
+      //         subcategoryId: category.id,
+      //         subcategoryName: category.name,
+      //       },
+      //     },
+      //   });
+      //   return;
+      // }
+
+      setSelectedCategory(category);
+      setSearchMode(false);
+      setSearchText('');
 
       setSubcategories(subs);
       setFilteredSubcategories(subs);
@@ -265,7 +280,7 @@ export default function CatalogScreen({ route }: { route: any }) {
           }}
         >
           <Text style={styles.rowText}>{item.name}</Text>
-           <Ionicons name="chevron-forward" size={18} color="#000" />
+          <Ionicons name="chevron-forward" size={18} color="#000" />
         </TouchableOpacity>
       );
     }
@@ -308,6 +323,7 @@ export default function CatalogScreen({ route }: { route: any }) {
   const renderSubcategoryItem = ({ item }: any) => {
 
     const goToProducts = () => {
+
       (navigation as any).navigate('Main', {
         screen: 'CatalogTab',
         params: {

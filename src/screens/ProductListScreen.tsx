@@ -125,7 +125,8 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
   const [searchMode, setSearchMode] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filteredProducts, setFilteredProducts] = useState(products);
-
+  console.log('subs ', subcategoryId, subcategoryName);
+  
   useEffect(() => {
     setFilteredProducts(products);
   }, [products]);
@@ -137,12 +138,12 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         let netInfo = await NetInfo.fetch();
         let data = [];
         let isOnline = netInfo.isConnected && netInfo.isInternetReachable !== false;
-        if (!isOnline) {
+       // if (!isOnline) {
           data = await getProductsCached(subcategoryId || null);
-        } else {
-          data = await getProducts(subcategoryId || null);
-        }
-        //  console.log('product data', data);
+        // } else {
+        //   data = await getProducts(subcategoryId || null);
+       //  }
+       //   console.log('product data', data);
 
         dispatch(setProducts(data));
       } catch (e) {

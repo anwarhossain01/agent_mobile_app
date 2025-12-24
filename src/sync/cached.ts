@@ -845,8 +845,16 @@ export const cacheInitializer = async (agentId: any) => {
   }
 };
 
+function bigNumberGenerator() {
+  const min = 1_000_000_000_00;      
+  const max = Number.MAX_SAFE_INTEGER;
+
+  return Math.floor(Math.random() * (max - min)) + min;
+}
+
 export const saveCategoryTree = async (data: any[]) => {
   const db = await getDBConnection();
+  //console.log("data you sent ", data);
 
   // Step 1: Flatten the data into separate arrays
   const categories: any[] = [];
@@ -855,14 +863,18 @@ export const saveCategoryTree = async (data: any[]) => {
 
   for (const category of data) {
     categories.push({ id: category.id, name: category.name });
-
+    //console.log("This category id is ", category.id );
+    
     for (const sub of category.subcategories || []) {
-      subcategories.push({ id: sub.id, name: sub.name, category_id: category.id });
-
+     // console.log("I am inserting products for sub id ", sub.id , " and category id ", category.id, category.name);
+      
+      if(sub.id != null && sub.name != null){
+        subcategories.push({ id: sub.id , name: sub.name || category.name, category_id: category.id });
+      }
       for (const p of sub.products || []) {
         products.push({
           id_product: p.id_product,
-          subcategory_id: sub.id,
+          subcategory_id: sub.id || category.id,
           id_supplier: p.id_supplier,
           id_manufacturer: p.id_manufacturer,
           id_category_default: p.id_category_default,
@@ -952,8 +964,8 @@ export const saveCategoryTree = async (data: any[]) => {
         [cat.id, cat.name]
       );
     }
-     // console.log('✅ Categories saved.');
-      store.dispatch(setSyncStatusText('✅ Categories saved.'));
+    // console.log('✅ Categories saved.');
+    store.dispatch(setSyncStatusText('✅ Categories saved.'));
   } catch (error) {
     console.log('❌ Categories save error:', error);
   }
@@ -994,8 +1006,8 @@ export const saveCategoryTree = async (data: any[]) => {
         Object.values(p)
       );
     }
-     // console.log('✅ Products saved.');
-      store.dispatch(setSyncStatusText('✅ Products saved.'));
+    // console.log('✅ Products saved.');
+    store.dispatch(setSyncStatusText('✅ Products saved.'));
   } catch (error) {
     console.log('❌ Products save error:', error);
   }
@@ -1078,7 +1090,7 @@ export const clearDatabase = async () => {
       (tx) => {
         // Disable FKs at transaction level
         tx.executeSql('PRAGMA foreign_keys = OFF;');
-        
+
         const tables = [
           'cart_items',
           'carts',
@@ -1113,7 +1125,7 @@ export const clearDatabase = async () => {
         reject(error);
       },
       () => {
-     //   console.log(' Database cleared successfully');
+        //   console.log(' Database cleared successfully');
         resolve();
       }
     );
@@ -1140,7 +1152,7 @@ export const syncCustomersIncrementally = async (agentId: number | string) => {
         console.log(`✅ No more customers at page ${currentPage} — sync complete.`);
         break;
       }
-       store.dispatch(setSyncStatusText(
+      store.dispatch(setSyncStatusText(
         `Pagina ${currentPage} (${totalSynced}/${customersRes.total_customers} clienti sincronizzati)`
       ));
 
@@ -1212,7 +1224,7 @@ export const syncCustomersIncrementally = async (agentId: number | string) => {
       totalSynced += batchInserted;
       store.dispatch(setCustomerSyncStatus({
         current_customer_length: totalSynced,
-        last_customer_id: actualLastCustomerId ,
+        last_customer_id: actualLastCustomerId,
         last_customer_page_synced: currentPage,
         // Note: we no longer set total pages
       }));
@@ -1241,7 +1253,7 @@ export const syncCourierData = async () => {
   try {
     const courierRes = await getCouriers(27);
     const carrier = courierRes?.data?.carriers?.[0];
-    
+
     if (!carrier) {
       throw new Error('No courier data for ID 27');
     }
@@ -1293,7 +1305,7 @@ export const upsertCustomer = async (customer: any) => {
     city: customer.city || '',
   };
 
-  
+
   await insertIfNotExists('customers', customerData, 'id_customer');
 
   // 2 Fetch & insert addresses
@@ -1342,19 +1354,16 @@ export const upsertCustomer = async (customer: any) => {
     console.warn(`⚠️ Skipping addresses for customer ${customer.id_customer}:`, addrErr.message);
   }
 };
-
 export const getProductsCached = async (
   category_id: number | string | null = null,
   search: string = "",
 ) => {
   try {
-    let whereClause = '';
     let params: any[] = [];
-
     const conditions: string[] = [];
 
     if (category_id != null) {
-      conditions.push('id_category_default = ?');
+      conditions.push('subcategory_id = ?');
       params.push(Number(category_id));
     }
 
@@ -1363,99 +1372,108 @@ export const getProductsCached = async (
       params.push(`%${search.trim()}%`);
     }
 
-    whereClause = conditions.join(' AND ');
+    const whereClause = conditions.join(' AND ');
 
-    const rows = await queryData('category_tree_products', whereClause, params);
-    console.log('📦 SQLite: Loaded', rows.length, 'products');
+    let rows = await queryData('category_tree_products', whereClause, params);
+    //console.log('📦 SQLite: Loaded', rows.length, 'products');
 
-    return rows.map(row => {
+    // FALLBACK SEARCH
+    // if (rows.length === 0 && category_id != null) {
+    //   console.log('🔁 Retry with id_category_default');
 
-      return {
-        // Identifiers
-        id: row.id_product,
-        id_product: row.id_product,
-        id_category_default: row.id_category_default,
-        reference: row.reference || '',
-        ean13: row.ean13 || '',
-        isbn: row.isbn || '',
-        upc: row.upc || '',
+    //   const fallbackConditions: string[] = [];
+    //   const fallbackParams: any[] = [];
 
-        // Naming & SEO
-        name: row.name || '',
-        link_rewrite: row.link_rewrite || '',
-        meta_title: row.meta_title || '',
-        meta_description: row.meta_description || '',
-        meta_keywords: row.meta_keywords || '',
+    //   fallbackConditions.push('id_category_default = ?');
+    //   fallbackParams.push(Number(category_id));
 
-        // Pricing
-        price: String(row.price != null ? row.price : '0'), // API returns string
-        wholesale_price: String(row.wholesale_price || '0'),
-        unit_price: String(row.unit_price || '0'),
-        unit_price_ratio: row.unit_price_ratio || 0,
-        ecotax: String(row.ecotax || '0'),
+    //   if (search.trim() !== '') {
+    //     fallbackConditions.push('name LIKE ?');
+    //     fallbackParams.push(`%${search.trim()}%`);
+    //   }
 
-        // Stock & Availability
-        quantity: row.quantity || 0,
-        minimal_quantity: row.minimal_quantity || 1,
-        low_stock_threshold: row.low_stock_threshold || null,
-        low_stock_alert: row.low_stock_alert || 0,
-        out_of_stock: row.out_of_stock || 0, // 0=deny orders, 1=allow, 2=deactivate
-        available_for_order: String(row.available_for_order || '1'), // API: "0" or "1"
-        available_date: row.available_date || '',
-        active: String(row.active || '1'), // PrestaShop uses "0"/"1"
+    //   const fallbackWhere = fallbackConditions.join(' AND ');
 
-        // Descriptions
-        description_short: row.description_short || '',
-        description: row.description || '',
-        condition: row.condition || 'new', // 'new', 'used', 'refurbished'
+    //   rows = await queryData('category_tree_products', fallbackWhere, fallbackParams);
+    //   console.log('📦 SQLite fallback loaded', rows.length, 'products');
+    // }
 
-        // Manufacturer/Supplier
-        id_manufacturer: row.id_manufacturer || 0,
-        id_supplier: row.id_supplier || 0,
-        manufacturer_name: row.manufacturer_name || '',
-        supplier_name: row.supplier_name || '',
+    // console.log(' SQLite: Loaded', rows);
+    
+    return rows.map(row => ({
+      id: row.id_product,
+      id_product: row.id_product,
+      id_category_default: row.id_category_default,
+      reference: row.reference || '',
+      ean13: row.ean13 || '',
+      isbn: row.isbn || '',
+      upc: row.upc || '',
 
-        // Visibility & Shop
-        visibility: row.visibility || 'both', // 'both', 'catalog', 'search', 'none'
-        show_price: String(row.show_price || '1'),
-        indexed: String(row.indexed || '1'),
+      name: row.name || '',
+      link_rewrite: row.link_rewrite || '',
+      meta_title: row.meta_title || '',
+      meta_description: row.meta_description || '',
+      meta_keywords: row.meta_keywords || '',
 
-        // Images (placeholder — extend later if image sync is ready)
-        id_default_image: row.id_default_image || 0, 
-        images: [], // ← will be empty unless you sync `image` table separately
+      price: String(row.price != null ? row.price : '0'),
+      wholesale_price: String(row.wholesale_price || '0'),
+      unit_price: String(row.unit_price || '0'),
+      unit_price_ratio: row.unit_price_ratio || 0,
+      ecotax: String(row.ecotax || '0'),
 
-        // Flags
-        on_sale: String(row.on_sale || '0'),
-        online_only: String(row.online_only || '0'),
-        customizable: String(row.customizable || '0'),
-        uploadable_files: String(row.uploadable_files || '0'),
-        text_fields: row.text_fields || 0,
+      quantity: row.quantity || 0,
+      minimal_quantity: row.minimal_quantity || 1,
+      low_stock_threshold: row.low_stock_threshold || null,
+      low_stock_alert: row.low_stock_alert || 0,
+      out_of_stock: row.out_of_stock || 0,
+      available_for_order: String(row.available_for_order || '1'),
+      available_date: row.available_date || '',
+      active: String(row.active || '1'),
 
-        // Tax
-        id_tax_rules_group: row.id_tax_rules_group || 0,
-        tax_name: row.tax_name || '',
-        rate: row.rate != null ? String(row.rate) : '0',
-        accisa: row.accisa != null ? parseFloat(row.accisa) : 0,
+      description_short: row.description_short || '',
+      description: row.description || '',
+      condition: row.condition || 'new',
 
-        // Dates
-        date_add: row.date_add || '',
-        date_upd: row.date_upd || '',
+      id_manufacturer: row.id_manufacturer || 0,
+      id_supplier: row.id_supplier || 0,
+      manufacturer_name: row.manufacturer_name || '',
+      supplier_name: row.supplier_name || '',
 
-        // Other (safe defaults)
-        width: row.width || 0,
-        height: row.height || 0,
-        depth: row.depth || 0,
-        weight: row.weight || 0,
-        location: row.location || '',
-        pack_stock_type: row.pack_stock_type || 0,
-        product_type: row.product_type || 'simple',
-      };
-    });
+      visibility: row.visibility || 'both',
+      show_price: String(row.show_price || '1'),
+      indexed: String(row.indexed || '1'),
+
+      id_default_image: row.id_default_image || 0,
+      images: [],
+
+      on_sale: String(row.on_sale || '0'),
+      online_only: String(row.online_only || '0'),
+      customizable: String(row.customizable || '0'),
+      uploadable_files: String(row.uploadable_files || '0'),
+      text_fields: row.text_fields || 0,
+
+      id_tax_rules_group: row.id_tax_rules_group || 0,
+      tax_name: row.tax_name || '',
+      rate: row.rate != null ? String(row.rate) : '0',
+      accisa: row.accisa != null ? parseFloat(row.accisa) : 0,
+
+      date_add: row.date_add || '',
+      date_upd: row.date_upd || '',
+
+      width: row.width || 0,
+      height: row.height || 0,
+      depth: row.depth || 0,
+      weight: row.weight || 0,
+      location: row.location || '',
+      pack_stock_type: row.pack_stock_type || 0,
+      product_type: row.product_type || 'simple',
+    }));
   } catch (error) {
     console.error('❌ getProductsCached failed:', error);
     return [];
   }
 };
+
 
 /**
  * Get unique cities (non-empty)
@@ -1486,15 +1504,23 @@ export const getPostcodes = async (): Promise<string[]> => {
 /**
  * Get all numero_ordinale for a given city
  */
-export const getOrdinaliByCity = async (city: string): Promise<string[]> => {
+export const getOrdinaliByCity = async (city: string) => {
   const rows = await queryData(
     'customers',
-    'city = ? AND numero_ordinale IS NOT NULL AND numero_ordinale != ""',
+    'city = ? AND numero_ordinale IS NOT NULL AND numero_ordinale != "" ORDER BY CAST(numero_ordinale AS INTEGER) ASC',
     [city]
   );
-  const ordinale = Array.from(new Set(rows.map(r => r.numero_ordinale.trim()))).filter(Boolean);
-  return ordinale.sort();
+
+  const ordinali = rows
+    .map(r => r.numero_ordinale?.trim())
+    .filter(Boolean);
+
+  return {
+    ordinali,
+    clients: rows, // full client data, untouched
+  };
 };
+
 
 /**
  * Get all numero_ordinale for a given postcode
@@ -1527,12 +1553,12 @@ export const getCategoryOrSubCategoryName = async (category_id: number) => {
     'id = ?',
     [category_id]
   );
-  
+
   // If found in categories, return immediately
   if (categories.length > 0) {
     return categories;
   }
-  
+
   // Otherwise try subcategories table
   return await queryData(
     'category_tree_subcategories',

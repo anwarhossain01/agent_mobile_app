@@ -14,13 +14,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import debounce from "lodash/debounce";
 import { RootState } from '../../store';
 
-import { dark, lightdark } from '../../../colors';
+import { dark, lightdark, textColor } from '../../../colors';
 import { setClients } from '../../store/slices/clientsSlice';
 import { getCachedClientsForAgentFrontPage } from '../../api/prestashop';
 import { getOrdinaliByCity, getOrdinaliByPostcode } from '../../sync/cached';
 import { setStopLoad } from '../../store/slices/customerClassificationSlice';
+import { green } from 'react-native-reanimated/lib/typescript/Colors';
 
 export const ClientHeader = ({ navigation }: { navigation: any }) => {
+    const [ordinaliClientData, setOrdinaliClientData] = useState<any>(null); // this is to set the client data after selecting a city to be shown with ordinali
     const [searchMode, setSearchMode] = useState(false);
     const [isSeachViaCity, setIsSeachViaCity] = useState(false);
     const [isSearchViaPostcode, setIsSearchViaPostcode] = useState(false);
@@ -124,8 +126,10 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
             try {
                 setSelectedIndex(index);
                 const ords = await getOrdinaliByCity(text); // returns string[]
+                console.log("ords here ", ords);
+                setOrdinaliClientData(ords.clients);
                 setSelectedFilterValues(s => ({ ...s, city: text, cap: null }));
-                setListData(ords.map(v => [v, 0]));
+                setListData(ords.ordinali.map(v => [v, 0]));
                 setModalTitle('Ordinale');
                 setIsSeachViaCity(true); // searching ordinale through city
                 setIsSearchViaPostcode(false);
@@ -154,6 +158,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
         if (modalTitle === 'Ordinale') {
             setSelectedIndex(index);
+            console.log('selected ordinale', text);
             setSelectedFilterValues(s => ({ ...s, ordinale: text }));
             return;
         }
@@ -233,13 +238,13 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
     const showOptionsPanel = () => {
         setShowOptions(!showOptions);
-       
+
         if (showOptions) {
             console.log('closing options panel');
             setSearchText('');
             performSearch('', {});
             dispatch(setStopLoad(false));
-        }else{
+        } else {
             console.log('showing options panel');
             setSelectedIndex(null);
             setIsSeachViaCity(false);
@@ -351,21 +356,35 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
                                             isSelected && styles.modalItemSelected,
                                         ]}
                                     >
-                                        <Text
-                                            style={[
-                                                styles.modalItemText,
-                                                isSelected && styles.modalItemTextSelected,
-                                            ]}
-                                        >
-                                            {item[0]}
-                                        </Text>
+                                        <View style={{ width: '100%', display: 'flex', flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            <Text
+                                                style={[
+                                                    styles.modalItemText,
+                                                    isSelected && styles.modalItemTextSelected,
+                                                ]}
+                                            >
+                                                {item[0]}
+                                            </Text>
+
+                                            {modalTitle === 'Ordinale' && isSeachViaCity == true && (
+                                                <View style={{ display: 'flex', flexDirection: 'column' , width: '60%'}}>
+                                                     <Text style={[styles.modalItemText, { color: textColor, fontWeight: '500' }]}>
+                                                        {ordinaliClientData[index].firstname == "NULL" ? 'N' : ordinaliClientData[index].firstname} {ordinaliClientData[index].lastname == "NULL" ? '/A' : ordinaliClientData[index].lastname }
+                                                    </Text>
+                                                    <Text style={styles.modalItemText}>
+                                                        {ordinaliClientData[index].address1}
+                                                    </Text>
+                                                   
+                                                </View>
+                                            )}
+
+                                        </View>
                                         {modalTitle !== 'Ordinale' && <Ionicons name="chevron-forward" size={18} color="#000" />}
 
                                     </TouchableOpacity>
                                 );
                             }}
                         />
-
 
                         {/* 👇 Action buttons */}
                         <View style={styles.modalButtonsRow}>

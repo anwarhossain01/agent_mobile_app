@@ -88,7 +88,7 @@ export default function ProductDetailPage() {
           <Text style={styles.price}>€ {parseFloat(product.price).toFixed(2)}</Text>
           {product.minimal_quantity > 1 && (
             <Text style={styles.minQty}>
-              Min Qty: {product.minimal_quantity}
+              Quantità minima: {product.minimal_quantity}
             </Text>
           )}
         </View>
@@ -107,7 +107,7 @@ export default function ProductDetailPage() {
         {/* Full Description */}
         {product.description ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.sectionTitle}>Descrizione</Text>
             <RenderHTML
               contentWidth={width - 32}
               source={{ html: product.description }}
@@ -118,11 +118,11 @@ export default function ProductDetailPage() {
 
         {/* Technical Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Product Info</Text>
-          <Text style={styles.infoText}>Reference: {product.reference}</Text>
-          <Text style={styles.infoText}>Condition: {product.condition}</Text>
+          <Text style={styles.sectionTitle}>Dettagli</Text>
+          <Text style={styles.infoText}>Riferimento: {product.reference}</Text>
+          <Text style={styles.infoText}>Condizione: {product.condition == "new" ? 'Nuovo' : product.condition}</Text>
           <Text style={styles.infoText}>
-            Available: {product.available_for_order === '1' ? 'Yes' : 'No'}
+            Disponibilità: {product.available_for_order === '1' ? 'Si' : 'No'}
           </Text>
         </View>
 

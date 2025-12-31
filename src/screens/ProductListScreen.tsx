@@ -14,6 +14,7 @@ import { addItem, removeItem, updateQuantity } from '../store/slices/cartSlice';
 import NetInfo from '@react-native-community/netinfo';
 // --- Move this OUTSIDE ProductListScreen ---
 import { memo } from 'react';
+import { queryData } from '../database/db';
 
 const fetchProductImage = (productId: number, imageId: number): string =>
   `https://b2b.fumostore.com/api/images/products/${productId}/${imageId}?ws_key=${API_KEY}`;
@@ -38,14 +39,16 @@ const ProductsList = memo(({ item, getQuantityInCart, onProductClick, onAddToCar
   darkerTheme: string;
 }) => {
   const [categoryName, setCategoryName] = useState<string>('...');
+  const [ItemQuantity, setItemQuantity] = useState(0);
   const quantity = getQuantityInCart(item.id);
   const dispatch = useDispatch();
+
   useEffect(() => {
     let isMounted = true;
 
     const loadCategoryName = async () => {
       if (item?.id_category_default == null) {
-        isMounted && setCategoryName('None');
+        isMounted && setCategoryName('');
         return;
       } else if (item?.id_category_default == 2) {
         isMounted && setCategoryName('Home');
@@ -55,7 +58,7 @@ const ProductsList = memo(({ item, getQuantityInCart, onProductClick, onAddToCar
       try {
         const result = await getCategoryOrSubCategoryName(item.id_category_default);
         if (isMounted) {
-          setCategoryName(result.length > 0 ? result[0].name || 'Unnamed' : 'None');
+          setCategoryName(result.length > 0 ? result[0].name || 'Unnamed' : '');
         }
       } catch (error) {
         console.error('Category load error:', error);
@@ -63,6 +66,31 @@ const ProductsList = memo(({ item, getQuantityInCart, onProductClick, onAddToCar
       }
     };
 
+    const loadStock = async () => {
+      try {
+        const product_id = item.id_product;
+
+        const rows = await queryData(
+          'product_stock',
+          'id_product = ?',
+          [product_id]
+        );
+
+        if (rows.length === 0) {
+          setItemQuantity(0);
+          return;
+        }
+
+        // since UNIQUE(id_product), there will be only one row
+        const quantity = Number(rows[0].quantity) || 0;
+        setItemQuantity(quantity);
+
+      } catch (error) {
+        console.error('❌ Stock load error:', error);
+        setItemQuantity(0);
+      }
+    };
+    loadStock();
     loadCategoryName();
 
     return () => { isMounted = false; };
@@ -92,27 +120,14 @@ const ProductsList = memo(({ item, getQuantityInCart, onProductClick, onAddToCar
         </TouchableOpacity>
 
         <ProductInformation label="Prezzo: " value={parseFloat(item.price).toFixed(2)} prefix="€" />
+        <ProductInformation
+          label="Disponibilità: "
+          value={String(ItemQuantity)}
+        />
+
         <ProductInformation label="" value={categoryName} />
       </View>
 
-      {/* <TouchableOpacity
-        onPress={() => onAddToCart(item)}
-        style={[
-          styles.addToCartButton,
-          { backgroundColor: added[item.id] ? 'green' : darkerTheme },
-        ]}
-        disabled={loadingItems[item.id]}
-      >
-        {loadingItems[item.id] ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <FontAwesome
-            name={added[item.id] ? 'check' : 'cart-plus'}
-            size={22}
-            color="#fff"
-          />
-        )}
-      </TouchableOpacity> */}
 
       {quantity === 0 ? (
         // ADD button (first time)

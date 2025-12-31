@@ -63,41 +63,41 @@ export default function CatalogScreen({ route }: { route: any }) {
         const isStale = (now - lastSavedTime) > FIXED_HOURS_MS;
 
         // 🌐 Only refresh if stale AND online
-        if (netInfo.isConnected && isStale && !is_syncing) {
-          console.log(
-            saved_at
-              ? ` Category tree last saved at ${saved_at} — refreshing (age: ${Math.round((now - lastSavedTime) / 60000)} min)`
-              : ' No saved timestamp — fetching category tree from server'
-          );
-          try {
-            const categoriesTree = await getCategoriesSubsAndProds();
+        // if (netInfo.isConnected && isStale && !is_syncing) {
+        //   console.log(
+        //     saved_at
+        //       ? ` Category tree last saved at ${saved_at} — refreshing (age: ${Math.round((now - lastSavedTime) / 60000)} min)`
+        //       : ' No saved timestamp — fetching category tree from server'
+        //   );
+        //   try {
+        //     const categoriesTree = await getCategoriesSubsAndProds();
 
-            if (categoriesTree.success) {
-              dispatch(setSyncing(true));
-              setShowModal(true);
-              await saveCategoryTree(categoriesTree.data);
+        //     if (categoriesTree.success) {
+        //       dispatch(setSyncing(true));
+        //       setShowModal(true);
+        //       await saveCategoryTree(categoriesTree.data);
 
-              //  Update cache timestamp — this is the key for next check
-              const newSavedAt = new Date().toISOString();
-              saved_at = newSavedAt;
-              dispatch(setSavedAt(newSavedAt));
+        //       //  Update cache timestamp — this is the key for next check
+        //       const newSavedAt = new Date().toISOString();
+        //       saved_at = newSavedAt;
+        //       dispatch(setSavedAt(newSavedAt));
 
-              // Update UI with fresh data
-              setCategories(categoriesTree.data);
-              setFilteredCategories(categoriesTree.data);
-            } else {
-              console.warn('⚠️ Server returned success=false for category tree');
-            }
-          } catch (error) {
-            console.log('❌ Category tree load error:', error);
+        //       // Update UI with fresh data
+        //       setCategories(categoriesTree.data);
+        //       setFilteredCategories(categoriesTree.data);
+        //     } else {
+        //       console.warn('⚠️ Server returned success=false for category tree');
+        //     }
+        //   } catch (error) {
+        //     console.log('❌ Category tree load error:', error);
 
-          } finally {
-            dispatch(setSyncing(false));
-            setShowModal(false);
-          }
-        } else if (!netInfo.isConnected && isStale) {
-          console.log(' Offline & category tree stale — using local cache');
-        }
+        //   } finally {
+        //     dispatch(setSyncing(false));
+        //     setShowModal(false);
+        //   }
+        // } else if (!netInfo.isConnected && isStale) {
+        //   console.log(' Offline & category tree stale — using local cache');
+        // }
       } catch (e) {
         console.error('❌ Category tree load error:', e);
       }

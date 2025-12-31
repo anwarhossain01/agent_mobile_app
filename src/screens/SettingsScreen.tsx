@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { lightdark, textColor, theme } from '../../colors';
 import { getDBConnection } from '../database/db';
-import { clearDatabase, getTotalCategoryCount, getTotalCustomerCount, getTotalProductCount, saveCategoryTree, syncCustomersIncrementally } from '../sync/cached';
+import { clearDatabase, getTotalCategoryCount, getTotalCustomerCount, getTotalProductCount, initializeAllProductStock, saveCategoryTree, syncCustomersIncrementally } from '../sync/cached';
 import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, selectTotalCustomerPagesTobeSynced, selectTotalCustomersFromServer, setCustomerSyncStatus, setLastCutomerSyncDate, setSyncing, setSyncStatusText } from '../store/slices/databaseStatusSlice';
 import { selectSavedAt, selectTotalCategoryLength, selectTotalProductNumber, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -80,6 +80,8 @@ export default function SettingsScreen() {
 
         if (categoriesTree.success) {
           dispatch(setSyncing(true));
+          
+          await initializeAllProductStock();
           await saveCategoryTree(categoriesTree.data);
 
           //  Update cache timestamp — this is the key for next check

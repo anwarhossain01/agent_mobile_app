@@ -573,7 +573,7 @@ export const cachedProductStock = async (
   try {
     //  console.log(`⚡ Checking stock for product ${product_id} locally...`);
 
-    // 1️⃣ Try local DB
+    //  Try local DB
     const localData = await queryData(tableName, `id_product = ?`, [product_id]);
 
     if (localData.length > 0) {
@@ -585,12 +585,12 @@ export const cachedProductStock = async (
       };
     }
 
-    // 2️⃣ Not found locally → call API
+    //  Not found locally → call API
     //console.log(`🌐 Stock not found locally, calling API...`);
     const res = await apiCall();
     const stockItem = res.data?.stock_availables?.[0];
 
-    // 3️⃣ Save only the first object
+    //  Save only the first object
     if (stockItem) {
       const stockData = {
         id_product: stockItem.id_product,

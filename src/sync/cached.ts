@@ -1,8 +1,9 @@
-import { checkAllProductStock, checkProductStock, clientAddressGet, getCachedProductStock, getClientsForAgent, getCouriers, getDeliveries } from "../api/prestashop";
+import { checkAllProductStock, checkProductStock, clientAddressGet, getActiveCategories, getAllProducts, getCachedProductStock, getClientsForAgent, getCouriers, getDeliveries } from "../api/prestashop";
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
 import NetInfo from "@react-native-community/netinfo";
 import { store } from "../store";
-import { selectCurrentCustomerLength, selectLastCustomerPageSynced, setCustomerSyncStatus, setSyncing, setSyncStatusText } from "../store/slices/databaseStatusSlice";
+import { selectCurrentCustomerLength, selectLastCustomerPageSynced, setCustomerSyncStatus, setLastCutomerSyncDate, setSyncing, setSyncStatusText, setTotalCustomersFromServer } from "../store/slices/databaseStatusSlice";
+import { setTotalCategoryLength, setTotalProductNumber } from "../store/slices/categoryTreeSlice";
 const PAGE_SIZE = 100;
 
 export const cachedDataForCarriers = async (
@@ -846,13 +847,14 @@ export const cacheInitializer = async (agentId: any) => {
 };
 
 function bigNumberGenerator() {
-  const min = 1_000_000_000_00;      
+  const min = 1_000_000_000_00;
   const max = Number.MAX_SAFE_INTEGER;
 
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
 export const saveCategoryTree = async (data: any[]) => {
+
   const db = await getDBConnection();
   //console.log("data you sent ", data);
 
@@ -864,12 +866,12 @@ export const saveCategoryTree = async (data: any[]) => {
   for (const category of data) {
     categories.push({ id: category.id, name: category.name });
     //console.log("This category id is ", category.id );
-    
+
     for (const sub of category.subcategories || []) {
-     // console.log("I am inserting products for sub id ", sub.id , " and category id ", category.id, category.name);
-      
-      if(sub.id != null && sub.name != null){
-        subcategories.push({ id: sub.id , name: sub.name || category.name, category_id: category.id });
+      // console.log("I am inserting products for sub id ", sub.id , " and category id ", category.id, category.name);
+
+      if (sub.id != null && sub.name != null) {
+        subcategories.push({ id: sub.id, name: sub.name || category.name, category_id: category.id });
       }
       for (const p of sub.products || []) {
         products.push({
@@ -956,6 +958,13 @@ export const saveCategoryTree = async (data: any[]) => {
 
   // Step 2: Categories transaction
   store.dispatch(setSyncStatusText('Fetching List '));
+  store.dispatch(setTotalCategoryLength(categories.length));
+  const uniqueProducts = Array.from(
+    new Map(products.map(p => [p.id_product, p])).values()
+  );
+
+  store.dispatch(setTotalProductNumber(uniqueProducts.length));
+
 
   try {
     for (const cat of categories) {
@@ -1133,19 +1142,21 @@ export const clearDatabase = async () => {
 };
 
 export const syncCustomersIncrementally = async (agentId: number | string) => {
+  const nowIso = new Date().toISOString();
   store.dispatch(setSyncStatusText('Sincronizzazione clienti in corso...'));
   store.dispatch(setSyncing(true));
-
+  store.dispatch(setLastCutomerSyncDate(nowIso));
   try {
     // Start from the *next* page
     let currentPage = selectLastCustomerPageSynced(store.getState()) + 1;
     let totalSynced = selectCurrentCustomerLength(store.getState());
     let batchInserted = 0;
     let actualLastCustomerId = 0;
+    let customersRes = null;
     while (true) {
 
       // Fetch page
-      const customersRes = await getClientsForAgent(agentId, PAGE_SIZE, currentPage);
+      customersRes = await getClientsForAgent(agentId, PAGE_SIZE, currentPage);
       const customers = Array.isArray(customersRes.customers) ? customersRes.customers : [];
 
       if (customers.length === 0) {
@@ -1226,14 +1237,13 @@ export const syncCustomersIncrementally = async (agentId: number | string) => {
         current_customer_length: totalSynced,
         last_customer_id: actualLastCustomerId,
         last_customer_page_synced: currentPage,
-        // Note: we no longer set total pages
       }));
 
       console.log(`✅ Page ${currentPage}: ${batchInserted} customers synced`);
       currentPage++;
       batchInserted = 0;
     }
-
+    store.dispatch(setTotalCustomersFromServer(customersRes.total_customers));
     store.dispatch(setSyncStatusText(
       `✅ Clienti sincronizzati: ${totalSynced} salvati`
     ));
@@ -1399,7 +1409,7 @@ export const getProductsCached = async (
     // }
 
     // console.log(' SQLite: Loaded', rows);
-    
+
     return rows.map(row => ({
       id: row.id_product,
       id_product: row.id_product,
@@ -1565,4 +1575,24 @@ export const getCategoryOrSubCategoryName = async (category_id: number) => {
     'id = ?',
     [category_id]
   );
+};
+
+export const getTotalCategoryCount = async () => {
+  // count categories
+  const categories = await queryData(
+    'category_tree_categories',
+    '1=1'
+  );
+
+  return categories.length;
+};
+
+export const getTotalCustomerCount = async () => {
+  const customers = await queryData('customers', '1=1');
+  return customers.length;
+};
+
+export const getTotalProductCount = async () => {
+  const products = await queryData('category_tree_products', '1=1');
+  return products.length;
 };

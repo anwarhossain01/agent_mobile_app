@@ -265,7 +265,7 @@ function MainTabs({ navigation }: { navigation: any }) {
           name="Settings"
           component={SettingsScreen}
           options={{
-            tabBarLabel: 'Logout',
+            tabBarLabel: 'Sinc',
             // tabBarIcon: ({ color, size }) => (
             //   <Ionicons name="settings-outline" color={color} size={size} />
             // ),
@@ -378,7 +378,7 @@ function AppContent() {
       {isSyncing && (
         <View style={styles.syncBar}>
           <ActivityIndicator size="small" color="#000" />
-          <Text style={styles.syncText}>Syncing… Loading may be slow</Text>
+          <Text style={styles.syncText}>Syncing… Attendere prego.</Text>
         </View>
       )}
       <NavigationContainer theme={navTheme}>
@@ -426,10 +426,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
+    height: 75,
   },
   syncText: {
     color: '#000',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
     marginLeft: 6,
   },

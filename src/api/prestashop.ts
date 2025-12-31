@@ -115,9 +115,15 @@ export const getProducts = async (category_id: number | string | null = null) =>
   return res.data.products || [];
 };
 
+export const getAllProducts = async () => {
+  const res = await api.get(`/products?output_format=JSON&display=full&t=${generateRandomNumber(10)}&ws_key=${API_KEY}`);
+//  const res = await api.get('/products?output_format=JSON&filter[id_category_default]=60&display=full&limit=50');
+  return res.data.products || [];
+};
+
 export const getActiveCategories = async () => {
   try {
-    const res = await api.get(`/categories?display=[id, id_parent ,name]&filter[active]=1&filter[id_parent]=1&output_format=JSON&ws_key=${API_KEY}`);
+    const res = await api.get(`/categories?display=[id, id_parent ,name]&filter[active]=1&output_format=JSON&ws_key=${API_KEY}`);
     return res.data;
   } catch (error: any) {
     console.log("Categories api error", error);

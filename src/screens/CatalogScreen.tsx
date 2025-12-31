@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Modal, A
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { setProducts } from '../store/slices/productsSlice';
-import { getActiveCategories, getCategoriesSubsAndProds, getProducts } from '../api/prestashop';
+import { getActiveCategories, getAllProducts, getCategoriesSubsAndProds, getProducts } from '../api/prestashop';
 import { dark, darkBg, darkerBg, darkestBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { selectIsCategoryTreeSaved, selectSavedAt, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 import { initializeAllProductStock, saveCategoryTree } from '../sync/cached';
@@ -38,7 +38,8 @@ export default function CatalogScreen({ route }: { route: any }) {
   useEffect(() => {
     const load = async () => {
       try {
-       // dispatch(setSyncing(false));
+        // dispatch(setSyncing(false));
+       
         const netInfo = await NetInfo.fetch();
 
         //  1. Load from local DB (always try — even if stale, show something fast)

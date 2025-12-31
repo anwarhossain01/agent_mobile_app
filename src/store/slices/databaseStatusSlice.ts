@@ -7,6 +7,7 @@ type DatabaseState = {
   last_customer_id: number;
   last_customer_page_synced: number;
   total_customer_pages_tobe_synced : number;
+  total_customers_from_server: number;
   last_customer_sync_date: string;
 };
 
@@ -17,6 +18,7 @@ const initialState: DatabaseState = {
   last_customer_id: 0,
   last_customer_page_synced: 0,
   total_customer_pages_tobe_synced: 0,
+  total_customers_from_server: 0,
   last_customer_sync_date: '',
 };
 
@@ -39,10 +41,13 @@ const databaseStatusSlice = createSlice({
     setLastCutomerSyncDate(state, action: PayloadAction<string>) {
       state.last_customer_sync_date = action.payload;
     },
+    setTotalCustomersFromServer(state, action: PayloadAction<number>) {
+      state.total_customers_from_server = action.payload;
+    }
   },
 });
 
-export const { setSyncing, setCustomerSyncStatus, setSyncStatusText, setLastCutomerSyncDate } = databaseStatusSlice.actions;
+export const { setSyncing, setCustomerSyncStatus, setSyncStatusText, setLastCutomerSyncDate, setTotalCustomersFromServer } = databaseStatusSlice.actions;
 export const selectIsSyncing = (state: any) => state.databaseStatus.is_syncing;
 export const selectCurrentCustomerLength = (state: any) => state.databaseStatus.current_customer_length;
 export const selectLastCustomerId = (state: any) => state.databaseStatus.last_customer_id;
@@ -50,4 +55,5 @@ export const selectLastCustomerPageSynced = (state: any) => state.databaseStatus
 export const selectTotalCustomerPagesTobeSynced = (state: any) => state.databaseStatus.total_customer_pages_tobe_synced;
 export const selectSyncStatusText = (state: any) => state.databaseStatus.sync_status_text;
 export const selectLastCustomerSyncDate = (state: any) => state.databaseStatus.last_customer_sync_date;
+export const selectTotalCustomersFromServer = (state: any) => state.databaseStatus.total_customers_from_server;
 export default databaseStatusSlice.reducer;

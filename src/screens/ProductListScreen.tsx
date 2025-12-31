@@ -10,7 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getCategoryOrSubCategoryName, getProductsCached, verifyProductStock } from '../sync/cached';
-import { addItem } from '../store/slices/cartSlice';
+import { addItem, removeItem, updateQuantity } from '../store/slices/cartSlice';
 import NetInfo from '@react-native-community/netinfo';
 // --- Move this OUTSIDE ProductListScreen ---
 import { memo } from 'react';
@@ -27,8 +27,9 @@ const ProductInformation = (props: { label: string; value: string; prefix?: stri
   </View>
 );
 
-const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingItems, textColor, darkerTheme }: {
+const ProductsList = memo(({ item, getQuantityInCart, onProductClick, onAddToCart, added, loadingItems, textColor, darkerTheme }: {
   item: any;
+  getQuantityInCart: (productId: number) => number;
   onProductClick: (item: any) => void;
   onAddToCart: (item: any) => void;
   added: Record<number, boolean>;
@@ -37,7 +38,8 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
   darkerTheme: string;
 }) => {
   const [categoryName, setCategoryName] = useState<string>('...');
-
+  const quantity = getQuantityInCart(item.id);
+  const dispatch = useDispatch();
   useEffect(() => {
     let isMounted = true;
 
@@ -93,7 +95,7 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
         <ProductInformation label="" value={categoryName} />
       </View>
 
-      <TouchableOpacity
+      {/* <TouchableOpacity
         onPress={() => onAddToCart(item)}
         style={[
           styles.addToCartButton,
@@ -110,7 +112,62 @@ const ProductsList = memo(({ item, onProductClick, onAddToCart, added, loadingIt
             color="#fff"
           />
         )}
-      </TouchableOpacity>
+      </TouchableOpacity> */}
+
+      {quantity === 0 ? (
+        // ADD button (first time)
+        <TouchableOpacity
+          onPress={() => onAddToCart(item)}
+          style={[
+            styles.addToCartButton,
+            { backgroundColor: added[item.id] ? 'green' : darkerTheme },
+          ]}
+          disabled={loadingItems[item.id]}
+        >
+          {loadingItems[item.id] ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <FontAwesome
+              name={added[item.id] ? 'check' : 'cart-plus'}
+              size={22}
+              color="#fff"
+            />
+          )}
+        </TouchableOpacity>
+      ) : (
+        // +/- quantity controller
+        <View style={styles.qtyContainer}>
+          <TouchableOpacity
+            onPress={() => {
+              if (quantity === 1) {
+                dispatch(removeItem(item.id));
+              } else {
+                dispatch(updateQuantity({
+                  product_id: item.id,
+                  quantity: quantity - 1,
+                }));
+              }
+            }}
+            style={styles.qtyButton}
+          >
+            <Text style={styles.qtyText}>−</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.qtyValue}>{quantity}</Text>
+
+          <TouchableOpacity
+            onPress={() => {
+              dispatch(updateQuantity({
+                product_id: item.id,
+                quantity: quantity + 1,
+              }));
+            }}
+            style={styles.qtyButton}
+          >
+            <Text style={styles.qtyText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 });
@@ -125,8 +182,10 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
   const [searchMode, setSearchMode] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [filteredProducts, setFilteredProducts] = useState(products);
-  console.log('subs ', subcategoryId, subcategoryName);
-  
+  const cartItems = useSelector((s: RootState) => s.cart.items);
+
+  // console.log('subs ', subcategoryId, subcategoryName);
+
   useEffect(() => {
     setFilteredProducts(products);
   }, [products]);
@@ -138,12 +197,12 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         let netInfo = await NetInfo.fetch();
         let data = [];
         let isOnline = netInfo.isConnected && netInfo.isInternetReachable !== false;
-       // if (!isOnline) {
-          data = await getProductsCached(subcategoryId || null);
+        // if (!isOnline) {
+        data = await getProductsCached(subcategoryId || null);
         // } else {
         //   data = await getProducts(subcategoryId || null);
-       //  }
-       //   console.log('product data', data);
+        //  }
+        //   console.log('product data', data);
 
         dispatch(setProducts(data));
       } catch (e) {
@@ -153,6 +212,11 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     };
     load();
   }, [dispatch, subcategoryId]);
+
+  const getQuantityInCart = (productId: number) => {
+    const item = cartItems.find(i => i.product_id === productId);
+    return item ? item.quantity : 0;
+  };
 
   const handleSearchSubmit = async () => {
     const text = searchText.trim().toLowerCase();
@@ -208,102 +272,9 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     navigation.navigate('ProductDetails', { product: item });
   };
 
-  // const ProductsList = ({ item: rawItem }: { item: any }) => {
-  //   const item = rawItem.item ? rawItem.item : rawItem;
-
-  //   const [categoryName, setCategoryName] = useState<string>('Loading...');
-
-  //   useEffect(() => {
-  //     const loadCategoryName = async () => {
-  //       try {
-  //         const result = await getCategoryOrSubCategoryName(item.id_category_default);
-  //         if (result.length > 0) {
-  //           setCategoryName(result[0].name || 'Unnamed');
-  //         } else {
-  //           setCategoryName('');
-  //         }
-  //       } catch (error) {
-  //         console.error('Failed to load category name:', error);
-  //         setCategoryName('Error');
-  //       }
-  //     };
-
-  //     if (item?.id_category_default != null) {
-  //       loadCategoryName();
-  //     } else {
-  //       setCategoryName('None');
-  //     }
-  //   }, [item.id_category_default]);
-
-  //   return (
-  //     <View style={styles.productsBox}>
-  //       {/* Product Image */}
-  //       <Image
-  //         style={styles.productImage}
-  //         source={{ uri: fetchProductImage(item.id, item.id_default_image) }}
-  //       />
-
-  //       {/* Product Info */}
-  //       <View style={{ flex: 1, marginLeft: 16 }}>
-  //            {/* Clicking this button loads the category names again ! */}
-  //         <TouchableOpacity onPress={() => handleProductClick(item)}> 
-  //           <Text
-  //             style={{
-  //               color: textColor,
-  //               fontSize: 16,
-  //               fontWeight: 'bold',
-  //               marginBottom: 10,
-  //               textDecorationLine: 'underline',
-  //             }}
-  //             numberOfLines={2}
-  //             ellipsizeMode="tail"
-  //           >
-  //             {item.name || 'No name'}
-  //           </Text>
-  //         </TouchableOpacity>
-
-  //         <ProductInformation label="Price: " value={parseFloat(item.price).toFixed(2)} prefix="€" />
-  //         <ProductInformation label="" value={categoryName} />
-  //       </View>
-
-  //       {/* Floating Add-to-Cart button */}
-  //       <TouchableOpacity
-  //         onPress={() => handleAddToCart(item)}
-  //         style={[
-  //           styles.addToCartButton,
-  //           { backgroundColor: added[item.id] ? 'green' : darkerTheme },
-  //         ]}
-  //         disabled={loadingItems[item.id]}
-  //       >
-  //         {loadingItems[item.id] ? (
-  //           <ActivityIndicator size="small" color="#fff" />
-  //         ) : (
-  //           <FontAwesome
-  //             name={added[item.id] ? 'check' : 'cart-plus'}
-  //             size={22}
-  //             color="#fff"
-  //           />
-  //         )}
-  //       </TouchableOpacity>
-  //     </View>
-  //   );
-  // };
 
   return (
-
-
     <View style={styles.container}>
-      {/* Custom Header */}
-      {/* <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        {subcategoryId && (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 12 }}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-        )}
-        <Text style={{ fontSize: 18, color: textColor, fontWeight: '800' }}>
-          {subcategoryName || 'Prodotti'}
-        </Text>
-      </View> */}
 
       {/* Custom Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -382,6 +353,7 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
         renderItem={({ item }) => (
           <ProductsList
             item={item}
+            getQuantityInCart={getQuantityInCart}
             onProductClick={handleProductClick}
             onAddToCart={handleAddToCart}
             added={added}
@@ -430,7 +402,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 3,
-  }
+  },
+  qtyContainer: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkerTheme,
+    borderRadius: 20,
+    paddingHorizontal: 6,
+    height: 36,
+  },
+  qtyButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme,
+  },
+
+  qtyText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+  qtyValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
+    marginHorizontal: 6,
+  },
+
 
 });
 

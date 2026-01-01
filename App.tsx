@@ -79,7 +79,19 @@ import SplashScreen from './src/screens/SplashScreen';
 import ProductDetailPage from './src/screens/ProductDetailsPage';
 import FloatingCartButton from './src/components/FloatingCartButton';
 import DettagliScreen from './src/screens/DettagliScreen';
-import { selectIsSyncing } from './src/store/slices/databaseStatusSlice';
+import { selectIsSyncing, selectLastCustomerPageSynced, selectLastCustomerSyncDate } from './src/store/slices/databaseStatusSlice';
+import { selectSavedAt } from './src/store/slices/categoryTreeSlice';
+import { createNavigationContainerRef } from '@react-navigation/native';
+
+export const navigationRef = createNavigationContainerRef();
+
+export function navigate(name: string, params?: any) {
+  if (navigationRef.isReady()) {
+    navigationRef.navigate(name as never, params as never);
+  } else {
+    console.log('⚠️ Navigation not ready yet');
+  }
+}
 
 const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -140,7 +152,7 @@ function MainTabs({ navigation }: { navigation: any }) {
         borderBottomWidth: 1,
         borderBottomColor: darkerBg,
       }}>
-        {state.routes.map((route : any, index : any) => {
+        {state.routes.map((route: any, index: any) => {
           const isFocused = state.index === index;
           const color = isFocused ? '#007AFF' : 'gray';
           const label =
@@ -301,7 +313,16 @@ function MainTabs({ navigation }: { navigation: any }) {
 function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
   const [dbReady, setDbReady] = useState(false);
+  const lastCategorySavedDate = useSelector(selectSavedAt);
+  const lastCustomerSyncDate = useSelector(selectLastCustomerSyncDate);
+  const is_syncing = useSelector(selectIsSyncing);
 
+  const isOlderThan3Hours = (date?: string | null) => {
+    if (!date) return true;
+    const t = new Date(date).getTime();
+    if (isNaN(t)) return true;
+    return Date.now() - t > 3 * 60 * 60 * 1000;
+  };
 
   useEffect(() => {
     const runStockInit = async () => {
@@ -337,6 +358,24 @@ function RootNavigator() {
 
   }, []);
 
+  useEffect(() => {
+    if (is_syncing && !dbReady) return;
+    if (!navigationRef.isReady()) return;
+
+    const categoryStale = isOlderThan3Hours(lastCategorySavedDate);
+    const customerStale = isOlderThan3Hours(lastCustomerSyncDate);
+
+    if (categoryStale || customerStale) {
+      console.log('⏱ Auto-sync stale → navigating to Settings');
+      navigate('Main', { screen: 'Settings' });
+    }
+  }, [
+    lastCategorySavedDate,
+    lastCustomerSyncDate,
+    is_syncing,
+    dbReady
+  ]);
+
   if (!dbReady) {
     return (
       <View style={{ flex: 1, backgroundColor: dark, justifyContent: 'center', alignItems: 'center' }}>
@@ -351,8 +390,8 @@ function RootNavigator() {
       {isLoggedIn ? (
         <>
           <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="ProductDetails" component={ProductDetailPage} /> 
-          <Stack.Screen name="Dettagli" component={DettagliScreen} options={{ headerShown: true ,  headerTintColor: '#000'}} />
+          <Stack.Screen name="ProductDetails" component={ProductDetailPage} />
+          <Stack.Screen name="Dettagli" component={DettagliScreen} options={{ headerShown: true, headerTintColor: '#000' }} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />
@@ -360,6 +399,7 @@ function RootNavigator() {
     </Stack.Navigator>
   );
 }
+
 function AppContent() {
   const isSyncing = useSelector(selectIsSyncing);
   const navTheme = {
@@ -381,7 +421,7 @@ function AppContent() {
           <Text style={styles.syncText}>Syncing… Attendere prego.</Text>
         </View>
       )}
-      <NavigationContainer theme={navTheme}>
+      <NavigationContainer theme={navTheme} ref={navigationRef}>
         <RootNavigator />
         <FloatingCartButton />
       </NavigationContainer>

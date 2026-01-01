@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { getCategoriesSubsAndProds } from '../api/prestashop';
 import { RootState } from '../store';
+import { useNavigation } from '@react-navigation/native';
 
 export default function SettingsScreen() {
   const dispatch = useDispatch();
@@ -19,7 +20,7 @@ export default function SettingsScreen() {
   const [totalCustomersInDb, setTotalCustomersInDb] = useState(0);
   const [totalProductsInDb, setTotalProductsInDb] = useState(0);
   const totalCategoryInServer = useSelector(selectTotalCategoryLength);
-  const categorySavedDate = useSelector(selectSavedAt);
+  const lastCategorySavedDate = useSelector(selectSavedAt);
   const lastCustomerSyncDate = useSelector(selectLastCustomerSyncDate);
   const totalCustomersFromServer = useSelector(selectTotalCustomersFromServer);
   const totalProductsFromServer = useSelector(selectTotalProductNumber);
@@ -28,6 +29,39 @@ export default function SettingsScreen() {
   const employeeId = auth.employeeId;
   const syncStatusText = useSelector(selectSyncStatusText);
   const [syncTitle, setSyncTitle] = useState('');
+  const navigation = useNavigation();
+
+  const isOlderThan3Hours = (date?: string | null) => {
+    if (!date) return true; // never synced → stale
+
+    const last = new Date(date).getTime();
+    if (isNaN(last)) return true;
+
+    const THREE_HOURS = 3 * 60 * 60 * 1000;
+    return Date.now() - last > THREE_HOURS;
+  };
+
+  useEffect(() => {
+    const autoSync = async () => {
+      if (is_syncing) return;
+      const categoryStale = isOlderThan3Hours(lastCategorySavedDate);
+      const customerStale = isOlderThan3Hours(lastCustomerSyncDate);
+
+      if (categoryStale || customerStale) {
+        console.log('⏱ Auto-sync triggered');
+
+        setSyncTitle('Auto Sync in progress');
+        dispatch(setSyncStatusText('Auto sync started'));
+
+        // run BOTH
+        await startCategoryAndProductSync();
+        await startCustomerSync();
+      }
+    };
+
+    autoSync();
+  }, [ ]);
+
 
   useEffect(() => {
     async function getAndSetCounts() {
@@ -80,7 +114,7 @@ export default function SettingsScreen() {
 
         if (categoriesTree.success) {
           dispatch(setSyncing(true));
-          
+
           await initializeAllProductStock();
           await saveCategoryTree(categoriesTree.data);
 
@@ -155,7 +189,7 @@ export default function SettingsScreen() {
       <SyncRow
         title="Categorie"
         progress={`${totalCategoryInDb}/${totalCategoryInServer}`}
-        date={categorySavedDate}
+        date={lastCategorySavedDate}
         onPress={async () => {
           setSyncTitle('Syncing Categorie e Prodotti');
           await startCategoryAndProductSync();
@@ -165,7 +199,7 @@ export default function SettingsScreen() {
       <SyncRow
         title="Prodotti"
         progress={`${totalProductsInDb}/${totalProductsFromServer}`}
-        date={categorySavedDate}
+        date={lastCategorySavedDate}
         onPress={async () => {
           setSyncTitle('Syncing Prodotti e Categorie');
           await startCategoryAndProductSync();

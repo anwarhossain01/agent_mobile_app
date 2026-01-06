@@ -367,7 +367,9 @@ function RootNavigator() {
 
     if (categoryStale || customerStale) {
       console.log('⏱ Auto-sync stale → navigating to Settings');
-      navigate('Main', { screen: 'Settings' });
+      if(isLoggedIn){
+        navigate('Main', { screen: 'Settings' });
+      }
     }
   }, [
     lastCategorySavedDate,

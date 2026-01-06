@@ -225,14 +225,23 @@ CREATE TABLE IF NOT EXISTS product_stock (
 
 CREATE TABLE IF NOT EXISTS category_tree_categories (
     id INTEGER PRIMARY KEY,
+    category_id INTEGER DEFAULT NULL, 
+    parent_id INTEGER DEFAULT 0,
     name TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS category_tree_subcategories (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    category_id INTEGER NOT NULL,
+    server_category_id INTEGER NOT NULL,
     FOREIGN KEY (category_id) REFERENCES category_tree_categories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS products_categories (
+  id INTEGER PRIMARY KEY,
+  id_product INTEGER NOT NULL,
+  id_category INTEGER NOT NULL,
+  FOREIGN KEY (id_product) REFERENCES products(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS category_tree_products (

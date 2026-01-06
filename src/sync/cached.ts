@@ -853,175 +853,336 @@ function bigNumberGenerator() {
   return Math.floor(Math.random() * (max - min)) + min;
 }
 
-export const saveCategoryTree = async (data: any[]) => {
+// export const saveCategoryTree = async (data: any[]) => {
 
-  const db = await getDBConnection();
-  //console.log("data you sent ", data);
+//   const db = await getDBConnection();
+//   //console.log("data you sent ", data);
 
-  // Step 1: Flatten the data into separate arrays
-  const categories: any[] = [];
-  const subcategories: any[] = [];
-  const products: any[] = [];
+//   // Step 1: Flatten the data into separate arrays
+//   const categories: any[] = [];
+//   const subcategories: any[] = [];
+//   const products: any[] = [];
 
-  for (const category of data) {
-    categories.push({ id: category.id, name: category.name });
-    //console.log("This category id is ", category.id );
+//   for (const category of data) {
+//     categories.push({ id: category.id, name: category.name });
+//     //console.log("This category id is ", category.id );
 
-    for (const sub of category.subcategories || []) {
-      // console.log("I am inserting products for sub id ", sub.id , " and category id ", category.id, category.name);
+//     for (const sub of category.subcategories || []) {
+//       // console.log("I am inserting products for sub id ", sub.id , " and category id ", category.id, category.name);
 
-      if (sub.id != null && sub.name != null) {
-        subcategories.push({ id: sub.id, name: sub.name || category.name, category_id: category.id });
+//       if (sub.id != null && sub.name != null) {
+//         subcategories.push({ id: sub.id, name: sub.name || category.name, category_id: category.id });
+//       }
+//       for (const p of sub.products || []) {
+//         products.push({
+//           id_product: p.id_product,
+//           subcategory_id: sub.id || category.id,
+//           id_supplier: p.id_supplier,
+//           id_manufacturer: p.id_manufacturer,
+//           id_category_default: p.id_category_default,
+//           id_default_image: p.id_default_image,
+//           id_shop_default: p.id_shop_default,
+//           id_tax_rules_group: p.id_tax_rules_group,
+//           on_sale: p.on_sale,
+//           online_only: p.online_only,
+//           ean13: p.ean13,
+//           isbn: p.isbn,
+//           upc: p.upc,
+//           mpn: p.mpn,
+//           ecotax: p.ecotax,
+//           quantity: p.quantity,
+//           minimal_quantity: p.minimal_quantity,
+//           low_stock_threshold: p.low_stock_threshold,
+//           low_stock_alert: p.low_stock_alert,
+//           price: p.price,
+//           wholesale_price: p.wholesale_price,
+//           unity: p.unity,
+//           unit_price: p.unit_price,
+//           unit_price_ratio: p.unit_price_ratio,
+//           additional_shipping_cost: p.additional_shipping_cost,
+//           reference: p.reference,
+//           supplier_reference: p.supplier_reference,
+//           location: p.location,
+//           width: p.width,
+//           height: p.height,
+//           depth: p.depth,
+//           weight: p.weight,
+//           out_of_stock: p.out_of_stock,
+//           additional_delivery_times: p.additional_delivery_times,
+//           quantity_discount: p.quantity_discount,
+//           customizable: p.customizable,
+//           uploadable_files: p.uploadable_files,
+//           text_fields: p.text_fields,
+//           active: p.active,
+//           redirect_type: p.redirect_type,
+//           id_type_redirected: p.id_type_redirected,
+//           available_for_order: p.available_for_order,
+//           available_date: p.available_date,
+//           show_condition: p.show_condition,
+//           condition: p.condition,
+//           show_price: p.show_price,
+//           indexed: p.indexed,
+//           visibility: p.visibility,
+//           cache_is_pack: p.cache_is_pack,
+//           cache_has_attachments: p.cache_has_attachments,
+//           is_virtual: p.is_virtual,
+//           cache_default_attribute: p.cache_default_attribute,
+//           date_add: p.date_add,
+//           date_upd: p.date_upd,
+//           advanced_stock_management: p.advanced_stock_management,
+//           pack_stock_type: p.pack_stock_type,
+//           state: p.state,
+//           product_type: p.product_type,
+//           accisa: p.accisa,
+//           id_shop: p.id_shop,
+//           id_lang: p.id_lang,
+//           link_rewrite: p.link_rewrite,
+//           description: p.description,
+//           description_short: p.description_short,
+//           meta_description: p.meta_description,
+//           meta_keywords: p.meta_keywords,
+//           meta_title: p.meta_title,
+//           name: p.name,
+//           available_now: p.available_now,
+//           available_later: p.available_later,
+//           delivery_in_stock: p.delivery_in_stock,
+//           delivery_out_stock: p.delivery_out_stock,
+//           manufacturer_name: p.manufacturer_name,
+//           supplier_name: p.supplier_name,
+//           rate: p.rate,
+//           tax_name: p.tax_name,
+//         });
+//       }
+//     }
+//   }
+
+//   // Step 2: Categories transaction
+//   store.dispatch(setSyncStatusText('Fetching List '));
+//   store.dispatch(setTotalCategoryLength(categories.length));
+//   const uniqueProducts = Array.from(
+//     new Map(products.map(p => [p.id_product, p])).values()
+//   );
+
+//   store.dispatch(setTotalProductNumber(uniqueProducts.length));
+
+
+//   try {
+//     for (const cat of categories) {
+//       await db.executeSql(
+//         `INSERT OR REPLACE INTO category_tree_categories (id, name) VALUES (?, ?)`,
+//         [cat.id, cat.name]
+//       );
+//     }
+//     // console.log('✅ Categories saved.');
+//     store.dispatch(setSyncStatusText('✅ Categories saved.'));
+//   } catch (error) {
+//     console.log('❌ Categories save error:', error);
+//   }
+
+//   // Step 3: Subcategories
+//   try {
+//     for (const sub of subcategories) {
+//       await db.executeSql(
+//         `INSERT OR REPLACE INTO category_tree_subcategories (id, name, category_id) VALUES (?, ?, ?)`,
+//         [sub.id, sub.name, sub.category_id]
+//       );
+//     }
+//     store.dispatch(setSyncStatusText('✅ Subcategories saved.'));
+//     // console.log('✅ Subcategories saved.');
+//   } catch (error) {
+//     console.log('❌ Subcategories save error:', error);
+//   }
+
+//   // Step 4: Products
+//   try {
+//     let productCount = 0;
+//     for (const p of products) {
+//       productCount++;
+//       store.dispatch(setSyncStatusText(`Saving Product ${productCount}`));
+//       await db.executeSql(
+//         `INSERT OR REPLACE INTO category_tree_products (
+//         id_product, subcategory_id, id_supplier, id_manufacturer, id_category_default, id_default_image, id_shop_default, id_tax_rules_group,
+//         on_sale, online_only, ean13, isbn, upc, mpn, ecotax, quantity, minimal_quantity, low_stock_threshold, low_stock_alert,
+//         price, wholesale_price, unity, unit_price, unit_price_ratio, additional_shipping_cost,
+//         reference, supplier_reference, location, width, height, depth, weight, out_of_stock, additional_delivery_times,
+//         quantity_discount, customizable, uploadable_files, text_fields, active, redirect_type, id_type_redirected,
+//         available_for_order, available_date, show_condition, condition, show_price, indexed, visibility,
+//         cache_is_pack, cache_has_attachments, is_virtual, cache_default_attribute, date_add, date_upd,
+//         advanced_stock_management, pack_stock_type, state, product_type, accisa, id_shop, id_lang, link_rewrite,
+//         description, description_short, meta_description, meta_keywords, meta_title, name, available_now,
+//         available_later, delivery_in_stock, delivery_out_stock, manufacturer_name, supplier_name, rate, tax_name
+//       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+//         Object.values(p)
+//       );
+//     }
+//     // console.log('✅ Products saved.');
+//     store.dispatch(setSyncStatusText('✅ Products saved.'));
+//   } catch (error) {
+//     console.log('❌ Products save error:', error);
+//   }
+
+//   return { categories, subcategories, products }; // optional, for reuse
+// };
+
+export const syncProductsAndCategoriesToDB = async () => {
+  try {
+    // 1. Fetch categories and products in parallel
+    const [categoriesRes, productsRes] = await Promise.all([
+      getActiveCategories(),
+      getAllProducts()
+    ]);
+
+    const categoriesData = categoriesRes?.categories || [];
+    const productsData = productsRes || [];
+    store.dispatch(setSyncStatusText('Fetching List '));
+    store.dispatch(setTotalProductNumber(productsData.length));
+    // 2. Insert categories
+    for (const cat of categoriesData) {
+      const categoryRecord = {
+        id: cat.id,
+        category_id: cat.id,
+        parent_id: cat.id_parent ?? 0,
+        name: cat.name ?? ''
+      };
+      await insertIfNotExists('category_tree_categories', categoryRecord, 'id');
+    }
+
+    // 3. Insert products AND collect product-category associations
+    const productCategoryPairs: { id_product: number; id_category: number }[] = [];
+    let p=0;
+    for (const prod of productsData) {
+      // Flatten nested fields and normalize types (ensure strings/numbers as needed)
+      const productRecord = {
+        id_product: prod.id,
+        id_supplier: prod.id_supplier ?? null,
+        id_manufacturer: prod.id_manufacturer ?? null,
+        id_category_default: prod.id_category_default ?? null,
+        id_default_image: prod.id_default_image ?? null,
+        id_shop_default: prod.id_shop_default ?? null,
+        id_tax_rules_group: prod.id_tax_rules_group ?? null,
+        on_sale: Number(prod.on_sale) || 0,
+        online_only: Number(prod.online_only) || 0,
+        ean13: prod.ean13 ?? '',
+        isbn: prod.isbn ?? '',
+        upc: prod.upc ?? '',
+        mpn: prod.mpn ?? '',
+        ecotax: String(prod.ecotax ?? '0.000000'),
+        quantity: Number(prod.quantity) || 0,
+        minimal_quantity: Number(prod.minimal_quantity) || 1,
+        low_stock_threshold: prod.low_stock_threshold ? Number(prod.low_stock_threshold) : null,
+        low_stock_alert: Number(prod.low_stock_alert) || 0,
+        price: String(prod.price ?? '0.000000'),
+        wholesale_price: String(prod.wholesale_price ?? '0.000000'),
+        unity: prod.unity ?? '',
+        unit_price: String(prod.unit_price ?? '0.000000'),
+        unit_price_ratio: String(prod.unit_price_ratio ?? '0.000000'),
+        additional_shipping_cost: String(prod.additional_shipping_cost ?? '0.000000'),
+        reference: prod.reference ?? '',
+        supplier_reference: prod.supplier_reference ?? '',
+        location: prod.location ?? '',
+        width: String(prod.width ?? '0.000000'),
+        height: String(prod.height ?? '0.000000'),
+        depth: String(prod.depth ?? '0.000000'),
+        weight: String(prod.weight ?? '0.000000'),
+        out_of_stock: Number(prod.out_of_stock) || 0,
+        additional_delivery_times: Number(prod.additional_delivery_times) || 0,
+        quantity_discount: Number(prod.quantity_discount) || 0,
+        customizable: Number(prod.customizable) || 0,
+        uploadable_files: Number(prod.uploadable_files) || 0,
+        text_fields: Number(prod.text_fields) || 0,
+        active: Number(prod.active) || 0,
+        redirect_type: prod.redirect_type ?? 'default',
+        id_type_redirected: Number(prod.id_type_redirected) || 0,
+        available_for_order: Number(prod.available_for_order) || 0,
+        available_date: prod.available_date ?? '',
+        show_condition: Number(prod.show_condition) || 0,
+        condition: prod.condition ?? 'new',
+        show_price: Number(prod.show_price) || 0,
+        indexed: Number(prod.indexed) || 0,
+        visibility: prod.visibility ?? 'both',
+        cache_is_pack: Number(prod.cache_is_pack) || 0,
+        cache_has_attachments: Number(prod.cache_has_attachments) || 0,
+        is_virtual: Number(prod.is_virtual) || 0,
+        cache_default_attribute: Number(prod.cache_default_attribute) || 0,
+        date_add: prod.date_add ?? '',
+        date_upd: prod.date_upd ?? '',
+        advanced_stock_management: Number(prod.advanced_stock_management) || 0,
+        pack_stock_type: Number(prod.pack_stock_type) || 0,
+        state: Number(prod.state) || 0,
+        product_type: prod.product_type ?? '',
+        accisa: String(prod.accisa ?? '0.000000'),
+        id_shop: prod.id_shop ?? null,
+        id_lang: prod.id_lang ?? null,
+        link_rewrite: prod.link_rewrite ?? '',
+        description: prod.description ?? '',
+        description_short: prod.description_short ?? '',
+        meta_description: prod.meta_description ?? '',
+        meta_keywords: prod.meta_keywords ?? '',
+        meta_title: prod.meta_title ?? '',
+        name: prod.name ?? '',
+        available_now: prod.available_now ?? '',
+        available_later: prod.available_later ?? '',
+        delivery_in_stock: prod.delivery_in_stock ?? '',
+        delivery_out_stock: prod.delivery_out_stock ?? '',
+        manufacturer_name: prod.manufacturer_name ?? '',
+        supplier_name: prod.supplier_name ?? '',
+        rate: Number(prod.rate) || 0,
+        tax_name: prod.tax_name ?? ''
+      };
+
+      await insertIfNotExists('category_tree_products', productRecord, 'id_product');
+      p++;
+      store.dispatch(setSyncStatusText('Saved Products of ' + p + '/ ' + productsData.length));
+      // Extract category associations from `associations.categories`
+      const assocCats = prod.associations?.categories || [];
+      for (const catRef of assocCats) {
+        if (catRef?.id) {
+          productCategoryPairs.push({
+            id_product: prod.id,
+            id_category: catRef.id
+          });
+        }
       }
-      for (const p of sub.products || []) {
-        products.push({
-          id_product: p.id_product,
-          subcategory_id: sub.id || category.id,
-          id_supplier: p.id_supplier,
-          id_manufacturer: p.id_manufacturer,
-          id_category_default: p.id_category_default,
-          id_default_image: p.id_default_image,
-          id_shop_default: p.id_shop_default,
-          id_tax_rules_group: p.id_tax_rules_group,
-          on_sale: p.on_sale,
-          online_only: p.online_only,
-          ean13: p.ean13,
-          isbn: p.isbn,
-          upc: p.upc,
-          mpn: p.mpn,
-          ecotax: p.ecotax,
-          quantity: p.quantity,
-          minimal_quantity: p.minimal_quantity,
-          low_stock_threshold: p.low_stock_threshold,
-          low_stock_alert: p.low_stock_alert,
-          price: p.price,
-          wholesale_price: p.wholesale_price,
-          unity: p.unity,
-          unit_price: p.unit_price,
-          unit_price_ratio: p.unit_price_ratio,
-          additional_shipping_cost: p.additional_shipping_cost,
-          reference: p.reference,
-          supplier_reference: p.supplier_reference,
-          location: p.location,
-          width: p.width,
-          height: p.height,
-          depth: p.depth,
-          weight: p.weight,
-          out_of_stock: p.out_of_stock,
-          additional_delivery_times: p.additional_delivery_times,
-          quantity_discount: p.quantity_discount,
-          customizable: p.customizable,
-          uploadable_files: p.uploadable_files,
-          text_fields: p.text_fields,
-          active: p.active,
-          redirect_type: p.redirect_type,
-          id_type_redirected: p.id_type_redirected,
-          available_for_order: p.available_for_order,
-          available_date: p.available_date,
-          show_condition: p.show_condition,
-          condition: p.condition,
-          show_price: p.show_price,
-          indexed: p.indexed,
-          visibility: p.visibility,
-          cache_is_pack: p.cache_is_pack,
-          cache_has_attachments: p.cache_has_attachments,
-          is_virtual: p.is_virtual,
-          cache_default_attribute: p.cache_default_attribute,
-          date_add: p.date_add,
-          date_upd: p.date_upd,
-          advanced_stock_management: p.advanced_stock_management,
-          pack_stock_type: p.pack_stock_type,
-          state: p.state,
-          product_type: p.product_type,
-          accisa: p.accisa,
-          id_shop: p.id_shop,
-          id_lang: p.id_lang,
-          link_rewrite: p.link_rewrite,
-          description: p.description,
-          description_short: p.description_short,
-          meta_description: p.meta_description,
-          meta_keywords: p.meta_keywords,
-          meta_title: p.meta_title,
-          name: p.name,
-          available_now: p.available_now,
-          available_later: p.available_later,
-          delivery_in_stock: p.delivery_in_stock,
-          delivery_out_stock: p.delivery_out_stock,
-          manufacturer_name: p.manufacturer_name,
-          supplier_name: p.supplier_name,
-          rate: p.rate,
-          tax_name: p.tax_name,
-        });
+    }
+
+    // 4. Insert product-category associations
+    // First, clear existing associations for these products (optional but safe for full sync)
+    const db = await getDBConnection();
+
+    // Optional: Clear old associations — only if you want a *full sync* (not incremental)
+    // If you prefer incremental, skip the DELETE.
+    // But given the function name "sync", assuming full replacement is desired.
+    if (productsData.length > 0) {
+      const productIds = productsData.map(p => p.id);
+      const placeholders = productIds.map(() => '?').join(',');
+      const deleteSql = `DELETE FROM products_categories WHERE id_product IN (${placeholders})`;
+      await db.executeSql(deleteSql, productIds);
+    }
+    let i = 0;
+    for (const pair of productCategoryPairs) {
+      const assocRecord = {
+        id: null, // auto-incremented; SQLite will ignore if PRIMARY KEY AUTOINCREMENT
+        id_product: pair.id_product,
+        id_category: pair.id_category
+      };
+      await insertIfNotExists('products_categories', assocRecord, 'id');
+      i++;
+      store.dispatch(setSyncStatusText('Associations - ' + i + ' of ' + productCategoryPairs.length + ' saved.'));
+    }
+
+    console.log(`✅ Sync completed: ${categoriesData.length} categories, ${productsData.length} products, ${productCategoryPairs.length} associations`);
+    return {
+      success: true,
+      stats: {
+        categories: categoriesData.length,
+        products: productsData.length,
+        associations: productCategoryPairs.length
       }
-    }
-  }
-
-  // Step 2: Categories transaction
-  store.dispatch(setSyncStatusText('Fetching List '));
-  store.dispatch(setTotalCategoryLength(categories.length));
-  const uniqueProducts = Array.from(
-    new Map(products.map(p => [p.id_product, p])).values()
-  );
-
-  store.dispatch(setTotalProductNumber(uniqueProducts.length));
-
-
-  try {
-    for (const cat of categories) {
-      await db.executeSql(
-        `INSERT OR REPLACE INTO category_tree_categories (id, name) VALUES (?, ?)`,
-        [cat.id, cat.name]
-      );
-    }
-    // console.log('✅ Categories saved.');
-    store.dispatch(setSyncStatusText('✅ Categories saved.'));
+    };
   } catch (error) {
-    console.log('❌ Categories save error:', error);
+    console.error('❌ syncProductsAndCategoriesToDB failed:', error);
+    throw error;
   }
-
-  // Step 3: Subcategories
-  try {
-    for (const sub of subcategories) {
-      await db.executeSql(
-        `INSERT OR REPLACE INTO category_tree_subcategories (id, name, category_id) VALUES (?, ?, ?)`,
-        [sub.id, sub.name, sub.category_id]
-      );
-    }
-    store.dispatch(setSyncStatusText('✅ Subcategories saved.'));
-    // console.log('✅ Subcategories saved.');
-  } catch (error) {
-    console.log('❌ Subcategories save error:', error);
-  }
-
-  // Step 4: Products
-  try {
-    let productCount = 0;
-    for (const p of products) {
-      productCount++;
-      store.dispatch(setSyncStatusText(`Saving Product ${productCount}`));
-      await db.executeSql(
-        `INSERT OR REPLACE INTO category_tree_products (
-        id_product, subcategory_id, id_supplier, id_manufacturer, id_category_default, id_default_image, id_shop_default, id_tax_rules_group,
-        on_sale, online_only, ean13, isbn, upc, mpn, ecotax, quantity, minimal_quantity, low_stock_threshold, low_stock_alert,
-        price, wholesale_price, unity, unit_price, unit_price_ratio, additional_shipping_cost,
-        reference, supplier_reference, location, width, height, depth, weight, out_of_stock, additional_delivery_times,
-        quantity_discount, customizable, uploadable_files, text_fields, active, redirect_type, id_type_redirected,
-        available_for_order, available_date, show_condition, condition, show_price, indexed, visibility,
-        cache_is_pack, cache_has_attachments, is_virtual, cache_default_attribute, date_add, date_upd,
-        advanced_stock_management, pack_stock_type, state, product_type, accisa, id_shop, id_lang, link_rewrite,
-        description, description_short, meta_description, meta_keywords, meta_title, name, available_now,
-        available_later, delivery_in_stock, delivery_out_stock, manufacturer_name, supplier_name, rate, tax_name
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        Object.values(p)
-      );
-    }
-    // console.log('✅ Products saved.');
-    store.dispatch(setSyncStatusText('✅ Products saved.'));
-  } catch (error) {
-    console.log('❌ Products save error:', error);
-  }
-
-  return { categories, subcategories, products }; // optional, for reuse
 };
 
 /**
@@ -1372,11 +1533,30 @@ export const getProductsCached = async (
     let params: any[] = [];
     const conditions: string[] = [];
 
+    let productIdsFromCategory: number[] | null = null;
+
+    // 1 If category is provided → get product IDs from mapping table
     if (category_id != null) {
-      conditions.push('subcategory_id = ?');
-      params.push(Number(category_id));
+      const rows = await queryData(
+        'products_categories',
+        'id_category = ?',
+        [Number(category_id)]
+      );
+
+      productIdsFromCategory = rows.map(r => r.id_product);
+
+      // No products in this category → return early
+      if (productIdsFromCategory.length === 0) {
+        return [];
+      }
+
+      conditions.push(
+        `id_product IN (${productIdsFromCategory.map(() => '?').join(',')})`
+      );
+      params.push(...productIdsFromCategory);
     }
 
+    // 2 Search by product name
     if (search.trim() !== '') {
       conditions.push('name LIKE ?');
       params.push(`%${search.trim()}%`);
@@ -1384,32 +1564,14 @@ export const getProductsCached = async (
 
     const whereClause = conditions.join(' AND ');
 
-    let rows = await queryData('category_tree_products', whereClause, params);
-    //console.log('📦 SQLite: Loaded', rows.length, 'products');
+    // 3 Fetch products
+    const rows = await queryData(
+      'category_tree_products',
+      whereClause,
+      params
+    );
 
-    // FALLBACK SEARCH
-    // if (rows.length === 0 && category_id != null) {
-    //   console.log('🔁 Retry with id_category_default');
-
-    //   const fallbackConditions: string[] = [];
-    //   const fallbackParams: any[] = [];
-
-    //   fallbackConditions.push('id_category_default = ?');
-    //   fallbackParams.push(Number(category_id));
-
-    //   if (search.trim() !== '') {
-    //     fallbackConditions.push('name LIKE ?');
-    //     fallbackParams.push(`%${search.trim()}%`);
-    //   }
-
-    //   const fallbackWhere = fallbackConditions.join(' AND ');
-
-    //   rows = await queryData('category_tree_products', fallbackWhere, fallbackParams);
-    //   console.log('📦 SQLite fallback loaded', rows.length, 'products');
-    // }
-
-    // console.log(' SQLite: Loaded', rows);
-
+    // 4 Return EXACT SAME structure as before
     return rows.map(row => ({
       id: row.id_product,
       id_product: row.id_product,
@@ -1479,10 +1641,11 @@ export const getProductsCached = async (
       product_type: row.product_type || 'simple',
     }));
   } catch (error) {
-    console.error('❌ getProductsCached failed:', error);
+    console.error(' getProductsCached failed:', error);
     return [];
   }
 };
+
 
 
 /**

@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '../store/slices/authSlice';
 import { lightdark, textColor, theme } from '../../colors';
 import { getDBConnection } from '../database/db';
-import { clearDatabase, getTotalCategoryCount, getTotalCustomerCount, getTotalProductCount, initializeAllProductStock, saveCategoryTree, syncCustomersIncrementally } from '../sync/cached';
+import { clearDatabase, getTotalCategoryCount, getTotalCustomerCount, getTotalProductCount, initializeAllProductStock, syncCustomersIncrementally, syncProductsAndCategoriesToDB } from '../sync/cached';
 import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, selectTotalCustomerPagesTobeSynced, selectTotalCustomersFromServer, setCustomerSyncStatus, setLastCutomerSyncDate, setSyncing, setSyncStatusText } from '../store/slices/databaseStatusSlice';
 import { selectSavedAt, selectTotalCategoryLength, selectTotalProductNumber, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -110,21 +110,22 @@ export default function SettingsScreen() {
 
     if (netInfo.isConnected && !is_syncing) {
       try {
-        const categoriesTree = await getCategoriesSubsAndProds();
+      //  const categoriesTree = await getCategoriesSubsAndProds();
 
-        if (categoriesTree.success) {
+      //  if (categoriesTree.success) {
           dispatch(setSyncing(true));
 
           await initializeAllProductStock();
-          await saveCategoryTree(categoriesTree.data);
+          await syncProductsAndCategoriesToDB();
+       //   await saveCategoryTree(categoriesTree.data);
 
           //  Update cache timestamp — this is the key for next check
           const newSavedAt = new Date().toISOString();
           dispatch(setSavedAt(newSavedAt));
 
-        } else {
-          console.warn('⚠️ Server returned success=false for category tree');
-        }
+      //  } else {
+       //   console.warn('⚠️ Server returned success=false for category tree');
+      //  }
       } catch (error) {
         console.log('❌ Category tree load error:', error);
 
@@ -188,7 +189,7 @@ export default function SettingsScreen() {
 
       <SyncRow
         title="Categorie"
-        progress={`${totalCategoryInDb}/${totalCategoryInServer}`}
+        progress={`${totalCategoryInDb}`}
         date={lastCategorySavedDate}
         onPress={async () => {
           setSyncTitle('Syncing Categorie e Prodotti');

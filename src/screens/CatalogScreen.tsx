@@ -6,105 +6,72 @@ import { setProducts } from '../store/slices/productsSlice';
 import { getActiveCategories, getAllProducts, getCategoriesSubsAndProds, getProducts } from '../api/prestashop';
 import { dark, darkBg, darkerBg, darkestBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { selectIsCategoryTreeSaved, selectSavedAt, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
-import { initializeAllProductStock, saveCategoryTree } from '../sync/cached';
+import { initializeAllProductStock, syncProductsAndCategoriesToDB } from '../sync/cached';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { queryData } from '../database/db';
 import { useNavigation } from '@react-navigation/native';
 import NetInfo from '@react-native-community/netinfo';
 import { selectIsSyncing, selectSyncStatusText, setSyncing } from '../store/slices/databaseStatusSlice';
 
-type SearchResult =
-  | { type: 'category'; id: number; name: string }
-  | { type: 'subcategory'; id: number; name: string; category_id: number };
 export default function CatalogScreen({ route }: { route: any }) {
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
 
-  const [categories, setCategories] = useState<any[]>([]);
-  const [filteredCategories, setFilteredCategories] = useState<any[]>([]);
-  const [subcategories, setSubcategories] = useState<any[]>([]);
-  const [filteredSubcategories, setFilteredSubcategories] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [searchMode, setSearchMode] = useState(false);
-  const [searchText, setSearchText] = useState('');
-
   const is_saved = useSelector(selectIsCategoryTreeSaved);
   const is_syncing = useSelector(selectIsSyncing);
   const syncStatusText = useSelector(selectSyncStatusText);
   const dispatch = useDispatch();
   const navigation = useNavigation();
   let saved_at = useSelector(selectSavedAt);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [expandedIds, setExpandedIds] = useState<number[]>([]);
+  const [childrenMap, setChildrenMap] = useState<Record<number, any[]>>({});
+const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        // dispatch(setSyncing(false));
-       
-        const netInfo = await NetInfo.fetch();
+    loadTopCategories();
+  }, []);
 
-        //  1. Load from local DB (always try — even if stale, show something fast)
-        const localCategories = await queryData('category_tree_categories', '1=1');
-        setCategories(localCategories);
-        setFilteredCategories(localCategories);
+  const loadTopCategories = async () => {
+    try {
+      const data = await queryData(
+        'category_tree_categories',
+        'parent_id = ?',
+        [2]
+      );
+      setCategories(data);
+    } catch (e) {
+      console.error('Failed to load categories', e);
+    }
+  };
 
-        //  2. Decide whether to refresh from server: only based on time
-        const now = Date.now();
-        const FIXED_HOURS_MS = 25 * 60 * 60 * 1000; // 25 hours
+  const toggleCategory = async (categoryId: number) => {
+    if (expandedIds.includes(categoryId)) {
+      // collapse
+      setExpandedIds(prev => prev.filter(id => id !== categoryId));
+      return;
+    }
 
-        let lastSavedTime = 0; // defaults to "never" → expired
+    // expand
+    setExpandedIds(prev => [...prev, categoryId]);
 
-        if (saved_at) {
-          const parsed = new Date(saved_at).getTime();
-          if (!isNaN(parsed)) {
-            lastSavedTime = parsed;
-          }
-        }
+    // already loaded → don't fetch again
+    if (childrenMap[categoryId]) return;
 
-        const isStale = (now - lastSavedTime) > FIXED_HOURS_MS;
+    try {
+      const children = await queryData(
+        'category_tree_categories',
+        'parent_id = ?',
+        [categoryId]
+      );
 
-        // 🌐 Only refresh if stale AND online
-        // if (netInfo.isConnected && isStale && !is_syncing) {
-        //   console.log(
-        //     saved_at
-        //       ? ` Category tree last saved at ${saved_at} — refreshing (age: ${Math.round((now - lastSavedTime) / 60000)} min)`
-        //       : ' No saved timestamp — fetching category tree from server'
-        //   );
-        //   try {
-        //     const categoriesTree = await getCategoriesSubsAndProds();
-
-        //     if (categoriesTree.success) {
-        //       dispatch(setSyncing(true));
-        //       setShowModal(true);
-        //       await saveCategoryTree(categoriesTree.data);
-
-        //       //  Update cache timestamp — this is the key for next check
-        //       const newSavedAt = new Date().toISOString();
-        //       saved_at = newSavedAt;
-        //       dispatch(setSavedAt(newSavedAt));
-
-        //       // Update UI with fresh data
-        //       setCategories(categoriesTree.data);
-        //       setFilteredCategories(categoriesTree.data);
-        //     } else {
-        //       console.warn('⚠️ Server returned success=false for category tree');
-        //     }
-        //   } catch (error) {
-        //     console.log('❌ Category tree load error:', error);
-
-        //   } finally {
-        //     dispatch(setSyncing(false));
-        //     setShowModal(false);
-        //   }
-        // } else if (!netInfo.isConnected && isStale) {
-        //   console.log(' Offline & category tree stale — using local cache');
-        // }
-      } catch (e) {
-        console.error('❌ Category tree load error:', e);
-      }
-    };
-
-    load();
-  }, [dispatch, is_syncing]);
+      setChildrenMap(prev => ({
+        ...prev,
+        [categoryId]: children,
+      }));
+    } catch (e) {
+      console.error('Failed to load subcategories', e);
+    }
+  };
 
   const formatTime = (isoString: string | null): string => {
     if (!isoString) return 'Mai';
@@ -116,21 +83,36 @@ export default function CatalogScreen({ route }: { route: any }) {
     return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' }); // e.g., "27/11"
   };
 
-  const syncCategoryTree = async () => {
+const onSelectCategory = (item: any) => {
+  setSelectedCategoryId(item.id);
+
+  (navigation as any).navigate('Main', {
+    screen: 'CatalogTab',
+    params: {
+      screen: 'ProductList',
+      params: {
+        subcategoryId: item.id,       
+        subcategoryName: item.name,  
+      },
+    },
+  });
+};
+
+const syncCategoryTree = async () => {
     try {
       dispatch(setSyncing(true));
       setShowModal(true);
-      const categoriesTree = await getCategoriesSubsAndProds();
-      if (categoriesTree.success) {
-        await saveCategoryTree(categoriesTree.data);
+     // const categoriesTree = await getCategoriesSubsAndProds();
+    //  if (categoriesTree.success) {
+        await syncProductsAndCategoriesToDB();
         await initializeAllProductStock();
         const newSavedAt = new Date().toISOString();
         dispatch(setSavedAt(newSavedAt));
-        setCategories(categoriesTree.data);
-        setFilteredCategories(categoriesTree.data);
-      } else {
-        console.warn('⚠️ Server returned success=false for category tree');
-      }
+       // setCategories(categoriesTree.data);
+       // setFilteredCategories(categoriesTree.data);
+    //  } else {
+     //   console.warn('⚠️ Server returned success=false for category tree');
+     // }
     } catch (error) {
       console.error('❌ Sync failed:', error);
     } finally {
@@ -145,205 +127,49 @@ export default function CatalogScreen({ route }: { route: any }) {
     }
   };
 
-  const handleCategoryPress = async (category: any) => {
-    try {
-      // fetch subcategories from SQLite using category_id
-      const subs = await queryData(
-        'category_tree_subcategories',
-        'category_id = ?',
-        [category.id]
-      );
+  const renderCategory = (item: any, level = 0) => {
+  const isExpanded = expandedIds.includes(item.id);
+  const children = childrenMap[item.id] || [];
+  const isSelected = selectedCategoryId === item.id;
 
-      // if (subs.length == 0) {
-      //   (navigation as any).navigate('Main', {
-      //     screen: 'CatalogTab',
-      //     params: {
-      //       screen: 'ProductList',
-      //       params: {
-      //         subcategoryId: category.id,
-      //         subcategoryName: category.name,
-      //       },
-      //     },
-      //   });
-      //   return;
-      // }
-
-      setSelectedCategory(category);
-      setSearchMode(false);
-      setSearchText('');
-
-      setSubcategories(subs);
-      setFilteredSubcategories(subs);
-    } catch (error) {
-      console.log('❌ Error fetching subcategories:', error);
-      setSubcategories([]);
-      setFilteredSubcategories([]);
-    }
-  };
-
-
-  const handleBack = () => {
-    setSelectedCategory(null);
-    setSearchMode(false);
-    setSearchText('');
-  };
-
-  const handleSearch = async () => {
-    if (!searchText.trim()) {
-      setSearchResults([]);
-      if (selectedCategory) {
-        setFilteredSubcategories(subcategories);
-      } else {
-        setFilteredCategories(categories);
-      }
-      return;
-    }
-
-    try {
-      // search categories
-      const cats = await queryData(
-        'category_tree_categories',
-        'name LIKE ?',
-        [`%${searchText}%`]
-      );
-
-      // search subcategories (NO MATTER WHAT)
-      const subs = await queryData(
-        'category_tree_subcategories',
-        'name LIKE ?',
-        [`%${searchText}%`]
-      );
-
-      const results: SearchResult[] = [
-        ...cats.map((c: any) => ({
-          type: 'category',
-          id: c.id,
-          name: c.name,
-        })),
-        ...subs.map((s: any) => ({
-          type: 'subcategory',
-          id: s.id,
-          name: s.name,
-          category_id: s.category_id,
-        })),
-      ];
-
-      setSearchResults(results);
-    } catch (err) {
-      console.log('Search error:', err);
-    }
-  };
-
-  // const handleSearch = async () => {
-  //   if (!searchText.trim()) {
-  //     // reset
-  //     if (selectedCategory) {
-  //       setFilteredSubcategories(subcategories);
-  //     } else {
-  //       setFilteredCategories(categories);
-  //     }
-  //     return;
-  //   }
-
-  //   try {
-  //     if (selectedCategory) {
-  //       // searching subcategories
-  //       const res = await queryData(
-  //         'category_tree_subcategories',
-  //         'name LIKE ? AND category_id = ?',
-  //         [`%${searchText}%`, selectedCategory.id]
-  //       );
-  //       setFilteredSubcategories(res);
-  //     } else {
-  //       // searching categories
-  //       const res = await queryData(
-  //         'category_tree_categories',
-  //         'name LIKE ?',
-  //         [`%${searchText}%`]
-  //       );
-  //       setFilteredCategories(res);
-  //     }
-  //   } catch (err) {
-  //     console.log('Search error:', err);
-  //   }
-  // };
-
-  const renderSearchResultItem = ({ item }: { item: SearchResult }) => {
-    if (item.type === 'category') {
-      return (
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => {
-            setSearchMode(false);
-            setSearchText('');
-            setSearchResults([]);
-            handleCategoryPress(item);
-          }}
-        >
-          <Text style={styles.rowText}>{item.name}</Text>
-          <Ionicons name="chevron-forward" size={18} color="#000" />
-        </TouchableOpacity>
-      );
-    }
-
-    // subcategory → go straight to products
-    return (
+  return (
+    <View key={item.id}>
       <TouchableOpacity
-        style={styles.subRow}
-        onPress={() => {
-          (navigation as any).navigate('Main', {
-            screen: 'CatalogTab',
-            params: {
-              screen: 'ProductList',
-              params: {
-                subcategoryId: item.id,
-                subcategoryName: item.name,
-              },
-            },
-          });
-        }}
+        style={[
+          styles.row,
+          { paddingLeft: 8 + level * 16 },
+        ]}
+        onPress={() => toggleCategory(item.id)}
+        activeOpacity={0.7}
       >
-        <Text style={styles.subRowText}>{item.name}</Text>
-        <Ionicons name="pricetag-outline" size={18} color="#000" />
+        {/* LEFT: arrow + name */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+          <Ionicons
+            name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+            size={18}
+            color={textColor}
+            style={{ marginRight: 8 }}
+          />
+          <Text style={styles.rowText}>{item.name}</Text>
+        </View>
+
+        {/* RIGHT: round checkbox */}
+        <TouchableOpacity
+          onPress={() => onSelectCategory(item)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.radioOuter}>
+            {isSelected && <View style={styles.radioInner} />}
+          </View>
+        </TouchableOpacity>
       </TouchableOpacity>
-    );
-  };
 
-
-
-  const renderCategoryItem = ({ item }: any) => (
-    <TouchableOpacity
-      onPress={() => handleCategoryPress(item)}
-      style={styles.row}
-    >
-      <Text style={styles.rowText}>{item.name}</Text>
-      <Ionicons name="chevron-forward" size={18} color="#000" />
-    </TouchableOpacity>
+      {isExpanded &&
+        children.map(child => renderCategory(child, level + 1))}
+    </View>
   );
+};
 
-  const renderSubcategoryItem = ({ item }: any) => {
-
-    const goToProducts = () => {
-
-      (navigation as any).navigate('Main', {
-        screen: 'CatalogTab',
-        params: {
-          screen: 'ProductList',
-          params: {
-            subcategoryId: item.id,
-            subcategoryName: item.name,
-          }
-        },
-      });
-    };
-
-    return (
-      <TouchableOpacity style={styles.subRow} onPress={goToProducts}>
-        <Text style={styles.subRowText}>{item.name}</Text>
-        <Ionicons name="chevron-forward" size={18} color="#000" />
-      </TouchableOpacity>
-    );
-  };
 
   return (
     <View style={styles.container}>
@@ -364,80 +190,14 @@ export default function CatalogScreen({ route }: { route: any }) {
         </View>
       )}
 
-
-      {/* Header */}
-      <View style={styles.header}>
-        {selectedCategory && (
-          <TouchableOpacity onPress={handleBack} style={styles.iconButton}>
-            <Ionicons name="arrow-back" size={22} color="#000" />
-          </TouchableOpacity>
-        )}
-
-        {!searchMode ? (
-          <>
-            <Text style={styles.title}>
-              {selectedCategory ? 'Cerca categoria' : 'Cerca categoria'}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setSearchMode(true)}
-              style={styles.iconButton}
-            >
-              <Ionicons name="search" size={20} color="#000" />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.searchBar}>
-            <TextInput
-              placeholder="Cerca..."
-              placeholderTextColor="#888"
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={setSearchText}
-              onSubmitEditing={handleSearch}
-              autoFocus
-              returnKeyType="search"
-            />
-            <TouchableOpacity
-              onPress={() => {
-                setSearchMode(false);
-                setSearchText('');
-                if (selectedCategory)
-                  setFilteredSubcategories(subcategories);
-                else
-                  setFilteredCategories(categories);
-              }}
-            >
-              <Ionicons name="close" size={22} color="#000" />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {/* List */}
-      {searchMode && searchResults.length > 0 ? (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item) => `${item.type}-${item.id}`}
-          renderItem={renderSearchResultItem}
-        />
-      ) : selectedCategory ? (
-        filteredSubcategories.length > 0 ? (
-          <FlatList
-            data={filteredSubcategories}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={renderSubcategoryItem}
-          />
-        ) : (
-          <Text style={styles.noDataText}>Nessun dato disponibile</Text>
-        )
-      ) : filteredCategories.length > 0 ? (
-        <FlatList
-          data={filteredCategories}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderCategoryItem}
-        />
+      {categories.length === 0 ? (
+        <Text style={styles.noDataText}>Nessuna categoria</Text>
       ) : (
-        <Text style={styles.noDataText}>Nessun dato disponibile</Text>
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => renderCategory(item)}
+        />
       )}
 
       {/* Sync Progress Modal — shown only during sync */}
@@ -467,33 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: dark,
     padding: 16,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: 600,
-    color: textColor,
-  },
-  iconButton: {
-    padding: 8,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: '#555',
-  },
-  searchInput: {
-    flex: 1,
-    color: textColor,
-    fontSize: 16,
-    paddingVertical: 6,
-  },
+
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -505,17 +239,6 @@ const styles = StyleSheet.create({
   rowText: {
     color: textColor,
     fontSize: 16,
-  },
-  subRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: darkBg,
-  },
-  subRowText: {
-    color: textColor,
-    fontSize: 15,
   },
   noDataText: {
     color: '#888',
@@ -590,4 +313,21 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
   },
+  radioOuter: {
+  width: 20,
+  height: 20,
+  borderRadius: 10,
+  borderWidth: 2,
+  borderColor: '#007AFF',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+radioInner: {
+  width: 10,
+  height: 10,
+  borderRadius: 5,
+  backgroundColor: '#007AFF',
+},
+
 });

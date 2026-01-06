@@ -19,7 +19,7 @@ import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme } from '../../colors';
 import { getCategoriesSubsAndProds, getClientsForAgent, loginEmployee } from '../api/prestashop';
-import { cacheInitializer, saveCategoryTree, storeAgentFromJson, syncCourierData, syncCustomersIncrementally } from '../sync/cached';
+import { cacheInitializer, storeAgentFromJson, syncCourierData, syncCustomersIncrementally, syncProductsAndCategoriesToDB } from '../sync/cached';
 import { selectIsCategoryTreeSaved, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 import { selectIsSyncing, selectSyncStatusText, setSyncing } from '../store/slices/databaseStatusSlice';
 
@@ -103,12 +103,10 @@ export default function LoginScreen() {
       try {
 
         if (!is_saved) {
-          const categoriesTree = await getCategoriesSubsAndProds();
-          if (categoriesTree.success) {
-            await saveCategoryTree(categoriesTree.data);
+            await syncProductsAndCategoriesToDB();
             dispatch(setIsTreeSaved(true));
             dispatch(setSavedAt(new Date().toISOString()));
-          }
+     
         }
         await syncCourierData();
         await syncCustomersIncrementally(res.employee?.id);

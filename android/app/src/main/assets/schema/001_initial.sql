@@ -233,8 +233,7 @@ CREATE TABLE IF NOT EXISTS category_tree_categories (
 CREATE TABLE IF NOT EXISTS category_tree_subcategories (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    server_category_id INTEGER NOT NULL,
-    FOREIGN KEY (category_id) REFERENCES category_tree_categories(id) ON DELETE CASCADE
+    category_id INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS products_categories (
@@ -246,7 +245,6 @@ CREATE TABLE IF NOT EXISTS products_categories (
 
 CREATE TABLE IF NOT EXISTS category_tree_products (
     id_product INTEGER PRIMARY KEY,
-    subcategory_id INTEGER NOT NULL,
     id_supplier INTEGER,
     id_manufacturer INTEGER,
     id_category_default INTEGER,
@@ -320,6 +318,5 @@ CREATE TABLE IF NOT EXISTS category_tree_products (
     manufacturer_name TEXT,
     supplier_name TEXT,
     rate REAL,
-    tax_name TEXT,
-    FOREIGN KEY (subcategory_id) REFERENCES category_tree_subcategories(id) ON DELETE CASCADE
+    tax_name TEXT
 );

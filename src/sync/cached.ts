@@ -2,7 +2,7 @@ import { checkAllProductStock, checkProductStock, clientAddressGet, getActiveCat
 import { getDBConnection, insertIfNotExists, queryData } from "../database/db";
 import NetInfo from "@react-native-community/netinfo";
 import { store } from "../store";
-import { selectCurrentCustomerLength, selectLastCustomerPageSynced, setCustomerSyncStatus, setLastCutomerSyncDate, setSyncing, setSyncStatusText, setTotalCustomersFromServer } from "../store/slices/databaseStatusSlice";
+import { selectCurrentCustomerLength, selectLastCustomerPageSynced, selectStopRequested, setCustomerSyncStatus, setLastCutomerSyncDate, setSyncing, setSyncStatusText, setTotalCustomersFromServer } from "../store/slices/databaseStatusSlice";
 import { setTotalCategoryLength, setTotalProductNumber } from "../store/slices/categoryTreeSlice";
 const PAGE_SIZE = 100;
 
@@ -630,6 +630,10 @@ export const initializeAllProductStock = async () => {
 
     // 2 Loop through all stock items
     for (const stockItem of stockList) {
+       if (selectStopRequested(store.getState())) {
+        console.log('🛑 Customer sync stopped by user');
+        break;
+      }
       if (!stockItem?.id_product) continue; // sanity check
       store.dispatch(setSyncStatusText('Stocking product ' + stockItem.id_product));
       const stockData = {
@@ -1038,6 +1042,10 @@ export const syncProductsAndCategoriesToDB = async () => {
     store.dispatch(setTotalProductNumber(productsData.length));
     // 2. Insert categories
     for (const cat of categoriesData) {
+       if (selectStopRequested(store.getState())) {
+        console.log('🛑 Customer sync stopped by user');
+        break;
+      }
       const categoryRecord = {
         id: cat.id,
         category_id: cat.id,
@@ -1049,8 +1057,12 @@ export const syncProductsAndCategoriesToDB = async () => {
 
     // 3. Insert products AND collect product-category associations
     const productCategoryPairs: { id_product: number; id_category: number }[] = [];
-    let p=0;
+    let p = 0;
     for (const prod of productsData) {
+       if (selectStopRequested(store.getState())) {
+        console.log('🛑 Customer sync stopped by user');
+        break;
+      }
       // Flatten nested fields and normalize types (ensure strings/numbers as needed)
       const productRecord = {
         id_product: prod.id,
@@ -1132,7 +1144,7 @@ export const syncProductsAndCategoriesToDB = async () => {
 
       await insertIfNotExists('category_tree_products', productRecord, 'id_product');
       p++;
-      store.dispatch(setSyncStatusText('Saved Products of ' + p + '/ ' + productsData.length));
+      store.dispatch(setSyncStatusText('Prodotti salvati ' + p + '/ ' + productsData.length));
       // Extract category associations from `associations.categories`
       const assocCats = prod.associations?.categories || [];
       for (const catRef of assocCats) {
@@ -1152,14 +1164,18 @@ export const syncProductsAndCategoriesToDB = async () => {
     // Optional: Clear old associations — only if you want a *full sync* (not incremental)
     // If you prefer incremental, skip the DELETE.
     // But given the function name "sync", assuming full replacement is desired.
-    if (productsData.length > 0) {
-      const productIds = productsData.map(p => p.id);
-      const placeholders = productIds.map(() => '?').join(',');
-      const deleteSql = `DELETE FROM products_categories WHERE id_product IN (${placeholders})`;
-      await db.executeSql(deleteSql, productIds);
-    }
+    // if (productsData.length > 0) {
+    //   const productIds = productsData.map(p => p.id);
+    //   const placeholders = productIds.map(() => '?').join(',');
+    //   const deleteSql = `DELETE FROM products_categories WHERE id_product IN (${placeholders})`;
+    //   await db.executeSql(deleteSql, productIds);
+    // }
     let i = 0;
     for (const pair of productCategoryPairs) {
+       if (selectStopRequested(store.getState())) {
+        console.log('🛑 Customer sync stopped by user');
+        break;
+      }
       const assocRecord = {
         id: null, // auto-incremented; SQLite will ignore if PRIMARY KEY AUTOINCREMENT
         id_product: pair.id_product,
@@ -1209,7 +1225,7 @@ export const verifyProductStock = async (product: any) => {
 
     // Out of stock
     if (stockData?.out_of_stock == 1) {
-      return { success: false, reason: "Prodotto non disponibile in magazzino" };
+      return { success: false, reason: "Prodotto non disponibile in magazzino !" };
     }
 
     // Depends on stock — check quantity
@@ -1302,20 +1318,24 @@ export const clearDatabase = async () => {
   });
 };
 
-export const syncCustomersIncrementally = async (agentId: number | string) => {
+export const syncCustomersIncrementally = async (agentId: number | string, reset = false) => {
   const nowIso = new Date().toISOString();
   store.dispatch(setSyncStatusText('Sincronizzazione clienti in corso...'));
   store.dispatch(setSyncing(true));
   store.dispatch(setLastCutomerSyncDate(nowIso));
   try {
     // Start from the *next* page
-    let currentPage = selectLastCustomerPageSynced(store.getState()) + 1;
-    let totalSynced = selectCurrentCustomerLength(store.getState());
+    let currentPage = reset == true ? 1 : selectLastCustomerPageSynced(store.getState()) + 1;
+    let totalSynced = reset == true ? 0 : selectCurrentCustomerLength(store.getState());
     let batchInserted = 0;
     let actualLastCustomerId = 0;
     let customersRes = null;
+    //   const seenCustomers = new Set();
     while (true) {
-
+      if (selectStopRequested(store.getState())) {
+        console.log('🛑 Customer sync stopped by user');
+        break;
+      }
       // Fetch page
       customersRes = await getClientsForAgent(agentId, PAGE_SIZE, currentPage);
       const customers = Array.isArray(customersRes.customers) ? customersRes.customers : [];
@@ -1344,6 +1364,19 @@ export const syncCustomersIncrementally = async (agentId: number | string) => {
             address1: c.address1 || '',
             city: c.city || '',
           };
+
+          // // detect duplicate BEFORE insert
+          // if (seenCustomers.has(c.id_customer)) {
+          //   console.log('DUPLICATE CUSTOMER FOUND:', {
+          //     id_customer: c.id_customer,
+          //     email: c.email,
+          //     firstname: c.firstname,
+          //     lastname: c.lastname,
+          //   });
+          //   continue; // skip inserting duplicate
+          // }
+
+          // seenCustomers.add(c.id_customer);
 
           await insertIfNotExists('customers', customerData, 'id_customer');
           batchInserted++;

@@ -9,6 +9,7 @@ type DatabaseState = {
   total_customer_pages_tobe_synced : number;
   total_customers_from_server: number;
   last_customer_sync_date: string;
+  stopRequested: boolean;
 };
 
 const initialState: DatabaseState = {
@@ -20,6 +21,7 @@ const initialState: DatabaseState = {
   total_customer_pages_tobe_synced: 0,
   total_customers_from_server: 0,
   last_customer_sync_date: '',
+  stopRequested: false
 };
 
 const databaseStatusSlice = createSlice({
@@ -43,11 +45,14 @@ const databaseStatusSlice = createSlice({
     },
     setTotalCustomersFromServer(state, action: PayloadAction<number>) {
       state.total_customers_from_server = action.payload;
+    },
+    setStopRequested (state, action: PayloadAction<boolean>) {
+      state.stopRequested = action.payload;
     }
   },
 });
 
-export const { setSyncing, setCustomerSyncStatus, setSyncStatusText, setLastCutomerSyncDate, setTotalCustomersFromServer } = databaseStatusSlice.actions;
+export const { setSyncing, setCustomerSyncStatus, setSyncStatusText, setLastCutomerSyncDate, setTotalCustomersFromServer, setStopRequested } = databaseStatusSlice.actions;
 export const selectIsSyncing = (state: any) => state.databaseStatus.is_syncing;
 export const selectCurrentCustomerLength = (state: any) => state.databaseStatus.current_customer_length;
 export const selectLastCustomerId = (state: any) => state.databaseStatus.last_customer_id;
@@ -56,4 +61,5 @@ export const selectTotalCustomerPagesTobeSynced = (state: any) => state.database
 export const selectSyncStatusText = (state: any) => state.databaseStatus.sync_status_text;
 export const selectLastCustomerSyncDate = (state: any) => state.databaseStatus.last_customer_sync_date;
 export const selectTotalCustomersFromServer = (state: any) => state.databaseStatus.total_customers_from_server;
+export const selectStopRequested = (state: any) => state.databaseStatus.stopRequested;
 export default databaseStatusSlice.reducer;

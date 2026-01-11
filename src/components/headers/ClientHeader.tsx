@@ -126,7 +126,7 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
             try {
                 setSelectedIndex(index);
                 const ords = await getOrdinaliByCity(text); // returns string[]
-                console.log("ords here ", ords);
+               // console.log("ords here ", ords);
                 setOrdinaliClientData(ords.clients);
                 setSelectedFilterValues(s => ({ ...s, city: text, cap: null }));
                 setListData(ords.ordinali.map(v => [v, 0]));
@@ -368,8 +368,9 @@ export const ClientHeader = ({ navigation }: { navigation: any }) => {
 
                                             {modalTitle === 'Ordinale' && isSeachViaCity == true && (
                                                 <View style={{ display: 'flex', flexDirection: 'column' , width: '60%'}}>
-                                                     <Text style={[styles.modalItemText, { color: textColor, fontWeight: '500' }]}>
-                                                        {ordinaliClientData[index].firstname == "NULL" ? 'N' : ordinaliClientData[index].firstname} {ordinaliClientData[index].lastname == "NULL" ? '/A' : ordinaliClientData[index].lastname }
+                                                     <Text style={[styles.modalItemText, { color: textColor, fontWeight: 800 }]}>
+                                                        {/* {ordinaliClientData[index].firstname == "NULL" ? 'N' : ordinaliClientData[index].firstname} {ordinaliClientData[index].lastname == "NULL" ? '/A' : ordinaliClientData[index].lastname } */}
+                                                    {ordinaliClientData[index].company }
                                                     </Text>
                                                     <Text style={styles.modalItemText}>
                                                         {ordinaliClientData[index].address1}

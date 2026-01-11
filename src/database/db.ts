@@ -29,7 +29,7 @@ export const insertIfNotExists = async (
 
     const sql = `INSERT OR REPLACE INTO ${tableName} (${columns}) VALUES (${placeholders})`;
     await db.executeSql(sql, values);
-   console.log(`💾 Upserted record in ${tableName} (${uniqueColumn}=${data[uniqueColumn]})`);
+//   console.log(`💾 Upserted record in ${tableName} (${uniqueColumn}=${data[uniqueColumn]})`);
     return true; // always returns true now (since it succeeded)
   } catch (error) {
     console.error(`❌ insertIfNotExists upsert failed in ${tableName} (${uniqueColumn}=${data[uniqueColumn]}):`, error);

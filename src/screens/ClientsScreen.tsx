@@ -60,19 +60,22 @@ export default function ClientsScreen() {
   }, []);
 
   const handleSync = async () => {
-    if (!employeeId) return;
-    if (isSyncing) return;
-    dispatch(setSyncStatusText('Starting'));
-    setModalVisible(true);
-    try {
-      await syncCustomersIncrementally(employeeId);
-      const nowIso = new Date().toISOString();
-      dispatch(setLastCutomerSyncDate(nowIso));
-    } catch (error) {
-      console.error('Sync failed in UI layer:', error);
-    } finally {
-      setModalVisible(false);
-    }
+    // if (!employeeId) return;
+    // if (isSyncing) return;
+    // dispatch(setSyncStatusText('Starting'));
+    // setModalVisible(true);
+    // try {
+    //   await syncCustomersIncrementally(employeeId);
+    //   const nowIso = new Date().toISOString();
+    //   dispatch(setLastCutomerSyncDate(nowIso));
+    // } catch (error) {
+    //   console.error('Sync failed in UI layer:', error);
+    // } finally {
+    //   setModalVisible(false);
+    // }
+    (navigation as any).navigate('Main', {
+      screen: 'Settings',
+    });
   };
 
   const syncDisabled = !isSyncStale(lastSyncDate, 3) && !isSyncing; // disable if synced < 3h ago

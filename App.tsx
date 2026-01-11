@@ -204,7 +204,7 @@ function MainTabs({ navigation }: { navigation: any }) {
     <>
       <Tab.Navigator
         initialRouteName="ClientsTab"
-        tabBarPosition="top"
+        tabBarPosition="bottom"
         screenOptions={{
           //   headerShown: false,
           tabBarActiveTintColor: '#007AFF',
@@ -317,11 +317,11 @@ function RootNavigator() {
   const lastCustomerSyncDate = useSelector(selectLastCustomerSyncDate);
   const is_syncing = useSelector(selectIsSyncing);
 
-  const isOlderThan3Hours = (date?: string | null) => {
+  const isOlderThan24Hours = (date?: string | null) => {
     if (!date) return true;
     const t = new Date(date).getTime();
     if (isNaN(t)) return true;
-    return Date.now() - t > 3 * 60 * 60 * 1000;
+    return Date.now() - t > 24 * 60 * 60 * 1000;
   };
 
   useEffect(() => {
@@ -362,12 +362,12 @@ function RootNavigator() {
     if (is_syncing && !dbReady) return;
     if (!navigationRef.isReady()) return;
 
-    const categoryStale = isOlderThan3Hours(lastCategorySavedDate);
-    const customerStale = isOlderThan3Hours(lastCustomerSyncDate);
+    const categoryStale = isOlderThan24Hours(lastCategorySavedDate);
+    const customerStale = isOlderThan24Hours(lastCustomerSyncDate);
 
     if (categoryStale || customerStale) {
       console.log('⏱ Auto-sync stale → navigating to Settings');
-      if(isLoggedIn){
+      if (isLoggedIn) {
         navigate('Main', { screen: 'Settings' });
       }
     }
@@ -418,10 +418,15 @@ function AppContent() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: dark }}>
       {isSyncing && (
-        <View style={styles.syncBar}>
-          <ActivityIndicator size="small" color="#000" />
-          <Text style={styles.syncText}>Syncing… Attendere prego.</Text>
-        </View>
+        <TouchableOpacity
+          onPress={() => {
+            navigate('Main', { screen: 'Settings' });
+          }} >
+          <View style={styles.syncBar}>
+            <ActivityIndicator size="small" color="#000" />
+            <Text style={styles.syncText}>Sincronizzazione in corso... Attendere.</Text>
+          </View>
+        </TouchableOpacity>
       )}
       <NavigationContainer theme={navTheme} ref={navigationRef}>
         <RootNavigator />
@@ -453,10 +458,10 @@ export default function App() {
 const styles = StyleSheet.create({
   syncBar: {
     position: 'absolute',
-    top: 0,
+    bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFA500', // amber/orange — attention-grabbing but not alarming
+    backgroundColor: '#FFA500',
     paddingVertical: 6,
     paddingHorizontal: 12,
     flexDirection: 'row',

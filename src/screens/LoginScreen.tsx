@@ -167,7 +167,7 @@ export default function LoginScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ActivityIndicator size="large" color={theme} />
-            <Text style={styles.modalTitle}>Setting Up Your Account</Text>
+            <Text style={styles.modalTitle}>Configurazione del tuo account</Text>
             <Text style={styles.modalMessage}>
               Attendi mentre prepariamo i tuoi dati per l'uso offline...
             </Text>
@@ -175,7 +175,7 @@ export default function LoginScreen() {
               {useSelector(selectSyncStatusText)}
             </Text>
             <Text style={styles.timerText}>
-              Elapsed time: {formatTime(elapsedSeconds)}
+              Tempo trascorso: {formatTime(elapsedSeconds)}
             </Text>
           </View>
         </View>

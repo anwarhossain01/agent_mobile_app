@@ -281,12 +281,9 @@ const ProductListScreen = ({ route, navigation }: { route: any; navigation: any 
     }
   };
 
-
   const handleProductClick = (item: any) => {
-
     navigation.navigate('ProductDetails', { product: item });
   };
-
 
   return (
     <View style={styles.container}>

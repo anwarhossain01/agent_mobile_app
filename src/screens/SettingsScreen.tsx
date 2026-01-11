@@ -5,7 +5,7 @@ import { logout } from '../store/slices/authSlice';
 import { lightdark, textColor, theme } from '../../colors';
 import { getDBConnection } from '../database/db';
 import { clearDatabase, getTotalCategoryCount, getTotalCustomerCount, getTotalProductCount, initializeAllProductStock, syncCustomersIncrementally, syncProductsAndCategoriesToDB } from '../sync/cached';
-import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, selectTotalCustomerPagesTobeSynced, selectTotalCustomersFromServer, setCustomerSyncStatus, setLastCutomerSyncDate, setSyncing, setSyncStatusText } from '../store/slices/databaseStatusSlice';
+import { selectIsSyncing, selectLastCustomerSyncDate, selectSyncStatusText, selectTotalCustomerPagesTobeSynced, selectTotalCustomersFromServer, setCustomerSyncStatus, setLastCutomerSyncDate, setStopRequested, setSyncing, setSyncStatusText } from '../store/slices/databaseStatusSlice';
 import { selectSavedAt, selectTotalCategoryLength, selectTotalProductNumber, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -49,6 +49,10 @@ export default function SettingsScreen() {
 
       if (categoryStale || customerStale) {
         console.log('⏱ Auto-sync triggered');
+        (navigation as any).navigate('Main', {
+          screen: 'Settings',
+
+        });
 
         setSyncTitle('Auto Sync in progress');
         dispatch(setSyncStatusText('Auto sync started'));
@@ -60,7 +64,7 @@ export default function SettingsScreen() {
     };
 
     autoSync();
-  }, [ ]);
+  }, []);
 
 
   useEffect(() => {
@@ -110,22 +114,23 @@ export default function SettingsScreen() {
 
     if (netInfo.isConnected && !is_syncing) {
       try {
-      //  const categoriesTree = await getCategoriesSubsAndProds();
+        //  const categoriesTree = await getCategoriesSubsAndProds();
 
-      //  if (categoriesTree.success) {
-          dispatch(setSyncing(true));
+        //  if (categoriesTree.success) {
+        dispatch(setStopRequested(false));
+        dispatch(setSyncing(true));
 
-          await initializeAllProductStock();
-          await syncProductsAndCategoriesToDB();
-       //   await saveCategoryTree(categoriesTree.data);
+        await initializeAllProductStock();
+        await syncProductsAndCategoriesToDB();
+        //   await saveCategoryTree(categoriesTree.data);
 
-          //  Update cache timestamp — this is the key for next check
-          const newSavedAt = new Date().toISOString();
-          dispatch(setSavedAt(newSavedAt));
+        //  Update cache timestamp — this is the key for next check
+        const newSavedAt = new Date().toISOString();
+        dispatch(setSavedAt(newSavedAt));
 
-      //  } else {
-       //   console.warn('⚠️ Server returned success=false for category tree');
-      //  }
+        //  } else {
+        //   console.warn('⚠️ Server returned success=false for category tree');
+        //  }
       } catch (error) {
         console.log('❌ Category tree load error:', error);
 
@@ -141,10 +146,11 @@ export default function SettingsScreen() {
     if (!employeeId) return;
     if (is_syncing) return;
     if (!netInfo.isConnected) return;
+    dispatch(setStopRequested(false));
     dispatch(setSyncStatusText('Starting'));
     dispatch(setSyncing(true));
     try {
-      await syncCustomersIncrementally(employeeId);
+      await syncCustomersIncrementally(employeeId, true);
       const nowIso = new Date().toISOString();
       dispatch(setLastCutomerSyncDate(nowIso));
     } catch (error) {
@@ -173,16 +179,21 @@ export default function SettingsScreen() {
     setLoading(false);
   }
 
+  function handleStopRequest() {
+    dispatch(setStopRequested(true));
+    dispatch(setSyncing(false));
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Sync</Text>
+      <Text style={styles.header}>Sincronizzazione</Text>
 
       <SyncRow
         title="Clienti"
         progress={`${totalCustomersInDb}/${totalCustomersFromServer}`}
         date={lastCustomerSyncDate}
         onPress={async () => {
-          setSyncTitle('Syncing Clienti');
+          setSyncTitle('Clienti');
           await startCustomerSync();
         }}
       />
@@ -192,7 +203,7 @@ export default function SettingsScreen() {
         progress={`${totalCategoryInDb}`}
         date={lastCategorySavedDate}
         onPress={async () => {
-          setSyncTitle('Syncing Categorie e Prodotti');
+          setSyncTitle('Categorie e Prodotti');
           await startCategoryAndProductSync();
         }}
       />
@@ -202,7 +213,7 @@ export default function SettingsScreen() {
         progress={`${totalProductsInDb}/${totalProductsFromServer}`}
         date={lastCategorySavedDate}
         onPress={async () => {
-          setSyncTitle('Syncing Prodotti e Categorie');
+          setSyncTitle('Prodotti e Categorie');
           await startCategoryAndProductSync();
         }}
       />
@@ -222,10 +233,19 @@ export default function SettingsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <ActivityIndicator size="large" color={theme} />
-            <Text style={styles.modalTitle}>{syncTitle}</Text>
+            <Text style={styles.modalTitle}>Sincronizzazione </Text>
+            <Text style={styles.modalSubTitle}>{syncTitle}</Text>
             <Text style={styles.modalText}>
               {syncStatusText || 'Sync in progress...'}
             </Text>
+
+            <TouchableOpacity
+              style={styles.stopButton}
+              onPress={handleStopRequest}
+            >
+              <Text style={styles.stopText}>STOP</Text>
+            </TouchableOpacity>
+
           </View>
         </View>
       )}
@@ -306,9 +326,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalTitle: {
-    marginTop: 16,
+    marginTop: 14,
     fontSize: 16,
     fontWeight: '700',
+    color: '#000',
+  },
+  modalSubTitle: {
+    marginTop: 5,
+    fontSize: 14,
+    fontWeight: '500',
     color: '#000',
   },
   modalText: {
@@ -317,6 +343,19 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+  stopButton: {
+    marginTop: 20,
+    backgroundColor: '#ff462e',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  stopText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 12
+  }
 
 });
 

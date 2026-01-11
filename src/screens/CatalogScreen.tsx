@@ -99,26 +99,30 @@ const onSelectCategory = (item: any) => {
 };
 
 const syncCategoryTree = async () => {
-    try {
-      dispatch(setSyncing(true));
-      setShowModal(true);
-     // const categoriesTree = await getCategoriesSubsAndProds();
-    //  if (categoriesTree.success) {
-        await syncProductsAndCategoriesToDB();
-        await initializeAllProductStock();
-        const newSavedAt = new Date().toISOString();
-        dispatch(setSavedAt(newSavedAt));
-       // setCategories(categoriesTree.data);
-       // setFilteredCategories(categoriesTree.data);
-    //  } else {
-     //   console.warn('⚠️ Server returned success=false for category tree');
-     // }
-    } catch (error) {
-      console.error('❌ Sync failed:', error);
-    } finally {
-      dispatch(setSyncing(false));
-      setShowModal(false);
-    }
+    (navigation as any).navigate('Main', {
+    screen: 'Settings',
+   
+  });
+    // try {
+    //   dispatch(setSyncing(true));
+    //   setShowModal(true);
+    //  // const categoriesTree = await getCategoriesSubsAndProds();
+    // //  if (categoriesTree.success) {
+    //     await syncProductsAndCategoriesToDB();
+    //     await initializeAllProductStock();
+    //     const newSavedAt = new Date().toISOString();
+    //     dispatch(setSavedAt(newSavedAt));
+    //    // setCategories(categoriesTree.data);
+    //    // setFilteredCategories(categoriesTree.data);
+    // //  } else {
+    //  //   console.warn('⚠️ Server returned success=false for category tree');
+    //  // }
+    // } catch (error) {
+    //   console.error('❌ Sync failed:', error);
+    // } finally {
+    //   dispatch(setSyncing(false));
+    //   setShowModal(false);
+    // }
   };
 
   const handleSyncNow = () => {

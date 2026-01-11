@@ -1224,17 +1224,17 @@ export const verifyProductStock = async (product: any) => {
     }
 
     // Out of stock
-    if (stockData?.out_of_stock == 1) {
-      return { success: false, reason: "Prodotto non disponibile in magazzino !" };
-    }
+    // if (stockData?.out_of_stock == 1) {
+    //   return { success: false, reason: "Prodotto non disponibile in magazzino !" };
+    // }
 
     // Depends on stock — check quantity
     if (stockData?.depends_on_stock === "1") {
       const availableStock = parseInt(stockData.quantity) || 0;
 
-      if (availableStock <= 0) {
-        return { success: false, reason: "Prodotto non disponibile in magazzino" };
-      }
+      // if (availableStock <= 0) {
+      //   return { success: false, reason: "Prodotto non disponibile in magazzino" };
+      // }
 
       // All good
       return {

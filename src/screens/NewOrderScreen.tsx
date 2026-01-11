@@ -235,19 +235,19 @@ const NewOrderScreen = ({ route }) => {
 
         const stockData = stockRes.data?.stock_availables?.[0];
 
-        if (stockData?.out_of_stock == 1) {
-            Alert.alert('Prodotto non disponibile in magazzino');
-            return;
-        }
+        // if (stockData?.out_of_stock == 1) {
+        //     Alert.alert('Prodotto non disponibile in magazzino');
+        //     return;
+        // }
 //        console.log(stockData);
         
         if (stockData?.depends_on_stock === "1") {
             const availableStock = parseInt(stockData.quantity) || 0;
 
-            if (availableStock <= 0) {
-                Alert.alert('Prodotto non disponibile in magazzino');
-                return;
-            }
+            // if (availableStock <= 0) {
+            //     Alert.alert('Prodotto non disponibile in magazzino');
+            //     return;
+            // }
 
             const price = parseFloat(item.price || 0);
             const quantity = parseInt(item.minimal_quantity) || 0;

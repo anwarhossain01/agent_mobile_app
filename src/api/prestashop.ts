@@ -1,5 +1,5 @@
 import axios from 'axios';
-import {  cachedClientAddresses, cachedDataForAgentFrontPage, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts, cachedProductStock } from '../sync/cached';
+import { cachedClientAddresses, cachedDataForAgentFrontPage, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts, cachedProductStock } from '../sync/cached';
 
 // PrestaShop Webservice Key
 const API_BASE_URL = 'https://b2b.fumostore.com/api';
@@ -44,22 +44,22 @@ export const loginEmployee = async (email: string, password: string) => {
 export const getClientsForAgent = async (agentId: number | string, limit: number = 100, page: number = 1) => {
 
   const res = await api.post(`/employeeapi/agentscustomer?limit=${limit}&page=${page}&t=${generateRandomNumber(10)}`,
-    { employee_id: agentId  },
+    { employee_id: agentId },
     { baseURL: API_LOGIN_URL }
   );
   console.log("getClientsForAgent res", res.data);
-  
+
   return res.data || [];
 };
 
-export const getClientsForAgentAll = async (agentId: number | string, ) => {
+export const getClientsForAgentAll = async (agentId: number | string,) => {
 
   const res = await api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
-    { employee_id: agentId  },
+    { employee_id: agentId },
     { baseURL: API_LOGIN_URL }
   );
-  console.log("getClientsForAgent res", res.data); 
-  
+  console.log("getClientsForAgent res", res.data);
+
   return res.data || [];
 };
 
@@ -67,9 +67,9 @@ export const getCachedClientsForAgent = async (agentId: number | string, search:
   try {
     const apiCall = () => {
       return api.post(`/employeeapi/agentscustomer?t=${generateRandomNumber(10)}`,
-    { employee_id: agentId },
-    { baseURL: API_LOGIN_URL }
-  );
+        { employee_id: agentId },
+        { baseURL: API_LOGIN_URL }
+      );
     }
     return cachedDataForCustomers('customers', apiCall, search, 'id_customer');
   } catch (error) {
@@ -111,7 +111,7 @@ export const getProducts = async (category_id: number | string | null = null) =>
   let filters = [];
   if (category_id) filters.push(`filter[id_category_default]=[${category_id}]`);
   const res = await api.get(`/products?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}&ws_key=${API_KEY}&${filters.join('&')}`);
-//  const res = await api.get('/products?output_format=JSON&filter[id_category_default]=60&display=full&limit=50');
+  //  const res = await api.get('/products?output_format=JSON&filter[id_category_default]=60&display=full&limit=50');
   return res.data.products || [];
 };
 
@@ -135,7 +135,7 @@ export const getallCustomerss = async () => {
     const res = await api.get('/customers', {
       params: {
         output_format: 'JSON',
-        display: 'full', 
+        display: 'full',
         limit: 50,
       },
     });
@@ -160,12 +160,14 @@ export const getSingleCustomer = async (id: number | string) => {
 export const getOrdersFromServer = async (employeeId: any) => {
 
   try {
+    console.log(employeeId);
+
     const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}`,
       { employee_id: employeeId },
       {
         baseURL: API_LOGIN_URL
       });
-   // console.log('Server orders:', res.data.orders);
+    console.log('Server orders:', res.data);
     return res.data.orders || [];
   } catch (err) {
     console.log('Orders API error:', err);
@@ -176,7 +178,7 @@ export const getOrdersFromServer = async (employeeId: any) => {
 export const getOrdersForCustomer = async (employeeId: any) => {
   try {
     const res = await api.get(`/orders?output_format=JSON&display=full&filter[id_customer]=[${employeeId}]&limit=50&t=${generateRandomNumber(10)}&ws_key=${API_KEY}`,
-      );
+    );
     console.log('customer orders:', res.data.orders);
     return res.data.orders || [];
   } catch (err) {
@@ -264,7 +266,7 @@ export const getProductSearchResult = async (search: string) => {
     const res = await api.get(
       `/products?filter[name]=%[${encodeURIComponent(search)}]%&display=[id,name,id_default_image,price,minimal_quantity,id_category_default]&output_format=JSON&ws_key=${API_KEY}`
     );
-     console.log('Product search result', res);
+    console.log('Product search result', res);
     return { success: true, data: res.data };
   } catch (error: any) {
     console.log('Product search error', error);
@@ -585,7 +587,7 @@ export const getCachedDeliveries = async (id_carrier: string | number | null) =>
 //       }
 //     };
 //     console.log("Cart data", cartData);
-    
+
 //     const res = await api.post(`/carts?output_format=JSON&ws_key=${API_KEY}`, cartData);
 //     return { success: true, data: res.data };
 //   } catch (error) {
@@ -655,9 +657,9 @@ export const createCart = async (
         'Content-Type': 'application/xml',
       },
     };
-    
-    const res = await api.post(`/carts?ws_key=${API_KEY}&output_format=JSON`, xmlPayload, config); 
-    
+
+    const res = await api.post(`/carts?ws_key=${API_KEY}&output_format=JSON`, xmlPayload, config);
+
     return { success: true, data: res.data };
   } catch (error) {
     console.log("Create cart error", error);
@@ -799,32 +801,158 @@ export const createOrder = async ({
         <date_add>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_add>
         <date_upd>${new Date().toISOString().slice(0, 19).replace('T', ' ')}</date_upd>
         <note>${note}</note>
-
       
         <carrier_tax_rate>${carrier_tax_rate!.toFixed(3)}</carrier_tax_rate>
       </order>
-    </prestashop>`;             
+    </prestashop>`;
+
 
     const res = await api.post('/orders?output_format=JSON&ws_key=' + API_KEY, xmlPayload, {
       headers: {
         'Content-Type': 'application/xml',
       },
     });
-    
+
     console.log('Order creation response:', res.data);
     return { success: true, data: res.data };
   } catch (error: any) {
     console.log("Create order error", error);
-    let order_id=await getOrderIdByCartId(id_cart);
+    let order_id = await getOrderIdByCartId(id_cart);
 
-    createOrderHistory(order_id,id_employee);
-    
-    return { 
-      success: true, 
-      error: error.response?.data?.error || error.message 
+    createOrderHistory(order_id, id_employee);
+
+    return {
+      success: true,
+      error: error.response?.data?.error || error.message
     };
   }
 };
+
+export const createOrderMessage = async ({
+  id_order,
+  message,
+}: {
+  id_order: number;
+  message: string;
+
+}) => {
+  try {
+    // Create XML payload
+    const xmlPayload = `<?xml version="1.0" encoding="UTF-8"?>
+    <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+      <order_message>
+        <id_order>${id_order}</id_order>
+        <message>${message}</message>
+      </order_message>
+    </prestashop>`;
+    console.log(xmlPayload);
+
+
+    const res = await api.post('/order_messages?output_format=JSON&ws_key=' + API_KEY, xmlPayload, {
+      headers: {
+        'Content-Type': 'application/xml',
+      },
+    });
+
+    console.log('Order Message creation response:', res.data);
+    return { success: true, data: res.data };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message
+    };
+  }
+};
+
+export const createCustomerThreadWithMessage = async ({
+  id_order,
+  id_customer,
+  note,
+}: {
+  id_order: number;
+  id_customer: number;
+  note: string;
+}) => {
+  try {
+    // -------- 1 CREATE CUSTOMER THREAD --------
+    const token = `thread_${id_order}_${id_customer}_001`;
+
+    const threadXml = `<?xml version="1.0" encoding="UTF-8"?>
+    <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+      <customer_thread>
+        <id_contact>2</id_contact>
+        <id_lang>3</id_lang>
+        <id_order>${id_order}</id_order>
+        <id_customer>${id_customer}</id_customer>
+        <token><![CDATA[${token}]]></token>
+        <status>open</status>
+      </customer_thread>
+    </prestashop>`;
+
+    const threadRes = await api.post(
+      `/customer_threads?ws_key=${API_KEY}`,
+      threadXml,
+      {
+        headers: { 'Content-Type': 'application/xml' },
+        responseType: 'json',
+      }
+    );
+//console.log("res 1", threadRes);
+
+    let customerThreadId: string | null = null;
+
+    // PrestaShop sometimes sends JSON even if you scream XML
+    if (typeof threadRes.data === 'object' && threadRes.data?.customer_thread?.id) {
+      customerThreadId = String(threadRes.data.customer_thread.id);
+    }
+    else {
+      const threadXmlResponse = String(threadRes.data || '');
+      const idMatch = threadXmlResponse.match(
+        /<id>\s*<!\[CDATA\[(\d+)\]\]>\s*<\/id>/
+      );
+      customerThreadId = idMatch?.[1] ?? null;
+    }
+
+    if (!customerThreadId) {
+      console.log('RAW THREAD RESPONSE:', threadRes.data);
+      throw new Error('Customer thread ID not found');
+    }
+
+    // -------- 3 CREATE CUSTOMER MESSAGE --------
+    const messageXml = `<?xml version="1.0" encoding="UTF-8"?>
+  <prestashop>
+    <customer_message>
+      <id_customer_thread>${customerThreadId}</id_customer_thread>
+      <message><![CDATA[${note}]]></message>
+      <private>1</private>
+    </customer_message>
+  </prestashop>`;
+
+    const messageRes = await api.post(
+      `/customer_messages?ws_key=${API_KEY}`,
+      messageXml,
+      {
+        headers: { 'Content-Type': 'application/xml' },
+      }
+    );
+//console.log("res 2", messageRes);
+
+    return {
+      success: true,
+      customer_thread_id: customerThreadId,
+      message_response: messageRes.data,
+    };
+
+  } catch (error: any) {
+    console.log('Create customer thread/message error', error);
+
+    return {
+      success: false,
+      error: error.response?.data || error.message,
+    };
+  }
+};
+
 
 export const getOrderIdByCartId = async (cartId: number) => {
   try {
@@ -849,9 +977,9 @@ export const getOrderIdByCartId = async (cartId: number) => {
   }
 };
 
-   
+
 export const createOrderHistory = async (orderId: number, employeeId: number) => {
-   
+
   const orderHistoryXml = `<?xml version="1.0" encoding="UTF-8"?>
   <prestashop>
     <order_history>
@@ -871,11 +999,11 @@ export const createOrderHistory = async (orderId: number, employeeId: number) =>
   }
 };
 
-export const getCategoriesSubsAndProds = async () =>{
+export const getCategoriesSubsAndProds = async () => {
   try {
-     let int_random = generateRandomNumber(10);
+    let int_random = generateRandomNumber(10);
     const res = await api.get(`employeeapi/customescategoryapi?t=${int_random}`, {
-      baseURL: API_LOGIN_URL, 
+      baseURL: API_LOGIN_URL,
     });
     console.log("getCategoriesSubsAndProds res", res.data);
     return { success: true, data: res.data };

@@ -8,7 +8,7 @@ export const initDatabase = async () => {
   try {
     const migrationFiles = [
       '001_initial.sql',
-      //'002_update.sql'
+      '002_update.sql'
     ];
 
     const completedMigrations = await AsyncStorage.getItem(MIGRATION_KEY);

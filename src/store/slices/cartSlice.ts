@@ -20,6 +20,7 @@ interface CartState {
   id_carrier: string | number| null;
   shipping_price_inc_tax: number;
   shipping_price_exc_tax: number;
+  note: string;
 }
 
 // Initial state
@@ -33,6 +34,7 @@ const initialState: CartState = {
   id_carrier: null,
   shipping_price_inc_tax: 0,
   shipping_price_exc_tax: 0,
+  note: '',
 };
 
 const cartSlice = createSlice({
@@ -64,6 +66,10 @@ const cartSlice = createSlice({
       const { shipping_price_inc_tax, shipping_price_exc_tax } = action.payload;
       state.shipping_price_inc_tax = shipping_price_inc_tax;
       state.shipping_price_exc_tax = shipping_price_exc_tax;
+    },
+
+    setNote: (state, action: PayloadAction<string>) => {
+      state.note = action.payload;
     },
     
     // Add item to cart
@@ -144,6 +150,7 @@ export const {
   addItem,
   setDeliveryAddressId,
   setInvoiceAddressId,
+  setNote,
   updateQuantity,
   removeItem,
   clearCart,
@@ -166,5 +173,6 @@ export const selectCartId = (state: { cart: CartState }) => state.cart.id_cart;
 export const selectCarrierId = (state: { cart: CartState }) => state.cart.id_carrier;
 export const selectShippingPriceExcTax = (state: { cart: CartState }) => state.cart.shipping_price_exc_tax;
 export const selectShippingPriceIncTax = (state: { cart: CartState }) => state.cart.shipping_price_inc_tax;
+export const selectNote = (state: { cart: CartState }) => state.cart.note;
 // Export reducer
 export default cartSlice.reducer;

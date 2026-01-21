@@ -17,6 +17,7 @@ import {
   setshippingPrice,
   selectShippingPriceIncTax,
   selectShippingPriceExcTax,
+  setNote,
 
 } from '../store/slices/cartSlice';
 import { clientAddressGet, getCustomer, createNewAddress, getCountryList, getCouriers, getDeliveries, getCachedDeliveries, getCachedCouriers, getCachedClientAddresses, getCachedClientsForAgent } from '../api/prestashop';
@@ -45,6 +46,7 @@ const CartScreen = () => {
   const [countrySearch, setCountrySearch] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
   const [creatingAddress, setCreatingAddress] = useState(false);
+  const [note, setNoteState] = useState('');
 
   const [selectedAlias, setSelectedAlias] = useState('');
   const aliasOptions = ['Delivery', 'Invoice'];
@@ -125,15 +127,15 @@ const CartScreen = () => {
     fetchClientById();
   }, [client_id, addresses.length]);
 
- const allAccisaAdder = () => {
-  let adder = 0;
-  for (let i = 0; i < cart.length; i++) {
-    const accisaWithTax = cart[i].accisa * TAX_RATE_MULTIPLIER;
-    const flooredAccisa = Math.floor(accisaWithTax * 100) / 100; // floor to nearest cent
-    adder += flooredAccisa * cart[i].quantity;
-  }
-  return adder;
-};
+  const allAccisaAdder = () => {
+    let adder = 0;
+    for (let i = 0; i < cart.length; i++) {
+      const accisaWithTax = cart[i].accisa * TAX_RATE_MULTIPLIER;
+      const flooredAccisa = Math.floor(accisaWithTax * 100) / 100; // floor to nearest cent
+      adder += flooredAccisa * cart[i].quantity;
+    }
+    return adder;
+  };
 
   const handleSelectDeliveryAddress = (address: any) => {
     dispatch(setDeliveryAddressId(address.id.toString()));
@@ -692,13 +694,26 @@ const CartScreen = () => {
               dispatch={dispatch}
               setCourier={setCourier}
             />
+
+            <TextInput
+              style={styles.noteInput}
+              placeholder="Note"
+              placeholderTextColor="#888"
+              value= {note}
+              onChangeText={(text) =>{
+                setNoteState(text) 
+                dispatch(setNote(text))
+              }}
+              multiline
+              numberOfLines={4}
+            />
+
             <View style={styles.grandTotal}>
               <Text style={styles.grandTotalText}>Totale Ordine (IVA incl):</Text>
               <Text style={styles.grandTotalAmount}>€{(calculateTotalWithShipping() + allAccisaAdder()).toFixed(2)}</Text>
             </View>
           </>
         )}
-
 
         <SubmissionModal
           showSubmissionModal={showSubmissionModal}
@@ -874,6 +889,18 @@ const oldStyles = {
   },
   inputText: {
     color: textColor,
+  },
+  noteInput: {
+    backgroundColor: darkBg,
+    color: textColor,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#c0c0c0ff',
+    minHeight: 100,
+    textAlignVertical: 'top'
   },
   placeholderText: {
     color: '#888',

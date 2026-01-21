@@ -21,7 +21,7 @@ import { dark, darkBg, darkerBg, lightdark, lighterTextColor, textColor, theme }
 import { getCategoriesSubsAndProds, getClientsForAgent, loginEmployee } from '../api/prestashop';
 import { cacheInitializer, storeAgentFromJson, syncCourierData, syncCustomersIncrementally, syncProductsAndCategoriesToDB } from '../sync/cached';
 import { selectIsCategoryTreeSaved, setIsTreeSaved, setSavedAt } from '../store/slices/categoryTreeSlice';
-import { selectIsSyncing, selectSyncStatusText, setSyncing } from '../store/slices/databaseStatusSlice';
+import { selectIsSyncing, selectSyncStatusText, setStopRequested, setSyncing } from '../store/slices/databaseStatusSlice';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -96,6 +96,7 @@ export default function LoginScreen() {
     const res = await loginEmployee(email, password);
 
     if (res.success) {
+      dispatch(setStopRequested(false));
       await storeAgentFromJson(res);
 
       // Show modal BEFORE heavy work starts

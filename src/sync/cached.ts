@@ -270,6 +270,7 @@ export const createOrderCache = async (orderData: Record<string, any>) => {
         'order_status',
         'remote_order_id',
         'last_synced_at',
+        'note'
       ];
 
       // ✅ Merge defaults for local tracking

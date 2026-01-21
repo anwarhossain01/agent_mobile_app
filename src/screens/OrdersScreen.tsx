@@ -53,7 +53,7 @@ export default function OrdersScreen({ route }) {
           orders = await getLatestServerOrders(employeeId);
         }
 
-        //   console.log("Orders res ", orders);
+           console.log("Orders res", orders);
 
         if (!mounted) return;
         setServerOrders(orders);
@@ -70,6 +70,7 @@ export default function OrdersScreen({ route }) {
           date_add: o.created_at || o.updated_at,
           synced: !o.is_dirty,
           reference: o.remote_order_id ? `#${o.remote_order_id}` : null,
+          note: o.note,
           company: null
         }));
 
@@ -84,6 +85,7 @@ export default function OrdersScreen({ route }) {
           date_add: o.date_add,
           synced: true,
           reference: o.reference,
+          note: o.note,
           payment: o.payment
         }));
 
@@ -113,11 +115,11 @@ export default function OrdersScreen({ route }) {
     };
   }, []);
 
-  const createDemoOrder = () => {
-    const localId = 'local-' + Date.now();
-    dispatch(addOrder({ localId, clientId: 1, items: [], synced: false }));
-    Alert.alert('Demo order created (offline). Background sync will attempt to push when online.');
-  };
+  // const createDemoOrder = () => {
+  //   const localId = 'local-' + Date.now();
+  //   dispatch(addOrder({ localId, clientId: 1, items: [], synced: false }));
+  //   Alert.alert('Demo order created (offline). Background sync will attempt to push when online.');
+  // };
 
   // const normalizedServerOrders = serverOrders.map(o => ({
   //   id: o.id_order,
@@ -209,6 +211,12 @@ export default function OrdersScreen({ route }) {
             <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.company || '—'}</Text>
           </View>
         )}
+         {item.note && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Note:</Text>
+            <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.note || '—'}</Text>
+          </View>
+        )}
 
         <View style={styles.details}>
           <View style={styles.detailItem}>
@@ -226,12 +234,11 @@ export default function OrdersScreen({ route }) {
     );
   };
 
-
   return (
     <View style={{ flex: 1, padding: 13 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 6 }}>
         <Text style={{ fontSize: 18, marginBottom: 12, color: textColor, fontWeight: 800 }}>Ordini</Text>
-        {showbtn ? <Button title="NUOVO ORDINE +" color="#00bd29ff" onPress={newOrderRouteHandler} /> : null}
+        {/* {showbtn ? <Button title="NUOVO ORDINE +" color="#00bd29ff" onPress={newOrderRouteHandler} /> : null} */}
       </View>
 
       {loadingServer ? <ActivityIndicator color={textColor} /> : null}

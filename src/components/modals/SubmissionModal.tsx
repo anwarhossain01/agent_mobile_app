@@ -11,9 +11,10 @@ import {
     setCartId,
     selectShippingPriceExcTax,
     selectShippingPriceIncTax,
-    clearCart
+    clearCart,
+    selectNote
 } from '../../store/slices/cartSlice';
-import { createCart, createOrder } from '../../api/prestashop';
+import { createCart, createCustomerThreadWithMessage, createOrder } from '../../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
 import { dark, darkBg, textColor } from '../../../colors';
 import { useNavigation } from '@react-navigation/native';
@@ -36,6 +37,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     const totalProducts = useSelector(selectTotalPrice);
     const shippingPriceExc = useSelector(selectShippingPriceExcTax);
     const shippingPriceInc = useSelector(selectShippingPriceIncTax);
+    const note = useSelector(selectNote);
     const dispatch = useDispatch();
     const auth = useSelector((s: RootState) => s.auth);
     const employeeId = auth.employeeId;
@@ -45,8 +47,8 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     useEffect(() => {
         if (showSubmissionModal) {
             //  handleCreateOrder();
-            //handleCacheOrder();
-            handleOrderCreationByNetwork();
+            handleCacheOrder();
+          //handleOrderCreationByNetwork();
             //console.log("ORDER TOTALS.....", calculateOrderTotals());
         }
     }, [showSubmissionModal]);
@@ -156,6 +158,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 id_lang: 3,
                 id_customer: parseInt(client_id),
                 id_carrier: parseInt(carrier_id),
+                note: note,
                 module: 'ps_wirepayment',
                 payment: 'Manual payment',
                 total_paid: totals.total_paid,
@@ -271,12 +274,21 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 total_shipping: totals.total_shipping_tax_incl,
                 total_shipping_tax_incl: shippingPriceInc,
                 total_shipping_tax_excl: shippingPriceExc,
-                conversion_rate: 1.0
+                conversion_rate: 1.0,
+                note: note
             });
 
             if (orderRes.success) {
                 setStatus(`Order created successfully!`);
+                if(note){
+                    const orderMsgRes = await createCustomerThreadWithMessage({
+                        id_order: orderRes.data.order.id,
+                        id_customer: parseInt(client_id),
+                        note
+                    });
 
+                    console.log(orderMsgRes);
+                }
                 // Wait a moment to show success then close
                 setTimeout(() => {
                     setShowSubmissionModal(false);

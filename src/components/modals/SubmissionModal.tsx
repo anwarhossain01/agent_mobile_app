@@ -47,8 +47,8 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     useEffect(() => {
         if (showSubmissionModal) {
             //  handleCreateOrder();
-            handleCacheOrder();
-          //handleOrderCreationByNetwork();
+          //  handleCacheOrder();
+          handleOrderCreationByNetwork();
             //console.log("ORDER TOTALS.....", calculateOrderTotals());
         }
     }, [showSubmissionModal]);

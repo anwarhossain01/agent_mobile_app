@@ -709,15 +709,15 @@ export const storeServerOrders = async (ordersResponse: any[]) => {
 
     // loop insert each
     for (const order of latestOrders) {
-      const { company, firstname, lastname, id_order, reference, total_paid, date_add } = order;
+      const { company, firstname, lastname, id_order, reference, total_paid, date_add, last_message } = order;
 
       await db.executeSql(
         `
         INSERT OR IGNORE INTO server_orders
-        (company, firstname, lastname, id_order, reference, total_paid, date_add)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        (company, firstname, lastname, id_order, reference, total_paid, date_add, last_message)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `,
-        [company, firstname, lastname, id_order, reference, parseFloat(total_paid), date_add]
+        [company, firstname, lastname, id_order, reference, parseFloat(total_paid), date_add, last_message]
       );
     }
 

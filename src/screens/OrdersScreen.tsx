@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet, Alert, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RootState } from '../store';
 import { addOrder } from '../store/slices/ordersSlice';
 import { getOrdersForCustomer, getOrdersFromServer, getSafeOrders } from '../api/prestashop';
@@ -68,6 +69,7 @@ export default function OrdersScreen({ route }) {
           payment: o.payment || 'Manual payment',
           customer_name: `Local Order`, // placeholder
           date_add: o.created_at || o.updated_at,
+          last_message: o.last_message,
           synced: !o.is_dirty,
           reference: o.remote_order_id ? `#${o.remote_order_id}` : null,
           note: o.note,
@@ -83,6 +85,7 @@ export default function OrdersScreen({ route }) {
           company: o.company,
           total_paid: o.total_paid,
           date_add: o.date_add,
+          last_message: o.last_message,
           synced: true,
           reference: o.reference,
           note: o.note,
@@ -177,6 +180,7 @@ export default function OrdersScreen({ route }) {
 
   const OrderCard = (item: any) => {
     item = item.item;
+    const [modalVisible, setModalVisible] = useState(false)
 
     return (
       <View style={styles.card}>
@@ -198,6 +202,13 @@ export default function OrdersScreen({ route }) {
             <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.reference}</Text>
           </View>
         )}
+
+        {item.last_message && <>
+          <TouchableOpacity style={styles.msgIconContainer} onPress={() => setModalVisible(true)}>
+            <Ionicons name="chatbox-ellipses-outline" size={22} color="#fff" />
+          </TouchableOpacity>
+          <LastMsgModal visible={modalVisible} onRequestClose={() => setModalVisible(false)} message={item.last_message}/>
+        </>}
 
         {item.payment && (
           <View style={styles.row}>
@@ -260,6 +271,31 @@ export default function OrdersScreen({ route }) {
       <FloatingSyncButton />
     </View>
   );
+}
+
+const LastMsgModal = ({visible = false, onRequestClose =() => {}, message=''}) => {
+  return (
+    <Modal visible={visible} onRequestClose={onRequestClose} transparent animationType="slide">
+      <View style={styles.modalBody}>
+        <View style={styles.modalContent}>
+          <View style={[{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e7ecf0'}]}>
+            <View style={[{width: 30}]}></View>
+            <Text style={[{color: 'black', fontWeight: 'bold', fontSize: 16, textAlign: 'center', flex:1, }]}>
+              Ultimo messaggio
+            </Text>
+            <TouchableOpacity style={[styles.modalCloseBtn]} onPress={onRequestClose}>
+              <Ionicons name="close-outline" size={22} color="red" />
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={{padding: 15}}>
+            <Text style={[{color: '#888888'}]}>
+              {message}
+            </Text>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  )
 }
 
 const styles = StyleSheet.create({
@@ -327,5 +363,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  msgIconContainer: {
+    position: 'absolute',
+    right: 14,
+    bottom: '35%',
+    height: 35,
+    width: 35,
+    borderRadius: 5,
+    backgroundColor: '#4E61D3',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
 
+  // last msg modal
+  modalBody:  {
+    flex: 1,
+    backgroundColor: "#00000080",
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    minHeight: 200,
+    maxHeight: 400,
+    backgroundColor: 'white',
+    borderRadius: 20,
+    overflow: 'hidden'
+  },
+   modalCloseBtn: {
+    height: 30,
+    width: 30,
+    borderRadius: 15,
+    margin: 5,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
 });

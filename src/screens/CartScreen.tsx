@@ -159,7 +159,7 @@ const CartScreen = () => {
 
   const handleSubmit = () => {
     if (!client_id || !delivery_address_id || !invoice_address_id) {
-      Alert.alert('Errore', 'Please select a client, delivery address, and invoice address');
+      Alert.alert('Errore', 'Selezionare un cliente, indirizzo di spedizione, e indirizzo di fatturazione');
       return;
     }
 

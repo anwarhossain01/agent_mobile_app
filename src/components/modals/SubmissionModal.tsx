@@ -279,7 +279,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             });
 
             if (orderRes.success) {
-                setStatus(`Order created successfully!`);
+                setStatus(`Ordine inviato correttamente!`);
                 if(note){
                     const orderMsgRes = await createCustomerThreadWithMessage({
                         id_order: orderRes.data.order.id,

@@ -24,7 +24,7 @@ import NetInfo from '@react-native-community/netinfo';
 
 const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) => {
     const TAX_RATE_MULTIPLIER = 1.22;
-    const [status, setStatus] = useState<string>('Preparing order...');
+    const [status, setStatus] = useState<string>("Sto preparando l'ordine…");
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -94,13 +94,13 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
     async function handleCacheOrder() {
 
         if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
-            setError('Missing required information: client, addresses, or carrier');
+            setError('Informazioni obbligatorie mancanti: cliente, indirizzi o vettore');
             console.log(client_id, delivery_address_id, invoice_address_id, carrier_id);
             return;
         }
 
         if (cart.length === 0) {
-            setError('Cart is empty');
+            setError('carrello è vuoto');
             return;
         }
 
@@ -112,7 +112,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
             // 1 Create local cart if it doesn't exist
             if (!currentCartId) {
-                setStatus('Creating cart locally...');
+                setStatus('Creazione del carrello sul dispositivo…');
 
                 const products = cart.map(item => ({
                     id_product: item.product_id,
@@ -134,20 +134,20 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
                     currentCartId = cartRes.data.cart.id.toString();
                     dispatch(setCartId(currentCartId));
-                    setStatus('Cart cached locally!');
+                    setStatus('Carrello salvato localmente!');
                 } else {
-                    throw new Error(cartRes.error || 'Failed to cache cart');
+                    throw new Error(cartRes.error || 'Errore durante il salvataggio del carrello.');
                 }
             } else {
-                setStatus('Using existing local cart...');
+                setStatus('Uso del carrello già presente…');
             }
 
             // 2 Calculate order totals
-            setStatus('Calculating order totals...');
+            setStatus("Calcolo dell'importo totale dell'ordine…");
             const totals = calculateOrderTotals();
 
             // 3 Cache the order
-            setStatus('Caching order locally...');
+            setStatus("Salvataggio dell'ordine in locale…");
 
             const orderRes = await createOrderCache({
                 id_employee: employeeId,
@@ -172,7 +172,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
             });
 
             if (orderRes.success) {
-                setStatus('Order cached locally!');
+                setStatus('Ordine salvato localmente!');
 
                 // Show success, clear cart, navigate
                 setTimeout(() => {
@@ -180,7 +180,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                     setIsCreating(false);
                     const clientBeforeReset = client_id;
                     dispatch(clearCart());
-                    setStatus('Preparing next order...');
+                    setStatus('Preparazione del prossimo acquisto…');
 
                     (navigation as any).replace('Main', {
                         screen: 'OrdersTab',
@@ -191,11 +191,11 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                     });
                 }, 1500);
             } else {
-                throw new Error(orderRes.error || 'Failed to cache order');
+                throw new Error(orderRes.error || "Errore durante il salvataggio dell'ordine.");
             }
         } catch (err: any) {
             console.log('Order caching error:', err);
-            setError(err.message || 'An unexpected error occurred');
+            setError(err.message || 'Errore imprevisto. Riprova più tardi.');
             setIsCreating(false);
         }
     }
@@ -205,12 +205,12 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
         // Validate all required data
         if (!client_id || !delivery_address_id || !invoice_address_id || !carrier_id) {
-            setError('Missing required information: client, addresses, or carrier');
+            setError('Informazioni obbligatorie mancanti: cliente, indirizzi o vettore');
             return;
         }
 
         if (cart.length === 0) {
-            setError('Cart is empty');
+            setError('carrello è vuoto');
             return;
         }
 
@@ -222,7 +222,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
 
             // Step 1: Create cart only if it doesn't exist
             if (!currentCartId) {
-                setStatus('Creating cart...');
+                setStatus('Sto creando il carrello…');
 
                 const products = cart.map(item => ({
                     id_product: item.product_id,
@@ -241,20 +241,20 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                 if (cartRes.success && cartRes.data?.cart?.id) {
                     currentCartId = cartRes.data.cart.id.toString();
                     dispatch(setCartId(currentCartId));
-                    setStatus('Cart created successfully!');
+                    setStatus('Il carrello è stato creato con successo!');
                 } else {
-                    throw new Error(cartRes.error || 'Failed to create cart');
+                    throw new Error(cartRes.error || 'Errore durante la creazione del carrello.');
                 }
             } else {
-                setStatus('Using existing cart...');
+                setStatus('Sto usando il carrello già presente…');
             }
 
             // Step 2: Calculate order totals
-            setStatus('Calculating order totals...');
+            setStatus("Calcolo dell'importo totale dell'ordine…");
             const totals = calculateOrderTotals();
 
             // Step 3: Create order
-            setStatus('Creating order...');
+            setStatus("Sto creando l'ordine…");
 
             const orderRes = await createOrder({
                 id_employee: employeeId,
@@ -296,7 +296,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                     let client_id_before_cleaning = client_id;
                     dispatch(clearCart());
                     // Reset for next order
-                    setStatus('Preparing order...');
+                    setStatus("Sto preparando l'ordine…");
 
                     (navigation as any).replace('Main', {
                         screen: 'OrdersTab',
@@ -310,11 +310,11 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                     });
                 }, 2000);
             } else {
-                throw new Error(orderRes.error || 'Failed to create order');
+                throw new Error(orderRes.error || "Errore durante la creazione dell'ordine.");
             }
         } catch (err: any) {
             console.log('Order creation error:', err);
-            setError(err.message || 'An unexpected error occurred');
+            setError(err.message || 'Errore imprevisto. Riprova più tardi.');
             setIsCreating(false);
         }
     };
@@ -333,7 +333,7 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
         if (!isCreating) {
             setShowSubmissionModal(false);
             setError(null);
-            setStatus('Preparing order...');
+            setStatus("Sto preparando l'ordine…");
         }
     };
 

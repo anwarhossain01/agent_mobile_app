@@ -1,10 +1,51 @@
 import axios from 'axios';
 import { cachedClientAddresses, cachedDataForAgentFrontPage, cachedDataForCarriers, cachedDataForCustomers, cachedDataForDeliveries, cachedDataForProducts, cachedProductStock } from '../sync/cached';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // PrestaShop Webservice Key
-const API_BASE_URL = 'https://b2b.fumostore.com/api';
-const API_LOGIN_URL = 'https://b2b.fumostore.com/module';
-export const API_KEY = 'ZK2XHVFPTQCP7ZUTS86K44W95HBVIEKU';
+let API_BASE_URL = 'https://b2b.fumostore.com/api';
+let API_LOGIN_URL = 'https://b2b.fumostore.com/module';
+export let API_KEY = 'ZK2XHVFPTQCP7ZUTS86K44W95HBVIEKU';
+let api: any = null;
+
+export function createApi() {
+  api = axios.create({
+    baseURL: API_BASE_URL,
+    auth: {
+      username: API_KEY,
+      password: '',
+    },
+    headers: {
+      'Output-Format': 'JSON',
+    },
+  });
+}
+
+export async function storeApiUrls(base_url: string, login_url: string, key: string) {
+  API_BASE_URL = base_url;
+  API_LOGIN_URL = login_url;
+  API_KEY = key;
+
+  console.log('API URLs updated:', API_BASE_URL, API_LOGIN_URL, API_KEY);
+  await AsyncStorage.setItem('API_BASE_URL', API_BASE_URL);
+  await AsyncStorage.setItem('API_LOGIN_URL', API_LOGIN_URL);
+  await AsyncStorage.setItem('API_KEY', API_KEY);
+
+  createApi();
+}
+
+export async function reStoreApiUrls() {
+  const base_url = await AsyncStorage.getItem('API_BASE_URL');
+  const login_url = await AsyncStorage.getItem('API_LOGIN_URL');
+  const key = await AsyncStorage.getItem('API_KEY');
+  if (base_url && login_url && key) {
+    API_BASE_URL = base_url;
+    API_LOGIN_URL = login_url;
+    API_KEY = key;
+  }
+
+  createApi();
+}
 
 function generateRandomNumber(length: number): number {
   if (length < 1) {
@@ -16,16 +57,16 @@ function generateRandomNumber(length: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  auth: {
-    username: API_KEY,
-    password: '',
-  },
-  headers: {
-    'Output-Format': 'JSON',
-  },
-});
+// const api = axios.create({
+//   baseURL: API_BASE_URL,
+//   auth: {
+//     username: API_KEY,
+//     password: '',
+//   },
+//   headers: {
+//     'Output-Format': 'JSON',
+//   },
+// });
 
 export const loginEmployee = async (email: string, password: string) => {
 

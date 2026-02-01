@@ -1,51 +1,3 @@
-// import React from 'react';
-// import { Provider } from 'react-redux';
-// import { NavigationContainer } from '@react-navigation/native';
-// import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-// import { createNativeStackNavigator } from '@react-navigation/native-stack';
-// import { PersistGate } from 'redux-persist/integration/react';
-// import { store, persistor } from './src/store';
-// import LoginScreen from './src/screens/LoginScreen';
-// import ClientsScreen from './src/screens/ClientsScreen';
-// import CatalogScreen from './src/screens/CatalogScreen';
-// import OrdersScreen from './src/screens/OrdersScreen';
-// import SettingsScreen from './src/screens/SettingsScreen';
-// import { View, Text } from 'react-native';
-
-// const Tab = createBottomTabNavigator();
-// const Stack = createNativeStackNavigator();
-
-// // put your tabs here
-// function MainTabs() {
-//   return (
-//     <Tab.Navigator initialRouteName="Clients">
-//       <Tab.Screen name="Clients" component={ClientsScreen} />
-//       <Tab.Screen name="Catalog" component={CatalogScreen} />
-//       <Tab.Screen name="Orders" component={OrdersScreen} />
-//       <Tab.Screen name="Settings" component={SettingsScreen} />
-//     </Tab.Navigator>
-//   );
-// }
-
-// export default function App() {
-//   const isLoggedIn = false; // 👉 replace with your redux/auth state
-
-//   return (
-//     <Provider store={store}>
-//       <PersistGate loading={<View><Text>Loading...</Text></View>} persistor={persistor}>
-//         <NavigationContainer>
-//           <Stack.Navigator screenOptions={{ headerShown: false }}>
-//             {isLoggedIn ? (
-//               <Stack.Screen name="Main" component={MainTabs} />
-//             ) : (
-//               <Stack.Screen name="Login" component={LoginScreen} />
-//             )}
-//           </Stack.Navigator>
-//         </NavigationContainer>
-//       </PersistGate>
-//     </Provider>
-//   );
-// }
 
 import React, { useEffect, useState } from 'react';
 import { Provider, useSelector } from 'react-redux';
@@ -82,6 +34,7 @@ import DettagliScreen from './src/screens/DettagliScreen';
 import { selectIsSyncing, selectLastCustomerPageSynced, selectLastCustomerSyncDate } from './src/store/slices/databaseStatusSlice';
 import { selectSavedAt } from './src/store/slices/categoryTreeSlice';
 import { createNavigationContainerRef } from '@react-navigation/native';
+import { createApi, reStoreApiUrls } from './src/api/prestashop';
 
 export const navigationRef = createNavigationContainerRef();
 
@@ -309,7 +262,6 @@ function MainTabs({ navigation }: { navigation: any }) {
   );
 }
 
-// Root navigation that actually uses Redux state
 function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
   const [dbReady, setDbReady] = useState(false);
@@ -343,6 +295,7 @@ function RootNavigator() {
 
     const initializeDatabase = async () => {
       try {
+        reStoreApiUrls();
         console.log('Initializing database...');
         await initDatabase();
         console.log('Database initialized successfully');

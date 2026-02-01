@@ -41,30 +41,30 @@ export default function SettingsScreen() {
     return Date.now() - last > THREE_HOURS;
   };
 
-  useEffect(() => {
-    const autoSync = async () => {
-      if (is_syncing) return;
-      const categoryStale = isOlderThan3Hours(lastCategorySavedDate);
-      const customerStale = isOlderThan3Hours(lastCustomerSyncDate);
+  // useEffect(() => {
+  //   const autoSync = async () => {
+  //     if (is_syncing) return;
+  //     const categoryStale = isOlderThan3Hours(lastCategorySavedDate);
+  //     const customerStale = isOlderThan3Hours(lastCustomerSyncDate);
 
-      if (categoryStale || customerStale) {
-        console.log('⏱ Auto-sync triggered');
-        (navigation as any).navigate('Main', {
-          screen: 'Settings',
+  //     if (categoryStale || customerStale) {
+  //       console.log('⏱ Auto-sync triggered');
+  //       (navigation as any).navigate('Main', {
+  //         screen: 'Settings',
 
-        });
+  //       });
 
-        setSyncTitle('Auto Sync in progress');
-        dispatch(setSyncStatusText('Auto sync started'));
+  //       setSyncTitle('Auto Sync in progress');
+  //       dispatch(setSyncStatusText('Auto sync started'));
 
-        // run BOTH
-        await startCategoryAndProductSync();
-        await startCustomerSync();
-      }
-    };
+  //       // run BOTH
+  //       await startCategoryAndProductSync();
+  //       await startCustomerSync();
+  //     }
+  //   };
 
-    autoSync();
-  }, []);
+  //   autoSync();
+  // }, []);
 
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function SettingsScreen() {
     }
     getAndSetCounts();
   })
-  const formatDate = (date) => {
+  const formatDate = (date : any) => {
     if (!date) return 'non';
 
     const parsed = new Date(date);
@@ -91,7 +91,7 @@ export default function SettingsScreen() {
   };
 
   // 🧱 reusable row component (can be reused many times)
-  const SyncRow = ({ title, progress, date, onPress }) => {
+  const SyncRow = ({ title, progress, date, onPress } : any) => {
     return (
       <View style={styles.row}>
         <View>

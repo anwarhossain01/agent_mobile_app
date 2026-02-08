@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { getDBConnection, queryData } from '../database/db';
-import { createCart, createCustomerThreadWithMessage, createOrder } from '../api/prestashop';
+import { createCart, createCustomerThreadWithMessage, createCustomMessage, createOrder } from '../api/prestashop';
 import NetInfo from '@react-native-community/netinfo';
 import { lighterTheme } from '../../colors';
 import { useNavigation } from '@react-navigation/native';
@@ -114,7 +114,15 @@ export const SyncOrders = () => {
             note: order.note
           });
 
-          console.log(orderMsgRes);
+          //  console.log(orderMsgRes);
+          const orderMsgResServer = await createCustomMessage({
+            id_order: orderRes.data.order.id,
+            id_cart: parseInt(remoteCartId),
+            id_customer: order.id_customer,
+            id_employee: order.id_employee,
+            message: order.note,
+            is_private: 0
+          });
         }
 
         if (!orderRes.success) {

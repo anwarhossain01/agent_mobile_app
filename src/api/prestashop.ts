@@ -938,7 +938,7 @@ export const createCustomerThreadWithMessage = async ({
         responseType: 'json',
       }
     );
-//console.log("res 1", threadRes);
+    //console.log("res 1", threadRes);
 
     let customerThreadId: string | null = null;
 
@@ -976,7 +976,7 @@ export const createCustomerThreadWithMessage = async ({
         headers: { 'Content-Type': 'application/xml' },
       }
     );
-//console.log("res 2", messageRes);
+    //console.log("res 2", messageRes);
 
     return {
       success: true,
@@ -994,6 +994,33 @@ export const createCustomerThreadWithMessage = async ({
   }
 };
 
+export const createCustomMessage = async (
+  { id_order,
+    id_cart,
+    id_customer,
+    id_employee,
+    message,
+    is_private,
+   }: any) => {
+
+  try {
+    console.log("Custom message data ", { id_order, id_cart, id_customer, id_employee, message, is_private });
+    
+    const res = await api.post(`/employeeapi/message?action=insert&t=${generateRandomNumber(10)}`,
+      { id_order, id_cart, id_customer, id_employee, message, private: is_private },
+      {
+        baseURL: API_LOGIN_URL
+      });
+    console.log('Server message:', res.data);
+    return { success: true, data: res.data };
+  } catch (error) {
+    console.log("Create custom message error", error);
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message
+    }
+  }
+}
 
 export const getOrderIdByCartId = async (cartId: number) => {
   try {

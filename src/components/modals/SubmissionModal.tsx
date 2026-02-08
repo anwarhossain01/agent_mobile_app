@@ -14,7 +14,7 @@ import {
     clearCart,
     selectNote
 } from '../../store/slices/cartSlice';
-import { createCart, createCustomerThreadWithMessage, createOrder } from '../../api/prestashop';
+import { createCart, createCustomerThreadWithMessage, createCustomMessage, createOrder } from '../../api/prestashop';
 import { useDispatch, useSelector } from 'react-redux';
 import { dark, darkBg, textColor } from '../../../colors';
 import { useNavigation } from '@react-navigation/native';
@@ -287,7 +287,18 @@ const SubmissionModal = ({ showSubmissionModal, setShowSubmissionModal }: any) =
                         note
                     });
 
-                    console.log(orderMsgRes);
+                     //console.log(orderMsgRes);
+                    const orderMsgResServer = await createCustomMessage({
+                        id_order: orderRes.data.order.id,
+                        id_cart: parseInt(currentCartId),
+                        id_customer: parseInt(client_id),
+                        id_employee: employeeId,
+                        message: note,
+                        is_private: 0
+                    });
+
+                 //   console.log("************* ", orderMsgResServer);
+                    
                 }
                 // Wait a moment to show success then close
                 setTimeout(() => {

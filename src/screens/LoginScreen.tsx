@@ -13,7 +13,7 @@
 // }
 
 import React, { useState, useEffect } from 'react';
-import { Modal, View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Modal, View, TextInput, Text, Alert, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, ImageBackground } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { setAuth } from '../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
@@ -54,31 +54,6 @@ export default function LoginScreen() {
     }
   }, [is_syncing]);
 
-  // const onLogin = async () => {
-  //   if (email.length === 0 || password.length === 0) {
-  //     Alert.alert('Please enter email and password');
-  //     return;
-  //   }
-  //   setError(false);
-  //   setLoading(true);
-  //   const res = await loginEmployee(email, password);
-
-  //   if (res.success) {
-  //     await storeAgentFromJson(res);
-  //     await cacheInitializer(res.employee?.id); // this functions stores a lot of data so takes a lot of time
-  //     if (!is_saved) {
-  //       const categoriesTree = await getCategoriesSubsAndProds();
-  //       if (categoriesTree.success) {
-  //         await saveCategoryTree(categoriesTree.data); // same for this one, we need this data
-  //         dispatch(setIsTreeSaved(true));
-  //       }
-  //     }
-  //     dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
-  //   } else {
-  //     setError(true);
-  //     setLoading(false);
-  //   }
-  // };
   const formatTime = (seconds: any) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -104,14 +79,14 @@ export default function LoginScreen() {
       try {
 
         if (!is_saved) {
-            await syncProductsAndCategoriesToDB();
-            dispatch(setIsTreeSaved(true));
-            dispatch(setSavedAt(new Date().toISOString()));
-     
+          await syncProductsAndCategoriesToDB();
+          dispatch(setIsTreeSaved(true));
+          dispatch(setSavedAt(new Date().toISOString()));
+
         }
         await syncCourierData();
         await syncCustomersIncrementally(res.employee?.id);
-      //  await cacheInitializer(res.employee?.id); // initializes all the data, the huge as function
+        //  await cacheInitializer(res.employee?.id); // initializes all the data, the huge as function
 
         dispatch(setAuth({ token: res.token, employeeId: res.employee?.id, isLoggedIn: true }));
       } catch (err) {
@@ -128,108 +103,133 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <ImageBackground
+      source={require('../../assets/background.jpeg')}
+      style={styles.background}
+      resizeMode="cover"
     >
-      <View style={styles.form}>
-        <Text style={styles.title}>Login</Text>
-        <TextInput
-          placeholder="Email"
-          placeholderTextColor={lighterTextColor}
-          value={email}
-          onChangeText={setEmail}
-          style={styles.input}
-        />
-        <TextInput
-          placeholder="Password"
-          placeholderTextColor={lighterTextColor}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={styles.input}
-        />
-        {error ? <Text style={styles.errorTxt}>Wrong Password or Email !</Text> : null}
-        {loading ? <ActivityIndicator color={theme} /> : (
-          <TouchableOpacity style={styles.button} onPress={onLogin}>
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
-        )}
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
 
-      </View>
+          <View style={styles.form}>
+            <Text style={styles.title}>Login</Text>
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor={lighterTextColor}
+              value={email}
+              onChangeText={setEmail}
+              style={styles.input}
+            />
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor={lighterTextColor}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              style={styles.input}
+            />
+            {error ? <Text style={styles.errorTxt}>Wrong Password or Email !</Text> : null}
+            {loading ? <ActivityIndicator color={theme} /> : (
+              <TouchableOpacity style={styles.button} onPress={onLogin}>
+                <Text style={styles.buttonText}>Login</Text>
+              </TouchableOpacity>
+            )}
 
-      {/* Setup Progress Modal */}
-      <Modal
-        transparent
-        animationType="fade"
-        visible={setupModalVisible}
-        onRequestClose={() => { }}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ActivityIndicator size="large" color={theme} />
-            <Text style={styles.modalTitle}>Configurazione del tuo account</Text>
-            <Text style={styles.modalMessage}>
-              Attendi mentre prepariamo i tuoi dati per l'uso offline...
-            </Text>
-            <Text style={[styles.modalMessage, { fontWeight: '500', color: textColor }]}>
-              {useSelector(selectSyncStatusText)}
-            </Text>
-            <Text style={styles.timerText}>
-              Tempo trascorso: {formatTime(elapsedSeconds)}
-            </Text>
           </View>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+
+          {/* Setup Progress Modal */}
+          <Modal
+            transparent
+            animationType="fade"
+            visible={setupModalVisible}
+            onRequestClose={() => { }}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <ActivityIndicator size="large" color={theme} />
+                <Text style={styles.modalTitle}>Configurazione del tuo account</Text>
+                <Text style={styles.modalMessage}>
+                  Attendi mentre prepariamo i tuoi dati per l'uso offline...
+                </Text>
+                <Text style={[styles.modalMessage, { fontWeight: '500', color: textColor }]}>
+                  {useSelector(selectSyncStatusText)}
+                </Text>
+                <Text style={styles.timerText}>
+                  Tempo trascorso: {formatTime(elapsedSeconds)}
+                </Text>
+              </View>
+            </View>
+          </Modal>
+        </KeyboardAvoidingView>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(54, 54, 54, 0.5)', // stronger
+  },
+  background: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: dark,
+    // backgroundColor: dark,
     justifyContent: 'center',
     padding: 16,
   },
   form: {
     width: '100%',
-    alignItems: 'center',
+    padding: 28,
+    borderRadius: 18,
+    backgroundColor: darkerBg,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   title: {
-    fontSize: 24,
-    marginBottom: 24,
-    color: textColor,
+    fontSize: 28,
+    marginBottom: 30,
+    color: '#000000ff',
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 1,
   },
   input: {
     width: '100%',
     borderWidth: 1,
-    borderColor: darkerBg,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    color: textColor,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 18,
+    color: '#000000ff',
     backgroundColor: darkBg,
   },
   button: {
     width: '100%',
-    backgroundColor: '#007AFF',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: theme,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginTop: 10,
   },
   buttonText: {
-    color: 'white',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 16,
+    letterSpacing: 0.5,
   },
+
   errorTxt: {
     color: 'red',
     fontSize: 14,

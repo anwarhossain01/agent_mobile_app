@@ -11,7 +11,7 @@ import ClientsScreen from './src/screens/ClientsScreen';
 import CatalogScreen from './src/screens/CatalogScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
-import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, ImageBackground } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import IndirizziScreen from './src/screens/IndirizziScreen';
 import ClientsMenuModal from './src/components/modals/ClientsMenuModal';
@@ -262,6 +262,65 @@ function MainTabs({ navigation }: { navigation: any }) {
   );
 }
 
+function LoadingStateComponent({ state_text }: { state_text: string }) {
+  return (<ImageBackground
+    source={require('./assets/background.jpeg')}
+    style={{ flex: 1 }}
+    resizeMode="cover"
+  >
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+        justifyContent: 'flex-end',
+      }}
+    >
+      {/* Snackbar Card */}
+      <View
+        style={{
+          marginHorizontal: 20,
+          marginBottom: 40,
+          backgroundColor: 'rgba(20,20,20,0.95)',
+          paddingVertical: 16,
+          paddingHorizontal: 20,
+          borderRadius: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.3,
+          shadowRadius: 15,
+          elevation: 10,
+        }}
+      >
+        <ActivityIndicator size="small" color="#ffffff" />
+
+        <View style={{ marginLeft: 14, flex: 1 }}>
+          <Text
+            style={{
+              color: '#ffffff',
+              fontSize: 15,
+              fontWeight: '600',
+            }}
+          >
+            {state_text}
+          </Text>
+
+          <Text
+            style={{
+              color: 'rgba(255,255,255,0.6)',
+              fontSize: 13,
+              marginTop: 2,
+            }}
+          >
+            Preparing offline environment...
+          </Text>
+        </View>
+      </View>
+    </View>
+  </ImageBackground>);
+}
+
 function RootNavigator() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
   const [dbReady, setDbReady] = useState(false);
@@ -333,11 +392,8 @@ function RootNavigator() {
 
   if (!dbReady) {
     return (
-      <View style={{ flex: 1, backgroundColor: dark, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={{ color: textColor, marginTop: 16 }}>Initializing database...</Text>
-      </View>
-    );
+    <LoadingStateComponent state_text="Initializing Database" />
+  );
   }
 
   return (
@@ -395,10 +451,7 @@ export default function App() {
     <Provider store={store}>
       <PersistGate
         loading={
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text>Loading...</Text>
-          </View>
+          <LoadingStateComponent state_text="Loading..." />
         }
         persistor={persistor}
       >

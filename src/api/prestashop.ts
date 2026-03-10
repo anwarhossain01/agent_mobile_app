@@ -201,14 +201,12 @@ export const getSingleCustomer = async (id: number | string) => {
 export const getOrdersFromServer = async (employeeId: any) => {
 
   try {
-    console.log(employeeId);
-
-    const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}`,
+    const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=55&t=${generateRandomNumber(10)}`,
       { employee_id: employeeId },
       {
         baseURL: API_LOGIN_URL
       });
-    console.log('Server orders:', res.data);
+    console.log(`Server orders for ${employeeId}:`, res.data);
     return res.data.orders || [];
   } catch (err) {
     console.log('Orders API error:', err);
@@ -218,7 +216,7 @@ export const getOrdersFromServer = async (employeeId: any) => {
 
 export const getOrdersForCustomer = async (employeeId: any) => {
   try {
-    const res = await api.get(`/orders?output_format=JSON&display=full&filter[id_customer]=[${employeeId}]&limit=50&t=${generateRandomNumber(10)}&ws_key=${API_KEY}`,
+    const res = await api.get(`/orders?output_format=JSON&display=full&limit=50&t=${generateRandomNumber(10)}&ws_key=${API_KEY}`,
     );
     console.log('customer orders:', res.data.orders);
     return res.data.orders || [];

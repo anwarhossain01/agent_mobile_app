@@ -20,10 +20,10 @@ export default function OrdersScreen({ route }) {
   const [localOrders, setLocalOrders] = useState<any[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const employeeId = route.params?.employee_id || auth.employeeId;
+  const employeeId =  auth.employeeId; //|| route.params?.employee_id;
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const [showbtn, setShowBtn] = useState(false);
+ // const [showbtn, setShowBtn] = useState(false);
   let localindex = 0;
 
   useEffect(() => {
@@ -40,16 +40,16 @@ export default function OrdersScreen({ route }) {
 
       try {
         let state = await NetInfo.fetch();
-        if (route.params?.employee_id) setShowBtn(true);
+      //  if (route.params?.employee_id) setShowBtn(true);
 
         let orders = null;
         if (state.isConnected) {
-          if (route.params?.employee_id) {
-            orders = await getOrdersForCustomer(employeeId);
-          } else {
+          //if (route.params?.employee_id) {
+          //  orders = await getOrdersForCustomer(employeeId);
+         // } else {
             orders = await getOrdersFromServer(employeeId);
             await storeServerOrders(orders);
-          }
+        //  }
         } else {
           orders = await getLatestServerOrders(employeeId);
         }

@@ -69,7 +69,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     const res = await loginEmployee(email, password);
-
+    
     if (res.success) {
       dispatch(setStopRequested(false));
       await storeAgentFromJson(res);

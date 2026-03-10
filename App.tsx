@@ -361,7 +361,7 @@ function RootNavigator() {
         await runStockInit();
         setDbReady(true);
       } catch (error) {
-        console.error('Failed to initialize database:', error);
+        console.warn('Failed to initialize database:', error);
         setDbReady(true);
       }
     };

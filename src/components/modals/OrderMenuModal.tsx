@@ -102,7 +102,7 @@ export default function OrderMenuModal({
                 </TouchableOpacity>
 
                 {/* Divider */}
-                <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} /> */}
+                {/* <View style={{ height: 1, backgroundColor: darkBg, marginVertical: 4 }} />  */}
 
                 {/* Indirizzi option */}
                 <TouchableOpacity

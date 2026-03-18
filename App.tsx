@@ -343,7 +343,7 @@ function RootNavigator() {
         const res = await initializeAllProductStock();
         if (res.success) {
           await AsyncStorage.setItem('init', 'true');
-          console.log('✅ Product stock cached locally');
+        // console.log('✅ Product stock cached locally');
         } else {
           console.log('⚠️ Stock sync failed:', res.error);
         }

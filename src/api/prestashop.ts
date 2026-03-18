@@ -198,14 +198,19 @@ export const getSingleCustomer = async (id: number | string) => {
   }
 };
 
-export const getOrdersFromServer = async (employeeId: any) => {
+export const getOrdersFromServer = async (employeeId: any, search : any ) => {
 
   try {
     const res = await api.post(`/employeeapi/orders?output_format=JSON&display=full&limit=55&t=${generateRandomNumber(10)}`,
-      { employee_id: employeeId },
+      {
+        employee_id: employeeId,
+        search: search
+      },
       {
         baseURL: API_LOGIN_URL
       });
+
+  //  console.log("Body ,",  employeeId, search);
     console.log(`Server orders for ${employeeId}:`, res.data);
     return res.data.orders || [];
   } catch (err) {

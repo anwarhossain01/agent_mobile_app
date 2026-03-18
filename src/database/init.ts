@@ -5,24 +5,24 @@ import RNFS from 'react-native-fs';
 const MIGRATION_KEY = 'DB_MIGRATIONS_COMPLETED';
 
 export const initDatabase = async () => {
-  try {
-    const migrationFiles = [
-      '001_initial.sql',
-      '002_update.sql'
-    ];
+  const migrationFiles = [
+    '001_initial.sql',
+    '002_update.sql'
+  ];
 
-    const completedMigrations = await AsyncStorage.getItem(MIGRATION_KEY);
-    const completedSet = new Set(completedMigrations ? JSON.parse(completedMigrations) : []);
+  const completedMigrations = await AsyncStorage.getItem(MIGRATION_KEY);
+  const completedSet = new Set(completedMigrations ? JSON.parse(completedMigrations) : []);
 
-    const db = await getDBConnection();
+  const db = await getDBConnection();
 
-    for (const migrationFile of migrationFiles) {
-      if (completedSet.has(migrationFile)) {
-        console.log(`Migration ${migrationFile} already completed — skipping`);
-        continue;
-      }
+  for (const migrationFile of migrationFiles) {
+    if (completedSet.has(migrationFile)) {
+      console.log(`Migration ${migrationFile} already completed — skipping`);
+      continue;
+    }
 
-      console.log(`Running migration: ${migrationFile}`);
+    console.log(`Running migration: ${migrationFile}`);
+    try {
 
       const sqlFilePath = `${RNFS.MainBundlePath}/schema/${migrationFile}`;
       let sqlContent = '';
@@ -45,13 +45,14 @@ export const initDatabase = async () => {
 
       completedSet.add(migrationFile);
       await AsyncStorage.setItem(MIGRATION_KEY, JSON.stringify([...completedSet]));
-      
-      console.log(`✅ Migration ${migrationFile} completed successfully`);
-    }
 
-    console.log('✅ All database migrations completed successfully');
-  } catch (error) {
-    console.error('❌ Database migration failed:', error);
-    throw error;
+      console.log(`✅ Migration ${migrationFile} completed successfully`);
+    } catch (error) {
+      console.warn('= Database migration failed:', error);
+      completedSet.add(migrationFile);
+      await AsyncStorage.setItem(MIGRATION_KEY, JSON.stringify([...completedSet]));
+    }
   }
+
+  console.log('✅ All database migrations completed successfully');
 };

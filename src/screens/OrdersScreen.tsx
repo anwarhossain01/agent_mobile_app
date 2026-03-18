@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet, Alert, TouchableOpacity, Modal, ScrollView } from 'react-native';
+import { View, Text, FlatList, Button, ActivityIndicator, StyleSheet, Alert, TouchableOpacity, Modal, ScrollView, TextInput } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RootState } from '../store';
@@ -20,10 +20,12 @@ export default function OrdersScreen({ route }) {
   const [localOrders, setLocalOrders] = useState<any[]>([]);
   const [loadingServer, setLoadingServer] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const employeeId =  auth.employeeId; //|| route.params?.employee_id;
+  const employeeId = auth.employeeId; //|| route.params?.employee_id;
   const dispatch = useDispatch();
   const navigation = useNavigation();
- // const [showbtn, setShowBtn] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchText, setSearchText] = useState(null);
+  const [searchQuery, setSearchQuery] = useState<any>(null);
   let localindex = 0;
 
   useEffect(() => {
@@ -40,21 +42,21 @@ export default function OrdersScreen({ route }) {
 
       try {
         let state = await NetInfo.fetch();
-      //  if (route.params?.employee_id) setShowBtn(true);
+        //  if (route.params?.employee_id) setShowBtn(true);
 
         let orders = null;
         if (state.isConnected) {
           //if (route.params?.employee_id) {
           //  orders = await getOrdersForCustomer(employeeId);
-         // } else {
-            orders = await getOrdersFromServer(employeeId);
-            await storeServerOrders(orders);
-        //  }
+          // } else {
+          orders = await getOrdersFromServer(employeeId, searchQuery);
+          await storeServerOrders(orders);
+          //  }
         } else {
           orders = await getLatestServerOrders(employeeId);
         }
 
-           console.log("Orders res", orders);
+        console.log("Orders res", orders);
 
         if (!mounted) return;
         setServerOrders(orders);
@@ -116,25 +118,12 @@ export default function OrdersScreen({ route }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [searchQuery]);
 
-  // const createDemoOrder = () => {
-  //   const localId = 'local-' + Date.now();
-  //   dispatch(addOrder({ localId, clientId: 1, items: [], synced: false }));
-  //   Alert.alert('Demo order created (offline). Background sync will attempt to push when online.');
-  // };
-
-  // const normalizedServerOrders = serverOrders.map(o => ({
-  //   id: o.id_order,
-  //   id_customer: o.id_customer,
-  //   customer_name: o.firstname + ' ' + o.lastname,
-  //   company: o.company,
-  //   total_paid: o.total_paid,
-  //   date_add: o.date_add,
-  //   synced: true,
-  //   reference: o.reference,
-  //   payment: o.payment
-  // }));
+  const submitSearch = () =>{
+   // console.log(": Searching For , ", searchText);
+   setSearchQuery(searchText);
+  }
 
   const parseDate = (d?: string) => (d ? new Date(String(d)) : new Date(0));
   const localNormalized = localOrders.map(lo => ({
@@ -142,31 +131,6 @@ export default function OrdersScreen({ route }) {
     date_add: lo.date_add || (lo.localId ? new Date(Number(lo.localId.replace('local-', ''))).toISOString() : null),
   }));
 
-  // const allOrders = [...normalizedServerOrders, ...localNormalized].sort((a, b) =>
-  //   parseDate(b.date_add).getTime() - parseDate(a.date_add).getTime()
-  // );
-
-  const newOrderRouteHandler = () => {
-    dispatch(setClientId(employeeId));
-    (navigation as any).replace('Main', {
-      screen: 'CatalogTab',
-      params: {
-        screen: 'Catalog',
-        params: {
-          title: 'Nuovo ordine'
-        }
-      }
-    });
-    // (navigation as any).navigate('Main', {
-    //   screen: 'OrdersTab',
-    //   params: {
-    //     screen: 'NewOrders',
-    //     params: {
-    //       client_id: employeeId,
-    //     }
-    //   }
-    // });
-  }
 
   const FloatingSyncButton = () => {
     if (localOrders.length > 0) {
@@ -207,7 +171,7 @@ export default function OrdersScreen({ route }) {
           <TouchableOpacity style={styles.msgIconContainer} onPress={() => setModalVisible(true)}>
             <Ionicons name="chatbox-ellipses-outline" size={22} color="#fff" />
           </TouchableOpacity>
-          <LastMsgModal visible={modalVisible} onRequestClose={() => setModalVisible(false)} message={item.last_message}/>
+          <LastMsgModal visible={modalVisible} onRequestClose={() => setModalVisible(false)} message={item.last_message} />
         </>}
 
         {item.payment && (
@@ -222,7 +186,7 @@ export default function OrdersScreen({ route }) {
             <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.company || '—'}</Text>
           </View>
         )}
-         {item.note && (
+        {item.note && (
           <View style={styles.row}>
             <Text style={styles.label}>Note:</Text>
             <Text numberOfLines={3} ellipsizeMode="tail" style={styles.companyvalue}>{item.note || '—'}</Text>
@@ -247,9 +211,54 @@ export default function OrdersScreen({ route }) {
 
   return (
     <View style={{ flex: 1, padding: 13 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 6 }}>
-        <Text style={{ fontSize: 18, marginBottom: 12, color: textColor, fontWeight: 800 }}>Ordini</Text>
-        {/* {showbtn ? <Button title="NUOVO ORDINE +" color="#00bd29ff" onPress={newOrderRouteHandler} /> : null} */}
+      <View style={{ padding: 6 }}>
+        {!showSearch ? (
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 18, color: textColor, fontWeight: '800' }}>Ordini</Text>
+
+            <TouchableOpacity onPress={() => setShowSearch(true)}>
+              <Ionicons name="search" size={24} color="black" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: darkBg,
+            borderRadius: 8,
+            paddingHorizontal: 8
+          }}>
+
+            <TextInput
+              style={{
+                flex: 1,
+                height: 40,
+                color: textColor
+              }}
+              placeholder="Search by customer"
+              placeholderTextColor="#888"
+              value={searchText}
+              onChangeText={setSearchText}
+              returnKeyType="search"
+            />
+
+            <TouchableOpacity onPress={submitSearch} >
+              <Ionicons name="search" size={24} color="black" />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                setShowSearch(false);
+                setSearchText('');
+                setSearchQuery(null);
+              }}
+              style={{ marginHorizontal: 6 }}
+            >
+              <Ionicons name="close" size={24} color="black" />
+            </TouchableOpacity>
+
+          </View>
+        )}
       </View>
 
       {loadingServer ? <ActivityIndicator color={textColor} /> : null}
@@ -273,22 +282,22 @@ export default function OrdersScreen({ route }) {
   );
 }
 
-const LastMsgModal = ({visible = false, onRequestClose =() => {}, message=''}) => {
+const LastMsgModal = ({ visible = false, onRequestClose = () => { }, message = '' }) => {
   return (
     <Modal visible={visible} onRequestClose={onRequestClose} transparent animationType="slide">
       <View style={styles.modalBody}>
         <View style={styles.modalContent}>
-          <View style={[{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e7ecf0'}]}>
-            <View style={[{width: 30}]}></View>
-            <Text style={[{color: 'black', fontWeight: 'bold', fontSize: 16, textAlign: 'center', flex:1, }]}>
+          <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#e7ecf0' }]}>
+            <View style={[{ width: 30 }]}></View>
+            <Text style={[{ color: 'black', fontWeight: 'bold', fontSize: 16, textAlign: 'center', flex: 1, }]}>
               Ultimo messaggio
             </Text>
             <TouchableOpacity style={[styles.modalCloseBtn]} onPress={onRequestClose}>
               <Ionicons name="close-outline" size={22} color="red" />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{padding: 15}}>
-            <Text style={[{color: '#888888'}]}>
+          <ScrollView contentContainerStyle={{ padding: 15 }}>
+            <Text style={[{ color: '#888888' }]}>
               {message}
             </Text>
           </ScrollView>
@@ -376,7 +385,7 @@ const styles = StyleSheet.create({
   },
 
   // last msg modal
-  modalBody:  {
+  modalBody: {
     flex: 1,
     backgroundColor: "#00000080",
     justifyContent: 'center',
@@ -390,7 +399,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden'
   },
-   modalCloseBtn: {
+  modalCloseBtn: {
     height: 30,
     width: 30,
     borderRadius: 15,
